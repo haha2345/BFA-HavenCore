@@ -24,9 +24,10 @@
  *   317260        dummy selector (50 yd)
  *   317262        missile visual (in-game: .cast 317262 triggered)
  *   317265        stack aura on target; school damage BP is 0 so we fill it
+ *   318274/487/488 rank 1/2/3 hidden drivers (dummy % of max(AP, SP))
  *
- * Damage fallback is 8.3 AP/SP coefficients (111/276/415%). Ilvl scaling
- * when a real corrupted item is present can be added later.
+ * Damage uses 318274/487/488 effect 2 dummy (83/208/312). Item-level
+ * average(item) from aura 285 is not wired yet.
  */
 
 #include "Chat.h"
@@ -37,6 +38,7 @@
 #include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellHistory.h"
+#include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "Unit.h"
@@ -49,18 +51,77 @@ enum InfiniteStarsSpells
     SPELL_INFINITE_STARS_HIDDEN_PROC  = 317257,
     SPELL_INFINITE_STARS_SELECTOR     = 317260,
     SPELL_INFINITE_STARS_MISSILE      = 317262,
-    SPELL_INFINITE_STARS_DAMAGE       = 317265
+    SPELL_INFINITE_STARS_DAMAGE       = 317265,
+    SPELL_INFINITE_STARS_RANK_1       = 318274,
+    SPELL_INFINITE_STARS_RANK_2       = 318487,
+    SPELL_INFINITE_STARS_RANK_3       = 318488
 };
 
 namespace
 {
-float InfiniteStarsCoefficient(Unit const* caster)
+// 35662 Spell dump fallbacks if GetEffect is missing.
+constexpr int32 INFINITE_STARS_VULN_PCT_FALLBACK = 25;
+constexpr float INFINITE_STARS_RANGE_FALLBACK    = 50.0f;
+constexpr int32 INFINITE_STARS_RANK1_PCT_FALLBACK = 83;
+
+uint32 InfiniteStarsRankSpell(Unit const* caster)
 {
-    if (caster->HasAura(SPELL_CORRUPTION_INFINITE_STARS_3))
-        return 4.15f;
-    if (caster->HasAura(SPELL_CORRUPTION_INFINITE_STARS_2))
-        return 2.76f;
-    return 1.11f;
+    if (caster->HasAura(SPELL_INFINITE_STARS_RANK_3) || caster->HasAura(SPELL_CORRUPTION_INFINITE_STARS_3))
+        return SPELL_INFINITE_STARS_RANK_3;
+    if (caster->HasAura(SPELL_INFINITE_STARS_RANK_2) || caster->HasAura(SPELL_CORRUPTION_INFINITE_STARS_2))
+        return SPELL_INFINITE_STARS_RANK_2;
+    return SPELL_INFINITE_STARS_RANK_1;
+}
+
+int32 InfiniteStarsVulnPct()
+{
+    if (SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_INFINITE_STARS_DAMAGE))
+        if (SpellEffectInfo const* effect = info->GetEffect(EFFECT_2))
+            return effect->BasePoints;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "InfiniteStars: 317265 EFFECT_2 missing, using vuln %d", INFINITE_STARS_VULN_PCT_FALLBACK);
+    }
+    return INFINITE_STARS_VULN_PCT_FALLBACK;
+}
+
+float InfiniteStarsSelectRange()
+{
+    if (SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_INFINITE_STARS_SELECTOR))
+        if (SpellEffectInfo const* effect = info->GetEffect(EFFECT_0))
+        {
+            float radius = effect->CalcRadius();
+            if (radius > 0.0f)
+                return radius;
+        }
+    return INFINITE_STARS_RANGE_FALLBACK;
+}
+
+int32 InfiniteStarsBaseDamage(Unit const* caster)
+{
+    float ap = std::max(caster->GetTotalAttackPowerValue(BASE_ATTACK), caster->GetTotalAttackPowerValue(RANGED_ATTACK));
+    float sp = float(caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE));
+    int32 pct = INFINITE_STARS_RANK1_PCT_FALLBACK;
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(InfiniteStarsRankSpell(caster)))
+    {
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_1))
+            pct = effect->BasePoints;
+        else
+        {
+            static bool logged = false;
+            if (!logged)
+            {
+                logged = true;
+                TC_LOG_ERROR("scripts", "InfiniteStars: rank EFFECT_1 missing, using %d%%", INFINITE_STARS_RANK1_PCT_FALLBACK);
+            }
+        }
+    }
+
+    int32 damage = int32(std::max(ap, sp) * (float(pct) / 100.0f));
+    return damage < 1 ? 1 : damage;
 }
 
 // Ignore GCD / current cast / cost so a slam can still drop a star. Not FULL_DEBUG_MASK
@@ -139,6 +200,7 @@ void CastInfiniteStar(Unit* caster, Unit* target)
         visual, missile ? missile->Speed : -1.f, delay, uint32(ok), target->GetName().c_str());
     NotifyStarVisual(caster, target, visual, delay, ok);
 
+    // Not a DBC value: stops 317257 and 317260 from each dropping a star.
     caster->GetSpellHistory()->AddCooldown(SPELL_INFINITE_STARS_MISSILE, 0, Milliseconds(1500));
     caster->m_Events.AddEvent(new InfiniteStarImpactEvent(caster->GetGUID(), target->GetGUID()),
         caster->m_Events.CalculateTime(uint32(delay * 1000.0f)));
@@ -158,7 +220,7 @@ Unit* ResolveStarTarget(Unit* caster, ProcEventInfo& eventInfo)
         if (victim->IsAlive() && victim != caster)
             return victim;
 
-    return caster->SelectNearbyTarget(nullptr, 50.0f);
+    return caster->SelectNearbyTarget(nullptr, InfiniteStarsSelectRange());
 }
 }
 
@@ -214,7 +276,8 @@ class spell_infinite_stars_selector : public SpellScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_INFINITE_STARS_MISSILE, SPELL_INFINITE_STARS_DAMAGE });
+        return ValidateSpellInfo({ SPELL_INFINITE_STARS_MISSILE, SPELL_INFINITE_STARS_DAMAGE,
+            SPELL_INFINITE_STARS_RANK_1, SPELL_INFINITE_STARS_RANK_2, SPELL_INFINITE_STARS_RANK_3 });
     }
 
     void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -233,7 +296,7 @@ class spell_infinite_stars_selector : public SpellScript
         if (!target || target == caster)
             target = caster->GetVictim();
         if (!target)
-            target = caster->SelectNearbyTarget(nullptr, 50.0f);
+            target = caster->SelectNearbyTarget(nullptr, InfiniteStarsSelectRange());
 
         CastInfiniteStar(caster, target);
     }
@@ -249,6 +312,11 @@ class spell_infinite_stars_damage : public SpellScript
 {
     PrepareSpellScript(spell_infinite_stars_damage);
 
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_INFINITE_STARS_RANK_1, SPELL_INFINITE_STARS_RANK_2, SPELL_INFINITE_STARS_RANK_3 });
+    }
+
     void HandleHit()
     {
         Unit* caster = GetCaster();
@@ -256,11 +324,7 @@ class spell_infinite_stars_damage : public SpellScript
         if (!caster || !target)
             return;
 
-        float ap = std::max(caster->GetTotalAttackPowerValue(BASE_ATTACK), caster->GetTotalAttackPowerValue(RANGED_ATTACK));
-        float sp = float(caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE));
-        int32 damage = int32(std::max(ap, sp) * InfiniteStarsCoefficient(caster));
-        if (damage < 1)
-            damage = 1;
+        int32 damage = InfiniteStarsBaseDamage(caster);
 
         // 317265 applies its stack aura in the same hit. SimC multiplies with stacks *before* this star.
         int32 stacks = 0;
@@ -268,7 +332,7 @@ class spell_infinite_stars_damage : public SpellScript
             stacks = int32(aura->GetStackAmount());
         if (stacks > 0)
             --stacks;
-        AddPct(damage, 25 * stacks);
+        AddPct(damage, InfiniteStarsVulnPct() * stacks);
 
         caster->DealDamage(target, uint32(damage), nullptr, SPELL_DIRECT_DAMAGE, SPELL_SCHOOL_MASK_ARCANE, GetSpellInfo(), true);
         SetHitDamage(damage);
