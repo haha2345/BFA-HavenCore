@@ -67,6 +67,12 @@ target_compile_options(trinity-compile-option-interface
   INTERFACE
     /MP)
 
+# Source files are UTF-8. On a GBK (code page 936) system MSVC otherwise
+# mis-parses UTF-8 comments and reports fake missing-brace / undeclared-id errors.
+target_compile_options(trinity-core-interface
+  INTERFACE
+    /utf-8)
+
 if((PLATFORM EQUAL 64) OR (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0.23026.0) OR BUILD_SHARED_LIBS)
   # Enable extended object support
   target_compile_options(trinity-compile-option-interface
