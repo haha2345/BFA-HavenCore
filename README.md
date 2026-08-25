@@ -70,3 +70,27 @@ Join our **Discord** to collaborate with other developers and contributors.
 This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
  
 License: https://github.com/Hextv/BFA-HavenCore/tree/main?tab=GPL-3.0-1-ov-file#
+
+## 本 fork：满级 blizz-like（`endgame/corruption-stars`）
+
+对照正式服 8.3.7.35662。方案正文：[doc/837满级修复/README.md](doc/837满级修复/README.md)。
+
+### 近期任务
+
+当前阶段 **A 腐蚀**：一次一条签名效果的第 1 层（`.aura` 打桩）。未说开工前不自动开下一条。
+
+| 状态 | 任务 |
+|------|------|
+| **下一步** | A2 暮光毁灭第 1 层（技能/法术有几率面前直线斩击） |
+| 其后 | A3 虚空回响 → A4 扭曲的附肢（均为第 1 层打桩） |
+| 再其后 | 真装 2b：318274 等 ItemEffect，穿上自动出效果、ilvl 缩放 |
+| 未开 | 被动好效果；坏效果 2a（`UpdateCorruption`）；五人 / 词缀 / 团本 |
+
+### 已完成
+
+| 日期 | 内容 | 说明 |
+|------|------|------|
+| 2026-08-25 | **A1 无尽之星第 1 层** | `.aura 317257`：技能/法术出星，普攻不出；DEST `317262` 落星约 1 秒；`317265` 奥术 + 易伤（砸中前层数 ×25%，最多 10）。实测 visual=93802，980→1225。**未做**真装 318274 / ilvl。`ef9573b` |
+| 2026-08-24 | MapManager 启动崩溃 | `_freeInstanceIds` 未分配。`58a7a23` |
+| 2026-08-24 | MSVC `/utf-8` | GBK 代码页编中文注释。`1b3aa88` |
+| 2026-08-24 | 腐蚀基线 | 好效果在 ItemEffect，坏效果在 `CorruptionEffects.db2`（10 行完整） |
