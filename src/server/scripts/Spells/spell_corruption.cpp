@@ -39,18 +39,28 @@
  * (cylinder r=3, h=10), spline ~28 yd / 4s. Damage is OnUnitEnter -> 317159,
  * hits anything attackable in the path (pulls, like retail). 2020-02 hotfix:
  * max 10 targets, 6th-10th take half damage.
+ *
+ * Echoing Void (35662):
+ *   318280/485/486  rank 1/2/3 (Aura 285 LINKED -> 317014, dummy 40/60/100)
+ *   317014          hidden proc; 35662 ProcFlags=0 (hotfix), ICD 700ms
+ *   317020          stacks on the player (max 99)
+ *   317022          collapse periodic -> 317029 every 1s (shared with Hivemind)
+ *   317029          shadow AoE BP=0, 15 yd; script fills maxHP * (dummy/100)%
  */
 
 #include "AreaTrigger.h"
 #include "AreaTriggerAI.h"
 #include "Chat.h"
 #include "Log.h"
+#include "StringFormat.h"
 #include "Map.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "Random.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
 #include "SpellAuraEffects.h"
+#include "SpellAuras.h"
 #include "SpellHistory.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
@@ -85,6 +95,17 @@ enum TwilightDevastationSpells
     SPELL_TWILIGHT_DAMAGE             = 317159
 };
 
+enum EchoingVoidSpells
+{
+    SPELL_ECHOING_VOID_RANK_1   = 318280,
+    SPELL_ECHOING_VOID_RANK_2   = 318485,
+    SPELL_ECHOING_VOID_RANK_3   = 318486,
+    SPELL_ECHOING_VOID_PROC     = 317014,
+    SPELL_ECHOING_VOID_STACKS   = 317020,
+    SPELL_ECHOING_VOID_COLLAPSE = 317022,
+    SPELL_ECHOING_VOID_DAMAGE   = 317029
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -92,6 +113,12 @@ constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
 // 2020-02 hotfix values, not in DBC: beam stops after 10 targets, 6th-10th take 50%.
 constexpr uint32 TWILIGHT_BEAM_MAX_TARGETS      = 10;
 constexpr uint32 TWILIGHT_BEAM_HALF_DAMAGE_FROM = 6;
+
+// SimC bfa.echoing_void_collapse_chance. Not a DBC field — calibrate in-game if needed.
+constexpr float ECHOING_VOID_COLLAPSE_CHANCE = 0.15f;
+constexpr int32 ECHOING_VOID_RANK1_BP_FALLBACK = 40; // tooltip $s1/100 = 0.4% max HP
+constexpr uint32 ECHOING_VOID_PERIOD_FALLBACK_MS = 1000;
+constexpr int32 ECHOING_VOID_DURATION_SLACK_MS = 400;
 
 namespace
 {
@@ -180,15 +207,19 @@ TriggerCastFlags TwilightDamageCastFlags()
     return TriggerCastFlags(uint32(InfiniteStarsCastFlags()) | uint32(TRIGGERED_IGNORE_TARGET_CHECK));
 }
 
-void NotifyStarVisual(Unit* caster, Unit* target, uint32 visual, float delay, bool missileOk)
+void LabNotify(Unit* caster, char const* type, std::string const& kv)
 {
+    if (!caster || !type)
+        return;
+
     Player* player = caster->ToPlayer();
     if (!player || !player->IsGameMaster() || !player->GetSession())
         return;
 
-    ChatHandler(player->GetSession()).PSendSysMessage(
-        "[HavenLab] STAR_VISUAL spell=%u visual=%u delay=%.2f missile=%u target=%s",
-        SPELL_INFINITE_STARS_MISSILE, visual, delay, missileOk ? 1u : 0u, target->GetName().c_str());
+    if (kv.empty())
+        ChatHandler(player->GetSession()).PSendSysMessage("[HavenLab] %s", type);
+    else
+        ChatHandler(player->GetSession()).PSendSysMessage("[HavenLab] %s %s", type, kv.c_str());
 }
 
 class InfiniteStarImpactEvent : public BasicEvent
@@ -239,7 +270,9 @@ void CastInfiniteStar(Unit* caster, Unit* target)
 
     TC_LOG_INFO("scripts", "InfiniteStars visual=%u speed=%.3f delay=%.3f missileCast=%u dest=%s",
         visual, missile ? missile->Speed : -1.f, delay, uint32(ok), target->GetName().c_str());
-    NotifyStarVisual(caster, target, visual, delay, ok);
+    LabNotify(caster, "STAR_VISUAL", Trinity::StringFormat(
+        "spell=%u visual=%u delay=%.2f missile=%u target=%s",
+        SPELL_INFINITE_STARS_MISSILE, visual, delay, ok ? 1u : 0u, target->GetName().c_str()));
 
     // Not a DBC value: stops 317257 and 317260 from each dropping a star.
     caster->GetSpellHistory()->AddCooldown(SPELL_INFINITE_STARS_MISSILE, 0, Milliseconds(1500));
@@ -287,23 +320,18 @@ float TwilightHealthPct(Unit const* caster)
 
 void NotifyTwilightVisual(Unit* caster, uint32 visual, uint32 hits, int32 damage, bool beamOk)
 {
-    Player* player = caster->ToPlayer();
-    if (!player || !player->IsGameMaster() || !player->GetSession())
-        return;
-
-    ChatHandler(player->GetSession()).PSendSysMessage(
-        "[HavenLab] TWILIGHT_VISUAL spell=%u visual=%u hits=%u damage=%d beam=%u",
-        SPELL_TWILIGHT_BEAM, visual, hits, damage, beamOk ? 1u : 0u);
+    LabNotify(caster, "TWILIGHT_VISUAL", Trinity::StringFormat(
+        "spell=%u visual=%u hits=%u damage=%d beam=%u",
+        SPELL_TWILIGHT_BEAM, visual, hits, damage, beamOk ? 1u : 0u));
 }
 
 void NotifyTwilightHit(Unit* caster, Unit* target, uint32 hitIndex, int32 damage)
 {
-    Player* player = caster->ToPlayer();
-    if (!player || !player->IsGameMaster() || !player->GetSession())
+    if (!target)
         return;
 
-    ChatHandler(player->GetSession()).PSendSysMessage(
-        "[HavenLab] TWILIGHT_HIT #%u target=%s damage=%d", hitIndex, target->GetName().c_str(), damage);
+    LabNotify(caster, "TWILIGHT_HIT", Trinity::StringFormat(
+        "#%u target=%s damage=%d", hitIndex, target->GetName().c_str(), damage));
 }
 
 void CastTwilightDevastation(Unit* caster)
@@ -337,6 +365,94 @@ void CastTwilightDevastation(Unit* caster)
         AreaTrigger::CreateAreaTrigger(miscId, caster, nullptr, beamInfo, *caster, duration, visual);
 
     NotifyTwilightVisual(caster, visual, 0, baseDamage, beamOk);
+}
+
+TriggerCastFlags EchoingVoidCastFlags()
+{
+    return InfiniteStarsCastFlags();
+}
+
+uint32 EchoingVoidRankSpell(Unit const* caster)
+{
+    if (caster->HasAura(SPELL_ECHOING_VOID_RANK_3))
+        return SPELL_ECHOING_VOID_RANK_3;
+    if (caster->HasAura(SPELL_ECHOING_VOID_RANK_2))
+        return SPELL_ECHOING_VOID_RANK_2;
+    return SPELL_ECHOING_VOID_RANK_1;
+}
+
+float EchoingVoidHealthPct(Unit const* caster)
+{
+    int32 bp = ECHOING_VOID_RANK1_BP_FALLBACK;
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(EchoingVoidRankSpell(caster)))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
+            bp = effect->BasePoints;
+    // DBC stores 40/60/100; tooltip is $s1/100 percent of health (rank 1 = 0.4%).
+    return float(bp) / 100.0f / 100.0f;
+}
+
+uint32 EchoingVoidPeriodMs()
+{
+    if (SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_ECHOING_VOID_COLLAPSE))
+        if (SpellEffectInfo const* effect = info->GetEffect(EFFECT_0))
+            if (effect->ApplyAuraPeriod)
+                return effect->ApplyAuraPeriod;
+    return ECHOING_VOID_PERIOD_FALLBACK_MS;
+}
+
+void NotifyEchoStack(Unit* caster, uint32 stacks)
+{
+    LabNotify(caster, "ECHO_STACK", Trinity::StringFormat("stacks=%u", stacks));
+}
+
+void NotifyEchoCollapse(Unit* caster, uint32 stacks)
+{
+    LabNotify(caster, "ECHO_COLLAPSE", Trinity::StringFormat("stacks=%u", stacks));
+}
+
+void NotifyEchoTick(Unit* caster, uint32 remain)
+{
+    LabNotify(caster, "ECHO_TICK", Trinity::StringFormat("remain=%u", remain));
+}
+
+void StartEchoingVoidCollapse(Unit* caster)
+{
+    if (!caster || !caster->IsAlive())
+        return;
+
+    uint32 stacks = 1;
+    if (Aura const* stackAura = caster->GetAura(SPELL_ECHOING_VOID_STACKS))
+        stacks = stackAura->GetStackAmount();
+    if (stacks < 1)
+        stacks = 1;
+
+    NotifyEchoCollapse(caster, stacks);
+    caster->CastSpell(caster, SPELL_ECHOING_VOID_COLLAPSE, EchoingVoidCastFlags());
+}
+
+void HandleEchoingVoidProc(Unit* caster, ProcEventInfo& eventInfo)
+{
+    if (!caster || !caster->IsAlive())
+        return;
+
+    Spell const* procSpell = eventInfo.GetProcSpell();
+    if (!procSpell || !procSpell->GetSpellInfo() || procSpell->GetSpellInfo()->StartRecoveryTime == 0)
+        return;
+
+    if (caster->HasAura(SPELL_ECHOING_VOID_COLLAPSE))
+        return;
+
+    if (caster->GetAura(SPELL_ECHOING_VOID_STACKS) && roll_chance_f(ECHOING_VOID_COLLAPSE_CHANCE * 100.0f))
+    {
+        StartEchoingVoidCollapse(caster);
+        return;
+    }
+
+    caster->CastSpell(caster, SPELL_ECHOING_VOID_STACKS, EchoingVoidCastFlags());
+    uint32 stacks = 1;
+    if (Aura const* stackAura = caster->GetAura(SPELL_ECHOING_VOID_STACKS))
+        stacks = stackAura->GetStackAmount();
+    NotifyEchoStack(caster, stacks);
 }
 }
 
@@ -608,6 +724,132 @@ private:
     uint32 _hitCount;
 };
 
+// 317014 - hidden proc. 35662 ProcFlags were hotfixed to 0; spell_proc restores 69904.
+class spell_echoing_void_proc : public AuraScript
+{
+    PrepareAuraScript(spell_echoing_void_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_ECHOING_VOID_STACKS, SPELL_ECHOING_VOID_COLLAPSE, SPELL_ECHOING_VOID_DAMAGE,
+            SPELL_ECHOING_VOID_RANK_1, SPELL_ECHOING_VOID_RANK_2, SPELL_ECHOING_VOID_RANK_3 });
+    }
+
+    void HandleProc(ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+        if (Unit* caster = GetTarget())
+            HandleEchoingVoidProc(caster, eventInfo);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_echoing_void_proc::HandleProc);
+    }
+};
+
+// 317022 - collapse periodic. Shared with Hivemind; only rewrite duration / first tick when the
+// caster owns 317014 (player Echoing Void). Otherwise leave the boss aura alone.
+class spell_echoing_void_collapse : public AuraScript
+{
+    PrepareAuraScript(spell_echoing_void_collapse);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_ECHOING_VOID_PROC, SPELL_ECHOING_VOID_STACKS, SPELL_ECHOING_VOID_DAMAGE });
+    }
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster || !caster->HasAura(SPELL_ECHOING_VOID_PROC))
+            return;
+
+        uint32 stacks = 1;
+        if (Aura const* stackAura = caster->GetAura(SPELL_ECHOING_VOID_STACKS))
+            stacks = stackAura->GetStackAmount();
+        if (stacks < 1)
+            stacks = 1;
+
+        uint32 period = EchoingVoidPeriodMs();
+        int32 duration = int32(stacks * period + uint32(ECHOING_VOID_DURATION_SLACK_MS));
+        SetMaxDuration(duration);
+        SetDuration(duration);
+
+        // Engine first tick is at +period unless START_PERIODIC_AT_APPLY. SimC pulses immediately.
+        if (!GetSpellInfo()->HasAttribute(SPELL_ATTR5_START_PERIODIC_AT_APPLY))
+            if (Unit* owner = GetTarget())
+                owner->CastSpell(owner, SPELL_ECHOING_VOID_DAMAGE, EchoingVoidCastFlags());
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_echoing_void_collapse::HandleApply, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 317029 - shadow AoE, BP=0. Fill maxHP * (rank dummy/100)%. Decrement stacks once per cast
+// (AfterCast, not OnHit — this is an AoE). Shared with Hivemind: no 317014 → do nothing.
+class spell_echoing_void_damage : public SpellScript
+{
+    PrepareSpellScript(spell_echoing_void_damage);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_ECHOING_VOID_PROC, SPELL_ECHOING_VOID_STACKS, SPELL_ECHOING_VOID_COLLAPSE,
+            SPELL_ECHOING_VOID_RANK_1, SPELL_ECHOING_VOID_RANK_2, SPELL_ECHOING_VOID_RANK_3 });
+    }
+
+    void HandleHit()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target)
+            return;
+
+        if (!caster->HasAura(SPELL_ECHOING_VOID_PROC) || !caster->HasAura(SPELL_ECHOING_VOID_COLLAPSE))
+            return;
+
+        int32 damage = int32(float(caster->GetMaxHealth()) * EchoingVoidHealthPct(caster));
+        if (damage < 1)
+            damage = 1;
+
+        SetHitDamage(damage);
+    }
+
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        if (!caster || !caster->HasAura(SPELL_ECHOING_VOID_PROC))
+            return;
+
+        uint32 remain = 0;
+        if (Aura* stacks = caster->GetAura(SPELL_ECHOING_VOID_STACKS))
+        {
+            if (stacks->GetStackAmount() <= 1)
+            {
+                caster->RemoveAurasDueToSpell(SPELL_ECHOING_VOID_STACKS);
+                caster->RemoveAurasDueToSpell(SPELL_ECHOING_VOID_COLLAPSE);
+            }
+            else
+            {
+                stacks->ModStackAmount(-1);
+                remain = stacks->GetStackAmount();
+            }
+        }
+        else
+            caster->RemoveAurasDueToSpell(SPELL_ECHOING_VOID_COLLAPSE);
+
+        NotifyEchoTick(caster, remain);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_echoing_void_damage::HandleHit);
+        AfterCast += SpellCastFn(spell_echoing_void_damage::HandleAfterCast);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -618,4 +860,7 @@ void AddSC_corruption_spell_scripts()
     RegisterSpellScript(spell_twilight_devastation_beam);
     RegisterSpellScript(spell_twilight_devastation_damage);
     RegisterAreaTriggerAI(at_twilight_devastation);
+    RegisterAuraScript(spell_echoing_void_proc);
+    RegisterAuraScript(spell_echoing_void_collapse);
+    RegisterSpellScript(spell_echoing_void_damage);
 }

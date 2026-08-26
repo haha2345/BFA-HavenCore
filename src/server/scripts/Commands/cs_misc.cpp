@@ -55,6 +55,9 @@
 #include "WeatherMgr.h"
 #include "World.h"
 #include "WorldSession.h"
+#include <cctype>
+#include <cstdio>
+#include <cstring>
 
  // temporary hack until database includes are sorted out (don't want to pull in Windows.h everywhere from mysql.h)
 #ifdef GetClassName
@@ -68,6 +71,11 @@ public:
 
     std::vector<ChatCommand> GetCommands() const override
     {
+        static std::vector<ChatCommand> labCommandTable =
+        {
+            { "clear", rbac::RBAC_PERM_COMMAND_UNAURA, false, &HandleLabClearCommand, "" },
+            { "test",  rbac::RBAC_PERM_COMMAND_AURA,   false, &HandleLabTestCommand,  "" },
+        };
         static std::vector<ChatCommand> commandTable =
         {
             { "additem",          rbac::RBAC_PERM_COMMAND_ADDITEM,          false, &HandleAddItemCommand,          "" },
@@ -93,7 +101,9 @@ public:
             { "hidearea",         rbac::RBAC_PERM_COMMAND_HIDEAREA,         false, &HandleHideAreaCommand,         "" },
             { "itemmove",         rbac::RBAC_PERM_COMMAND_ITEMMOVE,         false, &HandleItemMoveCommand,         "" },
             { "kick",             rbac::RBAC_PERM_COMMAND_KICK,              true, &HandleKickPlayerCommand,       "" },
+            { "lab",              rbac::RBAC_PERM_COMMAND_AURA,             false, nullptr,                       "", labCommandTable },
             { "labaoe",           rbac::RBAC_PERM_COMMAND_NPC_ADD,          false, &HandleLabAoeCommand,           "" },
+            { "labecho",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabEchoCommand,          "" },
             { "labgear",          rbac::RBAC_PERM_COMMAND_ADDITEM,          false, &HandleLabGearCommand,          "" },
             { "labstars",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabStarsCommand,         "" },
             { "labtwilight",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTwilightCommand,      "" },
@@ -1267,44 +1277,140 @@ public:
         return true;
     }
 
-    static bool HandleLabStarsCommand(ChatHandler* handler, char const* /*args*/)
+    static void RemoveHavenLabCorruptionAuras(Player* player, Unit* selected)
+    {
+        // Infinite Stars
+        player->RemoveAurasDueToSpell(317257);
+        player->RemoveAurasDueToSpell(317262);
+        player->RemoveAurasDueToSpell(318274);
+        player->RemoveAurasDueToSpell(324889);
+        player->RemoveAurasDueToSpell(324890);
+        player->RemoveAurasDueToSpell(324891);
+        // Twilight Devastation
+        player->RemoveAurasDueToSpell(317147);
+        player->RemoveAurasDueToSpell(317155);
+        player->RemoveAurasDueToSpell(318276);
+        player->RemoveAurasDueToSpell(318477);
+        player->RemoveAurasDueToSpell(318478);
+        // Echoing Void
+        player->RemoveAurasDueToSpell(317014);
+        player->RemoveAurasDueToSpell(317020);
+        player->RemoveAurasDueToSpell(317022);
+        player->RemoveAurasDueToSpell(318280);
+        player->RemoveAurasDueToSpell(318485);
+        player->RemoveAurasDueToSpell(318486);
+        if (selected && selected != player)
+            selected->RemoveAurasDueToSpell(317265);
+    }
+
+    // New signature effect = one row. Aliases .labstars/.labtwilight/.labecho call this.
+    struct LabTestDef
+    {
+        char const* key;
+        uint32 addAura;
+        char const* sysTag;
+        char const* shownKey;
+        char const* removedNote;
+    };
+
+    static LabTestDef const* FindLabTest(char const* key)
+    {
+        static LabTestDef const tests[] =
+        {
+            { "stars",    317257, "labstars",    "stars",         "Twilight/echo auras removed." },
+            { "twilight", 317147, "labtwilight", "twilight",      "Star/echo auras removed." },
+            { "echo",     317014, "labecho",     "echoing void",  "Star/twilight auras removed." },
+        };
+
+        if (!key || !*key)
+            return nullptr;
+
+        for (LabTestDef const& def : tests)
+        {
+            char const* a = key;
+            char const* b = def.key;
+            bool same = true;
+            while (*a && *b)
+            {
+                if (std::tolower(static_cast<unsigned char>(*a)) != std::tolower(static_cast<unsigned char>(*b)))
+                {
+                    same = false;
+                    break;
+                }
+                ++a;
+                ++b;
+            }
+            if (same && *a == *b)
+                return &def;
+        }
+        return nullptr;
+    }
+
+    static bool ApplyLabTest(ChatHandler* handler, char const* key)
     {
         Player* player = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr;
         if (!player)
             return false;
 
+        LabTestDef const* def = FindLabTest(key);
+        if (!def)
+        {
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo", key ? key : "");
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
         // .aura hits the selected dummy; this always applies to the GM.
-        player->RemoveAurasDueToSpell(317147);
-        player->RemoveAurasDueToSpell(317155);
-        player->RemoveAurasDueToSpell(318276);
-        player->RemoveAurasDueToSpell(317257);
-        player->AddAura(317257, player);
-        if (Unit* selected = handler->getSelectedUnit())
-            if (selected != player)
-                selected->RemoveAurasDueToSpell(317265);
-        handler->PSendSysMessage("labstars: 317257 on %s (stars). Twilight auras removed.", player->GetName().c_str());
+        RemoveHavenLabCorruptionAuras(player, handler->getSelectedUnit());
+        player->AddAura(def->addAura, player);
+        handler->PSendSysMessage("%s: %u on %s (%s). %s",
+            def->sysTag, def->addAura, player->GetName().c_str(), def->shownKey, def->removedNote);
         return true;
+    }
+
+    static bool HandleLabClearCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        Player* player = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr;
+        if (!player)
+            return false;
+
+        RemoveHavenLabCorruptionAuras(player, handler->getSelectedUnit());
+        handler->PSendSysMessage("lab clear: corruption test auras removed from %s.", player->GetName().c_str());
+        return true;
+    }
+
+    static bool HandleLabTestCommand(ChatHandler* handler, char const* args)
+    {
+        if (!args || !*args)
+        {
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo>");
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        char key[64] = {};
+        if (sscanf(args, "%63s", key) != 1)
+        {
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo>");
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+        return ApplyLabTest(handler, key);
+    }
+
+    static bool HandleLabStarsCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        return ApplyLabTest(handler, "stars");
     }
 
     static bool HandleLabTwilightCommand(ChatHandler* handler, char const* /*args*/)
     {
-        Player* player = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr;
-        if (!player)
-            return false;
+        return ApplyLabTest(handler, "twilight");
+    }
 
-        player->RemoveAurasDueToSpell(317257);
-        player->RemoveAurasDueToSpell(317262);
-        player->RemoveAurasDueToSpell(324889);
-        player->RemoveAurasDueToSpell(324890);
-        player->RemoveAurasDueToSpell(324891);
-        player->RemoveAurasDueToSpell(318274);
-        player->RemoveAurasDueToSpell(317147);
-        player->AddAura(317147, player);
-        if (Unit* selected = handler->getSelectedUnit())
-            if (selected != player)
-                selected->RemoveAurasDueToSpell(317265);
-        handler->PSendSysMessage("labtwilight: 317147 on %s (twilight). Star auras removed.", player->GetName().c_str());
-        return true;
+    static bool HandleLabEchoCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        return ApplyLabTest(handler, "echo");
     }
 
     static bool HandleLabAoeCommand(ChatHandler* handler, char const* /*args*/)
