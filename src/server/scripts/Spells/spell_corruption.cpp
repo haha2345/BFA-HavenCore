@@ -28,10 +28,24 @@
  *
  * Damage uses 318274/487/488 effect 2 dummy (83/208/312). Item-level
  * average(item) from aura 285 is not wired yet.
+ *
+ * Twilight Devastation (35662):
+ *   318276/477/478  rank 1/2/3 (Aura 285 LINKED_2 -> 317147, dummy 60/120/180)
+ *   317147          hidden proc aura, RPPM 1 haste, 4s ICD, autos+abilities
+ *   317155          beam (CREATE_AREATRIGGER 19034 -> template 2307, 4s)
+ *   317159          shadow school damage, BP=0 so we fill maxHP * (dummy/10)%
+ *
+ * Official hitbox: 317155 CREATE_AREATRIGGER misc 19034 -> template 23070
+ * (cylinder r=3, h=10), spline ~28 yd / 4s. Damage is OnUnitEnter -> 317159,
+ * hits anything attackable in the path (pulls, like retail). 2020-02 hotfix:
+ * max 10 targets, 6th-10th take half damage.
  */
 
+#include "AreaTrigger.h"
+#include "AreaTriggerAI.h"
 #include "Chat.h"
 #include "Log.h"
+#include "Map.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -42,6 +56,10 @@
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "Unit.h"
+#include <cmath>
+#include <memory>
+#include <set>
+#include <vector>
 
 enum InfiniteStarsSpells
 {
@@ -56,6 +74,24 @@ enum InfiniteStarsSpells
     SPELL_INFINITE_STARS_RANK_2       = 318487,
     SPELL_INFINITE_STARS_RANK_3       = 318488
 };
+
+enum TwilightDevastationSpells
+{
+    SPELL_TWILIGHT_DEVASTATION_RANK_1 = 318276,
+    SPELL_TWILIGHT_DEVASTATION_RANK_2 = 318477,
+    SPELL_TWILIGHT_DEVASTATION_RANK_3 = 318478,
+    SPELL_TWILIGHT_PROC               = 317147,
+    SPELL_TWILIGHT_BEAM               = 317155,
+    SPELL_TWILIGHT_DAMAGE             = 317159
+};
+
+// Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
+constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
+constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
+
+// 2020-02 hotfix values, not in DBC: beam stops after 10 targets, 6th-10th take 50%.
+constexpr uint32 TWILIGHT_BEAM_MAX_TARGETS      = 10;
+constexpr uint32 TWILIGHT_BEAM_HALF_DAMAGE_FROM = 6;
 
 namespace
 {
@@ -137,6 +173,11 @@ TriggerCastFlags InfiniteStarsCastFlags()
         TRIGGERED_IGNORE_SET_FACING |
         TRIGGERED_DONT_REPORT_CAST_ERROR |
         TRIGGERED_DISALLOW_PROC_EVENTS);
+}
+
+TriggerCastFlags TwilightDamageCastFlags()
+{
+    return TriggerCastFlags(uint32(InfiniteStarsCastFlags()) | uint32(TRIGGERED_IGNORE_TARGET_CHECK));
 }
 
 void NotifyStarVisual(Unit* caster, Unit* target, uint32 visual, float delay, bool missileOk)
@@ -221,6 +262,81 @@ Unit* ResolveStarTarget(Unit* caster, ProcEventInfo& eventInfo)
             return victim;
 
     return caster->SelectNearbyTarget(nullptr, InfiniteStarsSelectRange());
+}
+
+constexpr int32 TWILIGHT_RANK1_BP_FALLBACK = 60; // tooltip $s1/10 = 6% max HP
+
+uint32 TwilightRankSpell(Unit const* caster)
+{
+    if (caster->HasAura(SPELL_TWILIGHT_DEVASTATION_RANK_3))
+        return SPELL_TWILIGHT_DEVASTATION_RANK_3;
+    if (caster->HasAura(SPELL_TWILIGHT_DEVASTATION_RANK_2))
+        return SPELL_TWILIGHT_DEVASTATION_RANK_2;
+    return SPELL_TWILIGHT_DEVASTATION_RANK_1;
+}
+
+float TwilightHealthPct(Unit const* caster)
+{
+    int32 bp = TWILIGHT_RANK1_BP_FALLBACK;
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(TwilightRankSpell(caster)))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
+            bp = effect->BasePoints;
+    // DBC stores 60/120/180; tooltip is $s1/10 percent of health.
+    return float(bp) / 10.0f / 100.0f;
+}
+
+void NotifyTwilightVisual(Unit* caster, uint32 visual, uint32 hits, int32 damage, bool beamOk)
+{
+    Player* player = caster->ToPlayer();
+    if (!player || !player->IsGameMaster() || !player->GetSession())
+        return;
+
+    ChatHandler(player->GetSession()).PSendSysMessage(
+        "[HavenLab] TWILIGHT_VISUAL spell=%u visual=%u hits=%u damage=%d beam=%u",
+        SPELL_TWILIGHT_BEAM, visual, hits, damage, beamOk ? 1u : 0u);
+}
+
+void NotifyTwilightHit(Unit* caster, Unit* target, uint32 hitIndex, int32 damage)
+{
+    Player* player = caster->ToPlayer();
+    if (!player || !player->IsGameMaster() || !player->GetSession())
+        return;
+
+    ChatHandler(player->GetSession()).PSendSysMessage(
+        "[HavenLab] TWILIGHT_HIT #%u target=%s damage=%d", hitIndex, target->GetName().c_str(), damage);
+}
+
+void CastTwilightDevastation(Unit* caster)
+{
+    if (!caster || !caster->IsAlive())
+        return;
+
+    SpellInfo const* beamInfo = sSpellMgr->GetSpellInfo(SPELL_TWILIGHT_BEAM);
+    uint32 visual = beamInfo ? beamInfo->GetSpellVisual(caster) : 0;
+    int32 baseDamage = int32(float(caster->GetMaxHealth()) * TwilightHealthPct(caster));
+    if (baseDamage < 1)
+        baseDamage = 1;
+
+    int32 duration = beamInfo ? beamInfo->CalcDuration(caster) : 0;
+    if (duration <= 0)
+        duration = int32(TWILIGHT_BEAM_TRAVEL_MS);
+
+    uint32 miscId = 19034;
+    if (beamInfo)
+        if (SpellEffectInfo const* effect = beamInfo->GetEffect(EFFECT_0))
+            if (effect->MiscValue)
+                miscId = uint32(effect->MiscValue);
+
+    // SpellGo plays visual 93766. CREATE_AREATRIGGER is prevented in the SpellScript
+    // so we spawn exactly one AT (Haven's dest-HIT path often skipped the effect).
+    bool beamOk = caster->CastSpell(caster->GetPosition(), SPELL_TWILIGHT_BEAM, InfiniteStarsCastFlags());
+
+    // Damage lives in at_twilight_devastation::OnUnitEnter, driven by the AT's own
+    // spline position (spell_areatrigger_splines 19034: 0 -> 28 yd over 4s).
+    if (caster->GetAreaTriggers(SPELL_TWILIGHT_BEAM).empty())
+        AreaTrigger::CreateAreaTrigger(miscId, caster, nullptr, beamInfo, *caster, duration, visual);
+
+    NotifyTwilightVisual(caster, visual, 0, baseDamage, beamOk);
 }
 }
 
@@ -334,7 +450,8 @@ class spell_infinite_stars_damage : public SpellScript
             --stacks;
         AddPct(damage, InfiniteStarsVulnPct() * stacks);
 
-        caster->DealDamage(target, uint32(damage), nullptr, SPELL_DIRECT_DAMAGE, SPELL_SCHOOL_MASK_ARCANE, GetSpellInfo(), true);
+        // BP is 0; fill hit and let the school-damage effect deal it. DealDamage on top
+        // double-dipped HP (twice the tooltip amount per star).
         SetHitDamage(damage);
     }
 
@@ -344,10 +461,161 @@ class spell_infinite_stars_damage : public SpellScript
     }
 };
 
+// 317147 - hidden proc (RPPM 1 haste, 4s ICD; DBC includes white hits)
+class spell_twilight_devastation_proc : public AuraScript
+{
+    PrepareAuraScript(spell_twilight_devastation_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_TWILIGHT_BEAM, SPELL_TWILIGHT_DAMAGE,
+            SPELL_TWILIGHT_DEVASTATION_RANK_1, SPELL_TWILIGHT_DEVASTATION_RANK_2, SPELL_TWILIGHT_DEVASTATION_RANK_3 });
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        Unit* caster = GetTarget();
+        if (!caster)
+            return;
+
+        TC_LOG_INFO("scripts", "TwilightDevastation proc caster=%s", caster->GetName().c_str());
+        CastTwilightDevastation(caster);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_twilight_devastation_proc::HandleProc);
+    }
+};
+
+// 317159 - shadow damage BP is 0; script fills maxHP * (rank dummy/10)%
+class spell_twilight_devastation_damage : public SpellScript
+{
+    PrepareSpellScript(spell_twilight_devastation_damage);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_TWILIGHT_DEVASTATION_RANK_1, SPELL_TWILIGHT_DEVASTATION_RANK_2, SPELL_TWILIGHT_DEVASTATION_RANK_3 });
+    }
+
+    void HandleHit()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target)
+            return;
+
+        // The AT passes the (possibly halved) amount via SPELLVALUE_BASE_POINT0; keep it.
+        if (GetHitDamage() > 0)
+            return;
+
+        int32 damage = int32(float(caster->GetMaxHealth()) * TwilightHealthPct(caster));
+        if (damage < 1)
+            damage = 1;
+
+        // BP is 0; fill hit and let the school-damage effect apply (crit/vers). Do not DealDamage
+        // on top — that would double-dip HP.
+        SetHitDamage(damage);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_twilight_devastation_damage::HandleHit);
+    }
+};
+
+// 317155 - CREATE_AREATRIGGER 19034. Dest on the caster; the effect itself is spawned in
+// CastTwilightDevastation (this core often never runs SPELL_EFFECT_HANDLE_HIT for it).
+class spell_twilight_devastation_beam : public SpellScript
+{
+    PrepareSpellScript(spell_twilight_devastation_beam);
+
+    void SetDest(SpellDestination& dest)
+    {
+        if (Unit* caster = GetCaster())
+            dest.Relocate(*caster);
+    }
+
+    void PreventAT(SpellEffIndex /*effIndex*/)
+    {
+        PreventHitDefaultEffect(EFFECT_0);
+    }
+
+    void Register() override
+    {
+        OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_twilight_devastation_beam::SetDest, EFFECT_0, TARGET_DEST_CASTER);
+        OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_twilight_devastation_beam::SetDest, EFFECT_0, TARGET_DEST_DEST_FRONT);
+        OnEffectHit += SpellEffectFn(spell_twilight_devastation_beam::PreventAT, EFFECT_0, SPELL_EFFECT_CREATE_AREATRIGGER);
+    }
+};
+
+// areatrigger_template 23070 (SpellMiscId 19034). Cylinder r=3 h=10 flies 28 yd / 4s; damage on enter.
+// Hits anything attackable in the path (retail beam pulls idle mobs). 2020-02 hotfix:
+// 6th-10th target take half damage, beam ends after the 10th.
+struct at_twilight_devastation : AreaTriggerAI
+{
+    at_twilight_devastation(AreaTrigger* areatrigger) : AreaTriggerAI(areatrigger), _hitCount(0) { }
+
+    void OnCreate() override
+    {
+        // Spline comes from spell_areatrigger_splines (19034: unique points 0..28 yd,
+        // Catmullrom needs no duplicated endpoints on this core). Fallback if the DB row is gone.
+        if (!at->HasSplines())
+        {
+            std::vector<Position> pts =
+            {
+                { 0.0f, 0.0f, 0.0f },
+                { TWILIGHT_BEAM_RANGE_YD * 0.33f, 0.0f, 0.0f },
+                { TWILIGHT_BEAM_RANGE_YD * 0.66f, 0.0f, 0.0f },
+                { TWILIGHT_BEAM_RANGE_YD, 0.0f, 0.0f }
+            };
+            at->InitSplineOffsets(pts, TWILIGHT_BEAM_TRAVEL_MS);
+        }
+    }
+
+    void OnUnitEnter(Unit* unit) override
+    {
+        Unit* caster = at->GetCaster();
+        if (!caster || !unit || unit == caster || !unit->IsAlive())
+            return;
+
+        SpellInfo const* damageInfo = sSpellMgr->GetSpellInfo(SPELL_TWILIGHT_DAMAGE);
+        if (!caster->_IsValidAttackTarget(unit, damageInfo))
+            return;
+
+        // Each target is hit once per beam even if it re-enters the sphere.
+        if (!_hitGuids.insert(unit->GetGUID()).second)
+            return;
+
+        ++_hitCount;
+
+        int32 damage = int32(float(caster->GetMaxHealth()) * TwilightHealthPct(caster));
+        if (_hitCount >= TWILIGHT_BEAM_HALF_DAMAGE_FROM)
+            damage /= 2;
+        if (damage < 1)
+            damage = 1;
+
+        caster->CastCustomSpell(SPELL_TWILIGHT_DAMAGE, SPELLVALUE_BASE_POINT0, damage, unit, TwilightDamageCastFlags());
+        NotifyTwilightHit(caster, unit, _hitCount, damage);
+
+        if (_hitCount >= TWILIGHT_BEAM_MAX_TARGETS)
+            at->Remove();
+    }
+
+private:
+    std::set<ObjectGuid> _hitGuids;
+    uint32 _hitCount;
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
     RegisterAuraScript(spell_infinite_stars_proc);
     RegisterSpellScript(spell_infinite_stars_selector);
     RegisterSpellScript(spell_infinite_stars_damage);
+    RegisterAuraScript(spell_twilight_devastation_proc);
+    RegisterSpellScript(spell_twilight_devastation_beam);
+    RegisterSpellScript(spell_twilight_devastation_damage);
+    RegisterAreaTriggerAI(at_twilight_devastation);
 }

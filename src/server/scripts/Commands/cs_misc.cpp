@@ -16,6 +16,7 @@
  */
 
 #include "AccountMgr.h"
+#include "Bag.h"
 #include "CellImpl.h"
 #include "CharacterCache.h"
 #include "Chat.h"
@@ -92,6 +93,10 @@ public:
             { "hidearea",         rbac::RBAC_PERM_COMMAND_HIDEAREA,         false, &HandleHideAreaCommand,         "" },
             { "itemmove",         rbac::RBAC_PERM_COMMAND_ITEMMOVE,         false, &HandleItemMoveCommand,         "" },
             { "kick",             rbac::RBAC_PERM_COMMAND_KICK,              true, &HandleKickPlayerCommand,       "" },
+            { "labaoe",           rbac::RBAC_PERM_COMMAND_NPC_ADD,          false, &HandleLabAoeCommand,           "" },
+            { "labgear",          rbac::RBAC_PERM_COMMAND_ADDITEM,          false, &HandleLabGearCommand,          "" },
+            { "labstars",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabStarsCommand,         "" },
+            { "labtwilight",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTwilightCommand,      "" },
             { "linkgrave",        rbac::RBAC_PERM_COMMAND_LINKGRAVE,        false, &HandleLinkGraveCommand,        "" },
             { "listfreeze",       rbac::RBAC_PERM_COMMAND_LISTFREEZE,       false, &HandleListFreezeCommand,       "" },
             { "maxskill",         rbac::RBAC_PERM_COMMAND_MAXSKILL,         false, &HandleMaxSkillCommand,         "" },
@@ -1259,6 +1264,225 @@ public:
         playerTarget->RemoveExploredZones(offset, val);
 
         handler->SendSysMessage(LANG_UNEXPLORE_AREA);
+        return true;
+    }
+
+    static bool HandleLabStarsCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        Player* player = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr;
+        if (!player)
+            return false;
+
+        // .aura hits the selected dummy; this always applies to the GM.
+        player->RemoveAurasDueToSpell(317147);
+        player->RemoveAurasDueToSpell(317155);
+        player->RemoveAurasDueToSpell(318276);
+        player->RemoveAurasDueToSpell(317257);
+        player->AddAura(317257, player);
+        if (Unit* selected = handler->getSelectedUnit())
+            if (selected != player)
+                selected->RemoveAurasDueToSpell(317265);
+        handler->PSendSysMessage("labstars: 317257 on %s (stars). Twilight auras removed.", player->GetName().c_str());
+        return true;
+    }
+
+    static bool HandleLabTwilightCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        Player* player = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr;
+        if (!player)
+            return false;
+
+        player->RemoveAurasDueToSpell(317257);
+        player->RemoveAurasDueToSpell(317262);
+        player->RemoveAurasDueToSpell(324889);
+        player->RemoveAurasDueToSpell(324890);
+        player->RemoveAurasDueToSpell(324891);
+        player->RemoveAurasDueToSpell(318274);
+        player->RemoveAurasDueToSpell(317147);
+        player->AddAura(317147, player);
+        if (Unit* selected = handler->getSelectedUnit())
+            if (selected != player)
+                selected->RemoveAurasDueToSpell(317265);
+        handler->PSendSysMessage("labtwilight: 317147 on %s (twilight). Star auras removed.", player->GetName().c_str());
+        return true;
+    }
+
+    static bool HandleLabAoeCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        Player* player = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr;
+        if (!player)
+            return false;
+
+        constexpr uint32 dummyEntry = 31146; // Heroic Training Dummy
+        if (!sObjectMgr->GetCreatureTemplate(dummyEntry))
+        {
+            handler->PSendSysMessage("labaoe: creature %u missing", dummyEntry);
+            return false;
+        }
+
+        uint32 cleared = 0;
+        for (Creature* creature : player->FindNearestCreatures(dummyEntry, 80.0f))
+        {
+            if (!creature || creature->GetSpawnId())
+                continue;
+            creature->DespawnOrUnsummon();
+            ++cleared;
+        }
+
+        struct Spot
+        {
+            float dist;
+            float angle;
+        };
+        Spot const spots[] =
+        {
+            {  5.0f, 0.0f },
+            {  9.0f, 0.0f },
+            { 13.0f, 0.0f },
+            { 17.0f, 0.0f },
+            { 21.0f, 0.0f },
+            { 12.0f, float(M_PI) / 2.0f },
+            {  6.0f, float(M_PI) }
+        };
+
+        uint32 spawned = 0;
+        for (Spot const& spot : spots)
+        {
+            Position pos = player->GetFirstCollisionPosition(spot.dist, spot.angle);
+            pos.SetOrientation(pos.GetAngle(*player));
+            if (player->SummonCreature(dummyEntry, pos, TEMPSUMMON_TIMED_DESPAWN, 15 * MINUTE * IN_MILLISECONDS))
+                ++spawned;
+        }
+
+        handler->PSendSysMessage(
+            "labaoe: spawned %u temp dummies (cleared %u). Face the line of 5; side and back should miss Twilight. 15 min, not saved to DB.",
+            spawned, cleared);
+        return true;
+    }
+
+    static bool HandleLabGearCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        Player* player = handler->getSelectedPlayerOrSelf();
+        if (!player)
+        {
+            handler->SendSysMessage(LANG_NO_CHAR_SELECTED);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        if (handler->HasLowerSecurity(player, ObjectGuid::Empty))
+            return false;
+
+        struct KitItem
+        {
+            uint32 id;
+            std::vector<int32> bonuses;
+        };
+
+        // Ny'alotha-level warrior plate (SimC T25 Arms). No corruption bonus lists.
+        KitItem const kit[] =
+        {
+            { 174167, { 1517, 4775 } }, // head
+            { 158075, { 4929, 1630 } }, // heart of azeroth
+            { 174166, { 1517, 4775 } }, // shoulders
+            { 169223, { } },            // cloak
+            { 174164, { 1517, 4775 } }, // chest
+            { 174170, { 1517 } },       // wrists
+            { 174178, { 1517 } },       // hands
+            { 174174, { 1517 } },       // waist
+            { 174172, { 1517 } },       // legs
+            { 174173, { 1517 } },       // feet
+            { 169159, { 1522 } },       // ring
+            { 169158, { 1522 } },       // ring
+            { 169311, { 1517 } },       // trinket
+            { 174500, { 1517 } },       // trinket
+            { 172187, { 1517 } }        // 2H
+        };
+
+        uint32 removed = 0;
+        for (KitItem const& entry : kit)
+        {
+            uint32 have = player->GetItemCount(entry.id, true);
+            if (!have)
+                continue;
+            removed += have;
+            player->DestroyItemCount(entry.id, have, true, true);
+        }
+
+        uint32 bagId = sObjectMgr->GetItemTemplate(154695) ? 154695 : 142075;
+        for (uint8 slot = INVENTORY_SLOT_BAG_START; slot < INVENTORY_SLOT_BAG_END; ++slot)
+        {
+            if (Item* equipped = player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            {
+                Bag* bag = equipped->ToBag();
+                if (!bag || !bag->IsEmpty())
+                    continue;
+                player->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
+            }
+            if (!player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+                player->EquipNewItem(slot, bagId, ItemContext::NONE, true);
+        }
+
+        int64 const goldCap = 100000000; // 10000g
+        if (player->GetMoney() < uint64(goldCap))
+        {
+            int64 moneyToAdd = goldCap - int64(player->GetMoney());
+            if (uint64(player->GetMoney()) + uint64(moneyToAdd) > MAX_MONEY_AMOUNT)
+                moneyToAdd = int64(MAX_MONEY_AMOUNT - player->GetMoney());
+            if (moneyToAdd > 0)
+                player->ModifyMoney(moneyToAdd);
+        }
+
+        uint32 given = 0;
+        for (KitItem const& entry : kit)
+        {
+            if (!sObjectMgr->GetItemTemplate(entry.id))
+            {
+                handler->PSendSysMessage("labgear: invalid item %u", entry.id);
+                continue;
+            }
+
+            ItemPosCountVec storeDest;
+            uint32 noSpace = 0;
+            if (player->CanStoreNewItem(NULL_BAG, NULL_SLOT, storeDest, entry.id, 1, &noSpace) != EQUIP_ERR_OK || storeDest.empty())
+            {
+                handler->PSendSysMessage("labgear: no space for %u", entry.id);
+                continue;
+            }
+
+            // Same path as .additem so bonus lists persist (CreateItem+AddBonuses before Equip was dropping them).
+            Item* item = player->StoreNewItem(storeDest, entry.id, true, ItemRandomBonusListId(0), GuidSet(), ItemContext::NONE, entry.bonuses);
+            if (!item)
+            {
+                handler->PSendSysMessage("labgear: cannot create %u", entry.id);
+                continue;
+            }
+
+            if (item->GetCount() != 1)
+                item->SetCount(1);
+
+            uint16 equipDest = 0;
+            if (player->CanEquipItem(NULL_SLOT, equipDest, item, false) == EQUIP_ERR_OK)
+            {
+                player->RemoveItem(item->GetBagSlot(), item->GetSlot(), true);
+                player->EquipItem(equipDest, item, true);
+            }
+
+            player->SendNewItem(item, 1, true, false);
+            ++given;
+        }
+
+        player->AutoUnequipOffhandIfNeed();
+        player->DurabilityRepairAll(false, 0, false);
+
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        player->SaveInventoryAndGoldToDB(trans);
+        CharacterDatabase.CommitTransaction(trans);
+
+        if (removed)
+            handler->PSendSysMessage("labgear: removed %u old copies, equipped %u items.", removed, given);
+        else
+            handler->PSendSysMessage("labgear: equipped %u items.", given);
         return true;
     }
 
