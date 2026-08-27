@@ -108,6 +108,7 @@ public:
             { "labecho",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabEchoCommand,          "" },
             { "labgear",          rbac::RBAC_PERM_COMMAND_ADDITEM,          false, &HandleLabGearCommand,          "" },
             { "labstars",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabStarsCommand,         "" },
+            { "labritual",        rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabRitualCommand,        "" },
             { "labtentacle",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTentacleCommand,      "" },
             { "labtwilight",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTwilightCommand,      "" },
             { "linkgrave",        rbac::RBAC_PERM_COMMAND_LINKGRAVE,        false, &HandleLinkGraveCommand,        "" },
@@ -1309,6 +1310,12 @@ public:
         player->RemoveAurasDueToSpell(318482);
         player->RemoveAurasDueToSpell(318483);
         player->RemoveAllMinionsByEntry(162764);
+        // Void Ritual
+        player->RemoveAurasDueToSpell(316814);
+        player->RemoveAurasDueToSpell(316823);
+        player->RemoveAurasDueToSpell(318286);
+        player->RemoveAurasDueToSpell(318479);
+        player->RemoveAurasDueToSpell(318480);
         if (selected && selected != player)
             selected->RemoveAurasDueToSpell(317265);
     }
@@ -1327,10 +1334,11 @@ public:
     {
         static LabTestDef const tests[] =
         {
-            { "stars",    317257, "labstars",    "stars",         "Twilight/echo/tentacle auras removed." },
-            { "twilight", 317147, "labtwilight", "twilight",      "Star/echo/tentacle auras removed." },
-            { "echo",     317014, "labecho",     "echoing void",  "Star/twilight/tentacle auras removed." },
-            { "tentacle", 316815, "labtentacle", "tentacle",      "Star/twilight/echo auras removed." },
+            { "stars",    317257, "labstars",    "stars",         "Twilight/echo/tentacle/ritual auras removed." },
+            { "twilight", 317147, "labtwilight", "twilight",      "Star/echo/tentacle/ritual auras removed." },
+            { "echo",     317014, "labecho",     "echoing void",  "Star/twilight/tentacle/ritual auras removed." },
+            { "tentacle", 316815, "labtentacle", "tentacle",      "Star/twilight/echo/ritual auras removed." },
+            { "ritual",   316814, "labritual",   "void ritual",   "Star/twilight/echo/tentacle auras removed." },
         };
 
         if (!key || !*key)
@@ -1366,7 +1374,7 @@ public:
         LabTestDef const* def = FindLabTest(key);
         if (!def)
         {
-            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle", key ? key : "");
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual", key ? key : "");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1394,7 +1402,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1402,7 +1410,7 @@ public:
         char key[64] = {};
         if (sscanf(args, "%63s", key) != 1)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1427,6 +1435,11 @@ public:
     static bool HandleLabTentacleCommand(ChatHandler* handler, char const* /*args*/)
     {
         return ApplyLabTest(handler, "tentacle");
+    }
+
+    static bool HandleLabRitualCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        return ApplyLabTest(handler, "ritual");
     }
 
     static bool HandleLabAoeCommand(ChatHandler* handler, char const* /*args*/)

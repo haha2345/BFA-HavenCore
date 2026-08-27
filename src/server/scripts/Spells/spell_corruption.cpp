@@ -52,6 +52,11 @@
  *   316815          hidden proc, RPPM 1 no haste, ProcFlags 69908 (autos+abilities)
  *   316818          summon 162764 for 10s, radius 3
  *   316835          Mind Flay: shadow periodic, 10s / 1s, BP=0
+ *
+ * Void Ritual (35662):
+ *   318286/479/480  rank 1/2/3 (Aura 285 LINKED -> 316814, dummy 14/33/63)
+ *   316814          hidden proc, RPPM 1, yellow+heal+hostile+periodic+trap
+ *   316823          The End Is Coming: 20s, max 20 stacks, MOD_RATING + periodic
  */
 
 #include "AreaTrigger.h"
@@ -124,6 +129,15 @@ enum TwistedAppendageSpells
     NPC_TWISTED_APPENDAGE          = 162764
 };
 
+enum VoidRitualSpells
+{
+    SPELL_VOID_RITUAL_RANK_1     = 318286,
+    SPELL_VOID_RITUAL_RANK_2     = 318479,
+    SPELL_VOID_RITUAL_RANK_3     = 318480,
+    SPELL_VOID_RITUAL_PROC       = 316814,
+    SPELL_VOID_RITUAL_END_COMING = 316823
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -139,6 +153,13 @@ constexpr uint32 ECHOING_VOID_PERIOD_FALLBACK_MS = 1000;
 constexpr int32 ECHOING_VOID_DURATION_SLACK_MS = 400;
 
 constexpr int32 TWISTED_APPENDAGE_RANK1_PCT_FALLBACK = 21; // tooltip $s2/100 * max(AP, SP)
+
+// DBC has ally count (2) but no radius. 8 yd is party-range "nearby".
+constexpr float VOID_RITUAL_ALLY_RANGE_YD = 8.0f;
+// SimC: solo RPPM *= 5/6. Not a DBC field — calibrate if in-game disagrees.
+constexpr float VOID_RITUAL_SOLO_RPPM_MULT = 5.0f / 6.0f;
+constexpr int32 VOID_RITUAL_RANK1_RATING_FALLBACK = 14;
+constexpr uint32 VOID_RITUAL_ALLY_NEED_FALLBACK = 2;
 
 namespace
 {
@@ -546,6 +567,92 @@ TriggerCastFlags TwistedAppendageFlayFlags()
         TRIGGERED_IGNORE_POWER_AND_REAGENT_COST |
         TRIGGERED_DONT_REPORT_CAST_ERROR |
         TRIGGERED_DISALLOW_PROC_EVENTS);
+}
+
+uint32 VoidRitualRankSpell(Unit const* owner)
+{
+    if (owner->HasAura(SPELL_VOID_RITUAL_RANK_3))
+        return SPELL_VOID_RITUAL_RANK_3;
+    if (owner->HasAura(SPELL_VOID_RITUAL_RANK_2))
+        return SPELL_VOID_RITUAL_RANK_2;
+    return SPELL_VOID_RITUAL_RANK_1;
+}
+
+int32 VoidRitualRatingPerStack(Unit const* owner)
+{
+    int32 rating = VOID_RITUAL_RANK1_RATING_FALLBACK;
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(VoidRitualRankSpell(owner)))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
+            rating = effect->BasePoints;
+    return rating < 1 ? VOID_RITUAL_RANK1_RATING_FALLBACK : rating;
+}
+
+uint32 VoidRitualAllyNeed(Unit const* owner)
+{
+    if (SpellInfo const* proc = sSpellMgr->GetSpellInfo(SPELL_VOID_RITUAL_PROC))
+        if (SpellEffectInfo const* effect = proc->GetEffect(EFFECT_2))
+            if (effect->BasePoints > 0)
+                return uint32(effect->BasePoints);
+
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(VoidRitualRankSpell(owner)))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_2))
+            if (effect->BasePoints > 0)
+                return uint32(effect->BasePoints);
+
+    return VOID_RITUAL_ALLY_NEED_FALLBACK;
+}
+
+uint32 VoidRitualNearbyAllies(Unit* caster)
+{
+    if (!caster)
+        return 0;
+
+    std::vector<Player*> players;
+    caster->GetPlayerListInGrid(players, VOID_RITUAL_ALLY_RANGE_YD);
+
+    uint32 allies = 0;
+    for (Player* player : players)
+    {
+        if (!player || player == caster || !player->IsAlive())
+            continue;
+        if (!caster->IsFriendlyTo(player))
+            continue;
+        if (!player->HasAura(SPELL_VOID_RITUAL_PROC))
+            continue;
+        ++allies;
+    }
+    return allies;
+}
+
+void NotifyVoidRitualTick(Unit* owner, uint32 stacks, int32 rating)
+{
+    LabNotify(owner, "RITUAL_TICK", Trinity::StringFormat("stacks=%u rating=%d", stacks, rating));
+}
+
+void CastVoidRitual(Unit* caster)
+{
+    if (!caster || !caster->IsAlive())
+        return;
+
+    if (caster->HasAura(SPELL_VOID_RITUAL_END_COMING))
+    {
+        LabNotify(caster, "RITUAL_PROC", "skipped=refresh");
+        return;
+    }
+
+    uint32 allies = VoidRitualNearbyAllies(caster);
+    bool increased = allies >= VoidRitualAllyNeed(caster);
+    if (!increased && !roll_chance_f(VOID_RITUAL_SOLO_RPPM_MULT * 100.0f))
+    {
+        LabNotify(caster, "RITUAL_PROC", Trinity::StringFormat(
+            "skipped=solo allies=%u", allies));
+        return;
+    }
+
+    bool ok = caster->CastSpell(caster, SPELL_VOID_RITUAL_END_COMING, InfiniteStarsCastFlags());
+    LabNotify(caster, "RITUAL_PROC", Trinity::StringFormat(
+        "allies=%u increased=%u ok=%u",
+        allies, increased ? 1u : 0u, ok ? 1u : 0u));
 }
 }
 
@@ -1099,6 +1206,101 @@ private:
     }
 };
 
+// 316814 - hidden proc. DBC already has RPPM 1 and yellow/heal/hostile/periodic/trap flags.
+class spell_void_ritual_proc : public AuraScript
+{
+    PrepareAuraScript(spell_void_ritual_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_VOID_RITUAL_END_COMING,
+            SPELL_VOID_RITUAL_RANK_1, SPELL_VOID_RITUAL_RANK_2, SPELL_VOID_RITUAL_RANK_3 });
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        if (Unit* caster = GetTarget())
+            CastVoidRitual(caster);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_void_ritual_proc::HandleProc);
+    }
+};
+
+// 316823 - The End Is Coming. MOD_RATING amount = rank Dummy * stacks.
+class spell_void_ritual_end_is_coming : public AuraScript
+{
+    PrepareAuraScript(spell_void_ritual_end_is_coming);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_VOID_RITUAL_PROC,
+            SPELL_VOID_RITUAL_RANK_1, SPELL_VOID_RITUAL_RANK_2, SPELL_VOID_RITUAL_RANK_3 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+
+        Unit* owner = GetUnitOwner();
+        if (!owner || !owner->HasAura(SPELL_VOID_RITUAL_PROC))
+        {
+            amount = 0;
+            return;
+        }
+
+        uint32 stacks = GetAura() ? GetAura()->GetStackAmount() : 1;
+        if (stacks < 1)
+            stacks = 1;
+        amount = VoidRitualRatingPerStack(owner) * int32(stacks);
+    }
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* owner = GetUnitOwner();
+        if (!owner || !owner->HasAura(SPELL_VOID_RITUAL_PROC))
+            return;
+
+        uint32 stacks = GetAura() ? GetAura()->GetStackAmount() : 1;
+        NotifyVoidRitualTick(owner, stacks, VoidRitualRatingPerStack(owner) * int32(stacks));
+    }
+
+    void HandlePeriodic(AuraEffect const* /*aurEff*/)
+    {
+        Unit* owner = GetUnitOwner();
+        Aura* aura = GetAura();
+        if (!owner || !aura || !owner->HasAura(SPELL_VOID_RITUAL_PROC))
+            return;
+
+        uint32 maxStacks = aura->GetMaxStackAmount();
+        if (!maxStacks)
+            maxStacks = 20;
+        uint32 before = aura->GetStackAmount();
+        // refresh=false: official window is 20s total. Default ModStackAmount
+        // resets duration, which turned a 20s ramp into ~40s (this log: 15s→56s).
+        if (before < maxStacks)
+            aura->ModStackAmount(1, AURA_REMOVE_BY_DEFAULT, false, false);
+
+        uint32 stacks = aura->GetStackAmount();
+        int32 rating = VoidRitualRatingPerStack(owner) * int32(stacks);
+        if (AuraEffect* ratingEff = aura->GetEffect(EFFECT_0))
+            ratingEff->ChangeAmount(rating);
+
+        if (stacks != before)
+            NotifyVoidRitualTick(owner, stacks, rating);
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_void_ritual_end_is_coming::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RATING);
+        AfterEffectApply += AuraEffectApplyFn(spell_void_ritual_end_is_coming::HandleApply, EFFECT_0, SPELL_AURA_MOD_RATING, AURA_EFFECT_HANDLE_REAL);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_void_ritual_end_is_coming::HandlePeriodic, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -1115,4 +1317,6 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_twisted_appendage_proc);
     RegisterAuraScript(spell_twisted_appendage_flay);
     RegisterCreatureAI(npc_twisted_appendage);
+    RegisterAuraScript(spell_void_ritual_proc);
+    RegisterAuraScript(spell_void_ritual_end_is_coming);
 }

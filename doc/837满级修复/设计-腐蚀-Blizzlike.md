@@ -62,6 +62,7 @@ DBC 表达不了、但属于 35662 最终行为的数字，允许硬编码，集
 |------|------|------|
 | 暮光毁灭 | 2020-02：最多 10 目标，第 6–10 个半伤，光束打满即消 | `TWILIGHT_BEAM_MAX_TARGETS=10`、`TWILIGHT_BEAM_HALF_DAMAGE_FROM=6` |
 | 虚空回响 | 2020-01-27：仅 GCD 技能；ICD 700ms；客户端 ProcFlags=0 | `spell_proc` 复原掩码 69904；C++ 滤无 GCD。坍缩几率 DBC 无字段，第 1 层用 SimC 模型 `ECHOING_VOID_COLLAPSE_CHANCE=0.15` |
+| 虚空仪式 | Dummy 7/10/13→14/33/63。附近人数 DBC 有、半径/倍率没有 | `VOID_RITUAL_ALLY_RANGE_YD=8`；无人时 SimC `VOID_RITUAL_SOLO_RPPM_MULT=5/6` |
 | 无尽之星 | 双入口 1.5s 去重（工程去重，非热修） | `317262` 冷却 |
 
 以后每加一条热修值，登记到这张表。来源用蓝贴/Wowhead 热修记录核对，不抄现役数值。
