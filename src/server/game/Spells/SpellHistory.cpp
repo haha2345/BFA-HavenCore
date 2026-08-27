@@ -562,6 +562,14 @@ void SpellHistory::ModifyCooldown(uint32 spellId, Clock::duration offset)
 
     Clock::time_point now = GameTime::GetGameTimeSystemPoint();
 
+    if (itr->second.CategoryEnd > now)
+    {
+        if (itr->second.CategoryEnd + offset > now)
+            itr->second.CategoryEnd += offset;
+        else
+            itr->second.CategoryEnd = now;
+    }
+
     if (itr->second.CooldownEnd + offset > now)
         itr->second.CooldownEnd += offset;
     else
@@ -871,6 +879,38 @@ void SpellHistory::ReduceChargeCooldown(SpellCategoryEntry const* chargeCategory
         entry.RechargeStart -= std::chrono::milliseconds(reductionTime);
         entry.RechargeEnd -= std::chrono::milliseconds(reductionTime);
     }
+    UpdateCharge(chargeCategoryEntry);
+    ForceSendSpellCharge(chargeCategoryEntry);
+}
+
+void SpellHistory::ScaleChargeRecovery(uint32 chargeCategoryId, int32 pct, bool apply)
+{
+    if (pct <= 0)
+        return;
+
+    SpellCategoryEntry const* chargeCategoryEntry = sSpellCategoryStore.LookupEntry(chargeCategoryId);
+    auto itr = _categoryCharges.find(chargeCategoryId);
+    if (!chargeCategoryEntry || itr == _categoryCharges.end() || itr->second.empty())
+        return;
+
+    Clock::time_point now = GameTime::GetGameTimeSystemPoint();
+    for (ChargeEntry& entry : itr->second)
+    {
+        if (entry.RechargeEnd <= now)
+            continue;
+
+        int64 remain = std::chrono::duration_cast<std::chrono::milliseconds>(entry.RechargeEnd - now).count();
+        if (remain <= 0)
+            continue;
+
+        int64 scaled = apply
+            ? (remain * 100) / (100 + pct)
+            : (remain * (100 + pct)) / 100;
+        Clock::duration offset = std::chrono::milliseconds(scaled - remain);
+        entry.RechargeStart += offset;
+        entry.RechargeEnd += offset;
+    }
+
     UpdateCharge(chargeCategoryEntry);
     ForceSendSpellCharge(chargeCategoryEntry);
 }

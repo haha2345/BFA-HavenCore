@@ -1273,6 +1273,8 @@ void ApplyIneffableTruthRate(int32& ms, int32 pct)
         ms = int32(int64(ms) * 100 / (100 + pct));
 }
 
+void ScaleExistingCharges(Player* player, int32 pct, bool apply);
+
 void ScaleExistingCooldowns(Player* player, int32 pct, bool apply)
 {
     if (!player || pct <= 0)
@@ -1301,6 +1303,54 @@ void ScaleExistingCooldowns(Player* player, int32 pct, bool apply)
         int32 delta = int32(scaled - int64(remain));
         if (delta)
             history->ModifyCooldown(info->Id, delta);
+    }
+
+    ScaleExistingCharges(player, pct, apply);
+}
+
+bool IneffableTruthScalesChargeCategory(Player const* player, uint32 chargeCategoryId)
+{
+    if (!player || !chargeCategoryId)
+        return false;
+
+    for (PlayerSpellMap::value_type const& kv : player->GetSpellMap())
+    {
+        if (!kv.second || kv.second->state == PLAYERSPELL_REMOVED)
+            continue;
+
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(kv.first);
+        if (!info || info->ChargeCategoryId != chargeCategoryId)
+            continue;
+        if (info->IsPassive() || IsIneffableTruthOwnSpell(info->Id) || IsGlimpseExcludedSpell(info->Id))
+            continue;
+        return true;
+    }
+
+    return false;
+}
+
+void ScaleExistingCharges(Player* player, int32 pct, bool apply)
+{
+    if (!player || pct <= 0)
+        return;
+
+    SpellHistory* history = player->GetSpellHistory();
+    if (!history)
+        return;
+
+    std::set<uint32> seen;
+    for (PlayerSpellMap::value_type const& kv : player->GetSpellMap())
+    {
+        if (!kv.second || kv.second->state == PLAYERSPELL_REMOVED)
+            continue;
+
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(kv.first);
+        if (!info || !info->ChargeCategoryId || !seen.insert(info->ChargeCategoryId).second)
+            continue;
+        if (!IneffableTruthScalesChargeCategory(player, info->ChargeCategoryId))
+            continue;
+
+        history->ScaleChargeRecovery(info->ChargeCategoryId, pct, apply);
     }
 }
 
@@ -2972,9 +3022,11 @@ public:
         ApplyIneffableTruthRate(categoryCooldown, pct);
     }
 
-    void OnChargeRecoveryTimeStart(Player* player, uint32 /*chargeCategoryId*/, int32& chargeRecoveryTime) override
+    void OnChargeRecoveryTimeStart(Player* player, uint32 chargeCategoryId, int32& chargeRecoveryTime) override
     {
         if (!player || !player->HasAura(SPELL_INEFFABLE_TRUTH_BUFF))
+            return;
+        if (!IneffableTruthScalesChargeCategory(player, chargeCategoryId))
             return;
 
         ApplyIneffableTruthRate(chargeRecoveryTime, IneffableTruthPct(player));

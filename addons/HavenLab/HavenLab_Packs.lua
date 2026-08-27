@@ -848,7 +848,7 @@ HL.PACKS = {
             return {
                 "待进游戏验收：316801 约 10 秒；窗口内新开的职业 CD 按 100/(100+30) 缩短。",
                 "pct=30 溯源 318303 Dummy。Lab 只挂 316799 时回退读 SpellInfo Dummy 30。",
-                "已有 buff 再 proc：默认刷新 10s（SimC TODO）。已在转的充能剩余、物品充能是否加速，进游戏再定。",
+                "已有 buff 再 proc：默认刷新 10s（SimC TODO）。职业充能 Apply/Remove 对称缩放；不在技能书的物品充能不加速。",
                 "职业技能过滤先宽后窄。二段 Dummy 50 用 .aura 318484 再验。",
             }
         end,
