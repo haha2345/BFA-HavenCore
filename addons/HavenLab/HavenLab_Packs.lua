@@ -707,6 +707,45 @@ HL.PACKS = {
         end,
     },
 
+    vitality = {
+        key = "vitality",
+        title = "活力涌动",
+        order = 9,
+        serverCmd = ".lab test vitality",
+        snapshotOnStart = true,
+        snapshotSpell = 318211,
+        expect = { stat = "versRating", minDelta = 343 },
+        hint = "挂 318212。木桩打不出。站会还手的怪或挨 DoT。\n318211 全能 rating +343（Scaled，不是 Icy Veins 312），20 秒。",
+        startText = "【活力涌动】已挂 318212。去挨打，不要打木桩。proc 写成 VITAL_PROC，buff 是 318211。",
+        startPrint = "已挂 318212。木桩测不出。站怪堆挨打。看 318211 与全能 rating +343。",
+        ids = { 318270, 318495, 318499, 318212, 318211 },
+        labels = {
+            [318270] = "一段驱动",
+            [318495] = "二段驱动",
+            [318499] = "三段驱动",
+            [318212] = "隐藏proc",
+            [318211] = "全能buff",
+        },
+        chain = {
+            { id = 318212, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂上 318212。用 .lab test vitality / .labvitality。" },
+            { id = 318212, role = "开涌动", want = "labmsg", labType = "VITAL_PROC", procStep = true,
+              hintFail = "没有 VITAL_PROC。木桩打不出；站会还手的怪或自己挨 DoT（RPPM 2，taken）。" },
+            { id = 318211, role = "全能buff", want = "aura-self",
+              hintFail = "有 VITAL_PROC 但自己没有 318211。脚本 CastSpell 没挂上（taken 目标应是自己）。" },
+            { id = 318211, role = "全能rating+343", want = "stat",
+              expect = { stat = "versRating", minDelta = 343 },
+              hintFail = "有 318211 但全能 rating 没涨到约 +343。一段 Scaled，禁止用 Icy Veins 312。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：318211 约 20 秒掉；再 proc 刷新、不叠层。",
+                "触发是受伤侧。热修掩码含 heal-taken，先不滤治疗。/dump GetCombatRating 对客户端全能下标。",
+                "驱动 Base 热修为 0，数字走 CalcValue Scaled。第 1 层挂 hidden proc。真装 P5。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",

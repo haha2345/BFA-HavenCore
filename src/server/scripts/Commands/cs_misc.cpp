@@ -114,6 +114,7 @@ public:
             { "labritual",        rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabRitualCommand,        "" },
             { "labtentacle",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTentacleCommand,      "" },
             { "labtwilight",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTwilightCommand,      "" },
+            { "labvitality",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabVitalityCommand,      "" },
             { "linkgrave",        rbac::RBAC_PERM_COMMAND_LINKGRAVE,        false, &HandleLinkGraveCommand,        "" },
             { "listfreeze",       rbac::RBAC_PERM_COMMAND_LISTFREEZE,       false, &HandleListFreezeCommand,       "" },
             { "maxskill",         rbac::RBAC_PERM_COMMAND_MAXSKILL,         false, &HandleMaxSkillCommand,         "" },
@@ -1330,10 +1331,11 @@ public:
             315590, 315591, 315592,
             315277, 315281, 315282, 320249,
             315607, 315608, 315609,
-            // P3 Racing Pulse / Honed Mind / Deadly Momentum
+            // P3 Racing Pulse / Honed Mind / Deadly Momentum / Surging Vitality
             318266, 318492, 318496, 318220, 318227,
             318269, 318494, 318498, 318214, 318216,
-            318268, 318493, 318497, 318218, 318219
+            318268, 318493, 318497, 318218, 318219,
+            318270, 318495, 318499, 318212, 318211
         };
         for (uint32 id : passives)
             player->RemoveAurasDueToSpell(id);
@@ -1368,6 +1370,7 @@ public:
             { "pulse",         318220, "labpulse",         "racing pulse",  "Other corruption test auras removed." },
             { "mind",          318214, "labmind",          "honed mind",    "Other corruption test auras removed." },
             { "momentum",      318218, "labmomentum",      "deadly momentum", "Other corruption test auras removed." },
+            { "vitality",      318212, "labvitality",      "surging vitality", "Other corruption test auras removed." },
         };
 
         if (!key || !*key)
@@ -1403,7 +1406,7 @@ public:
         LabTestDef const* def = FindLabTest(key);
         if (!def)
         {
-            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum", key ? key : "");
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum vitality", key ? key : "");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1431,7 +1434,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1439,7 +1442,7 @@ public:
         char key[64] = {};
         if (sscanf(args, "%63s", key) != 1)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1484,6 +1487,11 @@ public:
     static bool HandleLabMomentumCommand(ChatHandler* handler, char const* /*args*/)
     {
         return ApplyLabTest(handler, "momentum");
+    }
+
+    static bool HandleLabVitalityCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        return ApplyLabTest(handler, "vitality");
     }
 
     static bool HandleLabAoeCommand(ChatHandler* handler, char const* /*args*/)

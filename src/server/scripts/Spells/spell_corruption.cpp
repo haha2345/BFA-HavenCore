@@ -73,6 +73,12 @@
  *   318218          hidden proc, RPPM 5; DBC mask is wide so C++ keeps crits only
  *   318219          crit rating buff, 30s, max 5 stacks, DBC BP=0 so we fill Dummy
  *                   (engine multiplies MOD_RATING by stacks — do not multiply here)
+ *
+ * Surging Vitality (35662):
+ *   318270/495/499  rank 1/2/3 (Aura 285 LINKED -> 318212)
+ *                   Base was hotfixed to 0; rating is Scaled 343/458/801
+ *   318212          hidden proc, RPPM 2, TAKEN melee/spell/periodic/heal
+ *   318211          vers rating buff, 20s, no stacks, DBC BP=0 so we fill Scaled
  */
 
 #include "AreaTrigger.h"
@@ -189,6 +195,15 @@ enum DeadlyMomentumSpells
     SPELL_DEADLY_MOMENTUM_BUFF   = 318219
 };
 
+enum SurgingVitalitySpells
+{
+    SPELL_SURGING_VITALITY_RANK_1 = 318270,
+    SPELL_SURGING_VITALITY_RANK_2 = 318495,
+    SPELL_SURGING_VITALITY_RANK_3 = 318499,
+    SPELL_SURGING_VITALITY_PROC   = 318212,
+    SPELL_SURGING_VITALITY_BUFF   = 318211
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -224,6 +239,9 @@ constexpr int32 HONED_MIND_RANK1_RATING_FALLBACK = 392;
 
 // 318219 DBC BP is 0; fill per-stack Dummy. Engine multiplies by stacks.
 constexpr int32 DEADLY_MOMENTUM_RANK1_RATING_FALLBACK = 31;
+
+// Driver Base was hotfixed to 0. Rank-1 dump Scaled is 343. Do not use Icy Veins 312.
+constexpr int32 SURGING_VITALITY_RANK1_RATING_FALLBACK = 343;
 
 namespace
 {
@@ -912,6 +930,47 @@ void CastDeadlyMomentum(Unit* caster)
     int32 rating = DeadlyMomentumRatingPerStack(caster) * int32(stacks);
     LabNotify(caster, "MOMENTUM_PROC", Trinity::StringFormat(
         "stacks=%u rating=%d ok=%u", stacks, rating, ok ? 1u : 0u));
+}
+
+uint32 SurgingVitalityRankSpell(Unit const* owner)
+{
+    if (owner->HasAura(SPELL_SURGING_VITALITY_RANK_3))
+        return SPELL_SURGING_VITALITY_RANK_3;
+    if (owner->HasAura(SPELL_SURGING_VITALITY_RANK_2))
+        return SPELL_SURGING_VITALITY_RANK_2;
+    return SPELL_SURGING_VITALITY_RANK_1;
+}
+
+int32 SurgingVitalityRating(Unit const* owner)
+{
+    // BasePoints is 0 after the hotfix. Read SpellScaling * coefficient via CalcValue.
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(SurgingVitalityRankSpell(owner)))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
+        {
+            int32 value = effect->CalcValue(owner);
+            if (value >= 1)
+                return value;
+        }
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "SurgingVitality: rank EFFECT_0 CalcValue missing, using rating %d",
+            SURGING_VITALITY_RANK1_RATING_FALLBACK);
+    }
+    return SURGING_VITALITY_RANK1_RATING_FALLBACK;
+}
+
+void CastSurgingVitality(Unit* caster)
+{
+    if (!caster || !caster->IsAlive())
+        return;
+
+    int32 rating = SurgingVitalityRating(caster);
+    bool ok = caster->CastSpell(caster, SPELL_SURGING_VITALITY_BUFF, InfiniteStarsCastFlags());
+    LabNotify(caster, "VITAL_PROC", Trinity::StringFormat(
+        "rating=%d ok=%u", rating, ok ? 1u : 0u));
 }
 }
 
@@ -1798,6 +1857,61 @@ class spell_deadly_momentum_buff : public AuraScript
     }
 };
 
+// 318212 - hidden proc. DBC already has RPPM 2 and TAKEN melee/spell/periodic/heal.
+class spell_surging_vitality_proc : public AuraScript
+{
+    PrepareAuraScript(spell_surging_vitality_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_SURGING_VITALITY_BUFF,
+            SPELL_SURGING_VITALITY_RANK_1, SPELL_SURGING_VITALITY_RANK_2, SPELL_SURGING_VITALITY_RANK_3 });
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        if (Unit* caster = GetTarget())
+            CastSurgingVitality(caster);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_surging_vitality_proc::HandleProc);
+    }
+};
+
+// 318211 - vers rating, 20s, no stacks. DBC BP=0; fill from rank Scaled via CalcValue.
+class spell_surging_vitality_buff : public AuraScript
+{
+    PrepareAuraScript(spell_surging_vitality_buff);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_SURGING_VITALITY_PROC,
+            SPELL_SURGING_VITALITY_RANK_1, SPELL_SURGING_VITALITY_RANK_2, SPELL_SURGING_VITALITY_RANK_3 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+
+        Unit* owner = GetUnitOwner();
+        if (!owner || !owner->HasAura(SPELL_SURGING_VITALITY_PROC))
+        {
+            amount = 0;
+            return;
+        }
+
+        amount = SurgingVitalityRating(owner);
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_surging_vitality_buff::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RATING);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -1824,4 +1938,6 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_honed_mind_buff);
     RegisterAuraScript(spell_deadly_momentum_proc);
     RegisterAuraScript(spell_deadly_momentum_buff);
+    RegisterAuraScript(spell_surging_vitality_proc);
+    RegisterAuraScript(spell_surging_vitality_buff);
 }
