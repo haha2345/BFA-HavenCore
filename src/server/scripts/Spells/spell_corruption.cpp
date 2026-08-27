@@ -138,6 +138,14 @@ enum VoidRitualSpells
     SPELL_VOID_RITUAL_END_COMING = 316823
 };
 
+enum StrikethroughSpells
+{
+    SPELL_STRIKETHROUGH_RANK_1 = 315277,
+    SPELL_STRIKETHROUGH_RANK_2 = 315281,
+    SPELL_STRIKETHROUGH_RANK_3 = 315282,
+    SPELL_STRIKETHROUGH_HIDDEN = 320249
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -160,6 +168,10 @@ constexpr float VOID_RITUAL_ALLY_RANGE_YD = 8.0f;
 constexpr float VOID_RITUAL_SOLO_RPPM_MULT = 5.0f / 6.0f;
 constexpr int32 VOID_RITUAL_RANK1_RATING_FALLBACK = 14;
 constexpr uint32 VOID_RITUAL_ALLY_NEED_FALLBACK = 2;
+
+// 320249 EFFECT_0 DBC BP is 0; fill crit-damage Dummy. Do not hardcode 2/3/4.
+// Driver EFFECT_1 is a live SPELL_AURA_MOD_CRITICAL_HEALING_AMOUNT — leave 320249 heal at 0.
+constexpr int32 STRIKETHROUGH_RANK1_CRIT_FALLBACK = 2;
 
 namespace
 {
@@ -706,6 +718,32 @@ void CastVoidRitual(Unit* caster)
     LabNotify(caster, "RITUAL_PROC", Trinity::StringFormat(
         "allies=%u increased=%u ok=%u",
         allies, increased ? 1u : 0u, ok ? 1u : 0u));
+}
+
+uint32 StrikethroughRankSpell(Unit const* owner)
+{
+    if (owner->HasAura(SPELL_STRIKETHROUGH_RANK_3))
+        return SPELL_STRIKETHROUGH_RANK_3;
+    if (owner->HasAura(SPELL_STRIKETHROUGH_RANK_2))
+        return SPELL_STRIKETHROUGH_RANK_2;
+    return SPELL_STRIKETHROUGH_RANK_1;
+}
+
+int32 StrikethroughCritDamagePct(Unit const* owner)
+{
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(StrikethroughRankSpell(owner)))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
+            if (effect->BasePoints > 0)
+                return effect->BasePoints;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "Strikethrough: rank EFFECT_0 missing, using %d%%",
+            STRIKETHROUGH_RANK1_CRIT_FALLBACK);
+    }
+    return STRIKETHROUGH_RANK1_CRIT_FALLBACK;
 }
 }
 
@@ -1359,6 +1397,68 @@ class spell_void_ritual_end_is_coming : public AuraScript
     }
 };
 
+// 315277/81/82 - driver. Aura 285 Trigger 320249; apply hidden if the trigger did not.
+class spell_strikethrough_driver : public AuraScript
+{
+    PrepareAuraScript(spell_strikethrough_driver);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_STRIKETHROUGH_HIDDEN,
+            SPELL_STRIKETHROUGH_RANK_1, SPELL_STRIKETHROUGH_RANK_2, SPELL_STRIKETHROUGH_RANK_3 });
+    }
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* owner = GetTarget();
+        if (!owner || owner->HasAura(SPELL_STRIKETHROUGH_HIDDEN))
+            return;
+        owner->CastSpell(owner, SPELL_STRIKETHROUGH_HIDDEN, true);
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* owner = GetTarget();
+        if (!owner)
+            return;
+        if (owner->HasAura(SPELL_STRIKETHROUGH_RANK_1) ||
+            owner->HasAura(SPELL_STRIKETHROUGH_RANK_2) ||
+            owner->HasAura(SPELL_STRIKETHROUGH_RANK_3))
+            return;
+        owner->RemoveAurasDueToSpell(SPELL_STRIKETHROUGH_HIDDEN);
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_strikethrough_driver::HandleApply, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_strikethrough_driver::HandleRemove, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 320249 - hidden. EFFECT_0 BP=0; fill crit-damage Dummy. EFFECT_1 heal stays 0
+// (driver already has a live crit-heal aura; filling it here would double).
+class spell_strikethrough_hidden : public AuraScript
+{
+    PrepareAuraScript(spell_strikethrough_hidden);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_STRIKETHROUGH_RANK_1, SPELL_STRIKETHROUGH_RANK_2, SPELL_STRIKETHROUGH_RANK_3 });
+    }
+
+    void CalculateDamage(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        Unit* owner = GetUnitOwner();
+        amount = owner ? StrikethroughCritDamagePct(owner) : 0;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_strikethrough_hidden::CalculateDamage, EFFECT_0, SPELL_AURA_MOD_CRIT_DAMAGE_BONUS);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -1377,4 +1477,6 @@ void AddSC_corruption_spell_scripts()
     RegisterCreatureAI(npc_twisted_appendage);
     RegisterAuraScript(spell_void_ritual_proc);
     RegisterAuraScript(spell_void_ritual_end_is_coming);
+    RegisterAuraScript(spell_strikethrough_driver);
+    RegisterAuraScript(spell_strikethrough_hidden);
 }

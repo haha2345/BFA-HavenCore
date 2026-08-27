@@ -1318,6 +1318,18 @@ public:
         player->RemoveAurasDueToSpell(318480);
         if (selected && selected != player)
             selected->RemoveAurasDueToSpell(317265);
+        // P2 passives (drivers + hidden)
+        uint32 const passives[] = {
+            315544, 315545, 315546, 320257,
+            315529, 315530, 315531, 320253,
+            315549, 315552, 315553, 320259,
+            315554, 315557, 315558, 320261,
+            315590, 315591, 315592,
+            315277, 315281, 315282, 320249,
+            315607, 315608, 315609
+        };
+        for (uint32 id : passives)
+            player->RemoveAurasDueToSpell(id);
     }
 
     // New signature effect = one row. Aliases .labstars/.labtwilight/.labecho/.labtentacle call this.
@@ -1338,7 +1350,14 @@ public:
             { "twilight", 317147, "labtwilight", "twilight",      "Star/echo/tentacle/ritual auras removed." },
             { "echo",     317014, "labecho",     "echoing void",  "Star/twilight/tentacle/ritual auras removed." },
             { "tentacle", 316815, "labtentacle", "tentacle",      "Star/twilight/echo/ritual auras removed." },
-            { "ritual",   316814, "labritual",   "void ritual",   "Star/twilight/echo/tentacle auras removed." },
+            { "ritual",        316814, "labritual",        "void ritual",   "Other corruption test auras removed." },
+            { "expedient",     315544, "labexpedient",     "expedient",     "Other corruption test auras removed." },
+            { "masterful",     315529, "labmasterful",     "masterful",     "Other corruption test auras removed." },
+            { "versatile",     315549, "labversatile",     "versatile",     "Other corruption test auras removed." },
+            { "severe",        315554, "labsevere",        "severe",        "Other corruption test auras removed." },
+            { "siphoner",      315590, "labsiphoner",      "siphoner",      "Other corruption test auras removed." },
+            { "strikethrough", 315277, "labstrikethrough", "strikethrough", "Other corruption test auras removed." },
+            { "avoidant",      315607, "labavoidant",      "avoidant",      "Other corruption test auras removed." },
         };
 
         if (!key || !*key)
@@ -1374,7 +1393,7 @@ public:
         LabTestDef const* def = FindLabTest(key);
         if (!def)
         {
-            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual", key ? key : "");
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant", key ? key : "");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1402,7 +1421,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1410,7 +1429,7 @@ public:
         char key[64] = {};
         if (sscanf(args, "%63s", key) != 1)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant>");
             handler->SetSentErrorMessage(true);
             return false;
         }
