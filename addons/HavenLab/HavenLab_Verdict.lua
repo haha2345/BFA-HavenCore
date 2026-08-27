@@ -65,6 +65,20 @@ function HL:MatchLabExpect(msgs, expect)
             end
         end
     end
+    if expect.trimMs then
+        local kv = last.kv or {}
+        local before = tonumber(kv.before)
+        local after = tonumber(kv.after)
+        local want = tonumber(expect.trimMs)
+        local tol = tonumber(expect.tolerance) or 0
+        if not before or not after or not want then
+            return false, "CD_TRIM 缺 before/after"
+        end
+        local got = before - after
+        if math.abs(got - want) > tol then
+            return false, string.format("trim=%s 期望 %s", tostring(got), tostring(want))
+        end
+    end
     return true, ""
 end
 

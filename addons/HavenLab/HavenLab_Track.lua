@@ -16,6 +16,7 @@ local SPECIAL_EXPECT = {
     minCount = true, dealsDamage = true, summonEntries = true,
     stat = true, minDelta = true,
     minGapMs = true, approxPpm = true,
+    trimMs = true,
 }
 
 function HL:IsSpecialExpect(key)

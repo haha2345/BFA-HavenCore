@@ -1,7 +1,7 @@
 local ADDON, HL = ...
 HavenLab = HL
 
-HL.version = "2.0.4"
+HL.version = "2.0.5"
 HL.logs = {}
 HL.stats = {}
 HL.historyIndex = 0
