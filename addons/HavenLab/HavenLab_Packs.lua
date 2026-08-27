@@ -138,9 +138,9 @@ HL.PACKS = {
         title = "虚空回响",
         order = 3,
         serverCmd = ".lab test echo",
-        hint = "用带 GCD 的技能打。叠 317020，有几率坍缩。\nICD 700ms。坍缩写成 ECHO_COLLAPSE。",
-        startText = "【回响测试】已挂 317014。用带 GCD 的技能打木桩。叠层看 317020，坍缩看 ECHO_COLLAPSE / 317029。",
-        startPrint = "已对你挂 317014 并卸星/暮光。用带 GCD 的技能打，普攻不叠。",
+        hint = "用带 GCD 的技能打。叠 317020，有几率坍缩。\nICD 700ms。无 GCD / 平砍叠了层 = 过滤失效。",
+        startText = "【回响测试】已挂 317014。用带 GCD 的技能打木桩。叠层看 317020，坍缩看 ECHO_COLLAPSE / 317029。平砍或无 GCD 技能不应叠层。",
+        startPrint = "已对你挂 317014 并卸星/暮光。用带 GCD 的技能打；平砍 / 无 GCD 不叠。",
         ids = { 318280, 318485, 318486, 317014, 317020, 317022, 317029 },
         labels = {
             [318280] = "一段驱动",
@@ -155,7 +155,8 @@ HL.PACKS = {
             { id = 317014, role = "隐藏proc", want = "aura-self", hidden = true,
               expect = { minGapMs = 700 } },
             { id = 317020, role = "叠层", want = "aura-self", procStep = true,
-              hintFail = "没有 317020 叠层。只用带 GCD 的技能；普攻不叠。" },
+              -- 2020-01-27 热修：C++ 滤 StartRecoveryTime==0。来源：做法-A3 / 设计热修白名单
+              hintFail = "没有 317020 叠层。只用带 GCD 的技能。若平砍或无 GCD 技能叠了层 = 过滤失效。" },
             { id = 317022, role = "坍缩", want = "labmsg", labType = "ECHO_COLLAPSE",
               hintFail = "有叠层但没有 ECHO_COLLAPSE。坍缩是几率（约 15%），多打一会儿。" },
             { id = 317029, role = "暗影AoE", want = "damage",
@@ -174,6 +175,12 @@ HL.PACKS = {
             if stacks then
                 lines[#lines + 1] = string.format("现在自己 317020 有 %d 层。", stacks)
             end
+            local swings = self:CountSwings()
+            if swings > 0 and (s020.auraSelf or 0) > 0 then
+                lines[#lines + 1] = string.format(
+                    "平砍 %d。若这段时间只用平砍却出了 317020，无 GCD 过滤失效。", swings)
+            end
+            lines[#lines + 1] = "待进游戏验收：无 GCD 技能（部分爆发饰品）不叠层；坍缩扫到未进战野怪会拉进战斗（blizz-like，不当 bug）。"
             return lines
         end,
     },

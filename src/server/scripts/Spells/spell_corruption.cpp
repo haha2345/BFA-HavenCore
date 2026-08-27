@@ -432,12 +432,20 @@ uint32 EchoingVoidRankSpell(Unit const* caster)
 
 float EchoingVoidHealthPct(Unit const* caster)
 {
-    int32 bp = ECHOING_VOID_RANK1_BP_FALLBACK;
     if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(EchoingVoidRankSpell(caster)))
         if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            bp = effect->BasePoints;
-    // DBC stores 40/60/100; tooltip is $s1/100 percent of health (rank 1 = 0.4%).
-    return float(bp) / 100.0f / 100.0f;
+            if (effect->BasePoints > 0)
+                // DBC stores 40/60/100; tooltip is $s1/100 percent of health (rank 1 = 0.4%).
+                return float(effect->BasePoints) / 100.0f / 100.0f;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "EchoingVoid: rank EFFECT_0 missing, using bp %d",
+            ECHOING_VOID_RANK1_BP_FALLBACK);
+    }
+    return float(ECHOING_VOID_RANK1_BP_FALLBACK) / 100.0f / 100.0f;
 }
 
 uint32 EchoingVoidPeriodMs()
@@ -446,7 +454,24 @@ uint32 EchoingVoidPeriodMs()
         if (SpellEffectInfo const* effect = info->GetEffect(EFFECT_0))
             if (effect->ApplyAuraPeriod)
                 return effect->ApplyAuraPeriod;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "EchoingVoid: 317022 period missing, using %u ms",
+            ECHOING_VOID_PERIOD_FALLBACK_MS);
+    }
     return ECHOING_VOID_PERIOD_FALLBACK_MS;
+}
+
+// Player Echoing Void casts 317022 on self. Hivemind puts 317022 on players from the boss.
+bool EchoingVoidPlayerOwnsCollapse(Unit const* unit)
+{
+    if (!unit || !unit->HasAura(SPELL_ECHOING_VOID_PROC))
+        return false;
+    Aura const* collapse = unit->GetAura(SPELL_ECHOING_VOID_COLLAPSE);
+    return collapse && collapse->GetCasterGUID() == unit->GetGUID();
 }
 
 void NotifyEchoStack(Unit* caster, uint32 stacks)
@@ -484,6 +509,7 @@ void HandleEchoingVoidProc(Unit* caster, ProcEventInfo& eventInfo)
     if (!caster || !caster->IsAlive())
         return;
 
+    // 2020-01-27 hotfix: only spells with a GCD stack. Autos / no-GCD trinkets do not.
     Spell const* procSpell = eventInfo.GetProcSpell();
     if (!procSpell || !procSpell->GetSpellInfo() || procSpell->GetSpellInfo()->StartRecoveryTime == 0)
         return;
@@ -1020,7 +1046,8 @@ class spell_echoing_void_collapse : public AuraScript
 };
 
 // 317029 - shadow AoE, BP=0. Fill maxHP * (rank dummy/100)%. Decrement stacks once per cast
-// (AfterCast, not OnHit — this is an AoE). Shared with Hivemind: no 317014 → do nothing.
+// (AfterCast, not OnHit — this is an AoE). Shared with Hivemind: only rewrite when the
+// player owns both 317014 and a self-cast 317022.
 class spell_echoing_void_damage : public SpellScript
 {
     PrepareSpellScript(spell_echoing_void_damage);
@@ -1038,7 +1065,7 @@ class spell_echoing_void_damage : public SpellScript
         if (!caster || !target)
             return;
 
-        if (!caster->HasAura(SPELL_ECHOING_VOID_PROC) || !caster->HasAura(SPELL_ECHOING_VOID_COLLAPSE))
+        if (!EchoingVoidPlayerOwnsCollapse(caster))
             return;
 
         int32 damage = int32(float(caster->GetMaxHealth()) * EchoingVoidHealthPct(caster));
@@ -1051,7 +1078,7 @@ class spell_echoing_void_damage : public SpellScript
     void HandleAfterCast()
     {
         Unit* caster = GetCaster();
-        if (!caster || !caster->HasAura(SPELL_ECHOING_VOID_PROC))
+        if (!EchoingVoidPlayerOwnsCollapse(caster))
             return;
 
         uint32 remain = 0;
