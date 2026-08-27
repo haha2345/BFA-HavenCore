@@ -107,6 +107,7 @@ public:
             { "labdummy",         rbac::RBAC_PERM_COMMAND_NPC_ADD,          false, &HandleLabDummyCommand,         "" },
             { "labecho",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabEchoCommand,          "" },
             { "labgear",          rbac::RBAC_PERM_COMMAND_ADDITEM,          false, &HandleLabGearCommand,          "" },
+            { "labglimpse",       rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabGlimpseCommand,       "" },
             { "labstars",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabStarsCommand,         "" },
             { "labmind",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabMindCommand,          "" },
             { "labmomentum",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabMomentumCommand,      "" },
@@ -1337,7 +1338,8 @@ public:
             318269, 318494, 318498, 318214, 318216,
             318268, 318493, 318497, 318218, 318219,
             318270, 318495, 318499, 318212, 318211,
-            318272, 318179, 318187
+            318272, 318179, 318187,
+            318239, 315574, 315573
         };
         for (uint32 id : passives)
             player->RemoveAurasDueToSpell(id);
@@ -1374,6 +1376,7 @@ public:
             { "momentum",      318218, "labmomentum",      "deadly momentum", "Other corruption test auras removed." },
             { "vitality",      318212, "labvitality",      "surging vitality", "Other corruption test auras removed." },
             { "wound",         318179, "labwound",         "gushing wound",  "Other corruption test auras removed." },
+            { "glimpse",       315574, "labglimpse",       "glimpse",        "Other corruption test auras removed." },
         };
 
         if (!key || !*key)
@@ -1409,7 +1412,7 @@ public:
         LabTestDef const* def = FindLabTest(key);
         if (!def)
         {
-            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum vitality wound", key ? key : "");
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum vitality wound glimpse", key ? key : "");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1437,7 +1440,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1445,7 +1448,7 @@ public:
         char key[64] = {};
         if (sscanf(args, "%63s", key) != 1)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1500,6 +1503,11 @@ public:
     static bool HandleLabWoundCommand(ChatHandler* handler, char const* /*args*/)
     {
         return ApplyLabTest(handler, "wound");
+    }
+
+    static bool HandleLabGlimpseCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        return ApplyLabTest(handler, "glimpse");
     }
 
     static bool HandleLabAoeCommand(ChatHandler* handler, char const* /*args*/)

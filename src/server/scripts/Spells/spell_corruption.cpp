@@ -84,6 +84,12 @@
  *   318272          rank 1 (Aura 285 LINKED -> 318179). Coefficient is ilvl, P5
  *   318179          hidden proc, RPPM 4 haste, yellow melee/ranged + hostile spells
  *   318187          target shadow bleed, 7s / 1s, BP=0; tick = Dummy13% of max(AP,SP)
+ *
+ * Glimpse of Clarity (35662):
+ *   318239          item wrapper (Aura 285 LINKED -> 315574)
+ *   315574          hidden proc, RPPM 2, Dummy 3s / 1 next spell
+ *   315573          15s buff, Dummy 3. Next class CD is trimmed; then consume a stack.
+ *                   315573 has no ProcFlags — trim lives on PlayerScript, not OnProc.
  */
 
 #include "AreaTrigger.h"
@@ -216,6 +222,15 @@ enum GushingWoundSpells
     SPELL_GUSHING_WOUND_DOT  = 318187
 };
 
+enum GlimpseOfClaritySpells
+{
+    SPELL_GLIMPSE_ITEM = 318239,
+    SPELL_GLIMPSE_PROC = 315574,
+    SPELL_GLIMPSE_BUFF = 315573,
+    SPELL_FLASH_OF_INSIGHT_ITEM = 318299,
+    SPELL_FLASH_OF_INSIGHT_PROC = 316717
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -257,6 +272,9 @@ constexpr int32 SURGING_VITALITY_RANK1_RATING_FALLBACK = 343;
 
 // 318187 EFFECT_1 Dummy is 13 after hotfix (was 10). Per-tick %, not divided by 7 ticks.
 constexpr int32 GUSHING_WOUND_TICK_PCT_FALLBACK = 13;
+
+// 315573 / 315574 Dummy is 3 seconds. Do not hardcode 3000 as the only value.
+constexpr int32 GLIMPSE_TRIM_MS_FALLBACK = 3000;
 
 namespace
 {
@@ -1040,6 +1058,99 @@ void CastGushingWound(Unit* caster, Unit* target)
     bool ok = caster->CastSpell(target, SPELL_GUSHING_WOUND_DOT, InfiniteStarsCastFlags());
     LabNotify(caster, "WOUND_PROC", Trinity::StringFormat(
         "target=%s ok=%u", target->GetName().c_str(), ok ? 1u : 0u));
+}
+
+int32 GlimpseTrimMs()
+{
+    if (SpellInfo const* buff = sSpellMgr->GetSpellInfo(SPELL_GLIMPSE_BUFF))
+        if (SpellEffectInfo const* effect = buff->GetEffect(EFFECT_0))
+            if (effect->BasePoints >= 1)
+                return effect->BasePoints * IN_MILLISECONDS;
+
+    if (SpellInfo const* proc = sSpellMgr->GetSpellInfo(SPELL_GLIMPSE_PROC))
+        if (SpellEffectInfo const* effect = proc->GetEffect(EFFECT_0))
+            if (effect->BasePoints >= 1)
+                return effect->BasePoints * IN_MILLISECONDS;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "GlimpseOfClarity: Dummy missing, using trim %d ms",
+            GLIMPSE_TRIM_MS_FALLBACK);
+    }
+    return GLIMPSE_TRIM_MS_FALLBACK;
+}
+
+bool IsGlimpseExcludedSpell(uint32 id)
+{
+    switch (id)
+    {
+        case SPELL_INFINITE_STARS_SELECTOR:
+        case SPELL_INFINITE_STARS_MISSILE:
+        case SPELL_INFINITE_STARS_DAMAGE:
+        case SPELL_TWILIGHT_BEAM:
+        case SPELL_TWILIGHT_DAMAGE:
+        case SPELL_ECHOING_VOID_COLLAPSE:
+        case SPELL_ECHOING_VOID_DAMAGE:
+        case SPELL_TWISTED_APPENDAGE_SUMMON:
+        case SPELL_TWISTED_APPENDAGE_FLAY:
+        case SPELL_GUSHING_WOUND_DOT:
+        case SPELL_GLIMPSE_ITEM:
+        case SPELL_GLIMPSE_PROC:
+        case SPELL_GLIMPSE_BUFF:
+        case SPELL_FLASH_OF_INSIGHT_ITEM:
+        case SPELL_FLASH_OF_INSIGHT_PROC:
+            return true;
+        default:
+            return false;
+    }
+}
+
+void ConsumeGlimpseStack(Player* player)
+{
+    Aura* aura = player->GetAura(SPELL_GLIMPSE_BUFF);
+    if (!aura)
+        return;
+
+    if (aura->GetStackAmount() <= 1)
+        player->RemoveAurasDueToSpell(SPELL_GLIMPSE_BUFF);
+    else
+        aura->ModStackAmount(-1);
+}
+
+void TryGlimpseTrim(Player* player, Spell* spell)
+{
+    if (!player || !spell || !player->HasAura(SPELL_GLIMPSE_BUFF))
+        return;
+
+    SpellInfo const* info = spell->GetSpellInfo();
+    if (!info || info->IsPassive() || spell->IsTriggered())
+        return;
+    if (!info->SpellFamilyName)
+        return;
+    if (!info->GetRecoveryTime() && !info->ChargeCategoryId)
+        return;
+    if (spell->m_CastItem || spell->m_castItemEntry)
+        return;
+    if (IsGlimpseExcludedSpell(info->Id))
+        return;
+
+    SpellHistory* history = player->GetSpellHistory();
+    if (!history)
+        return;
+
+    int32 trim = GlimpseTrimMs();
+    uint32 before = history->GetRemainingCooldown(info);
+    if (info->ChargeCategoryId)
+        history->ReduceChargeCooldown(info->ChargeCategoryId, uint32(trim));
+    if (info->GetRecoveryTime() > 0 || before > 0)
+        history->ModifyCooldown(info->Id, -trim);
+
+    uint32 after = history->GetRemainingCooldown(info);
+    ConsumeGlimpseStack(player);
+    LabNotify(player, "CD_TRIM", Trinity::StringFormat(
+        "spell=%u before=%u after=%u", info->Id, before, after));
 }
 }
 
@@ -2047,6 +2158,30 @@ class spell_gushing_wound_dot : public AuraScript
     }
 };
 
+// 315573 - Glimpse buff. Dummy only; trim is PlayerScript OnSuccessfulSpellCast.
+class spell_glimpse_of_clarity : public AuraScript
+{
+    PrepareAuraScript(spell_glimpse_of_clarity);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_GLIMPSE_PROC, SPELL_GLIMPSE_ITEM });
+    }
+
+    void Register() override { }
+};
+
+class player_glimpse_of_clarity : public PlayerScript
+{
+public:
+    player_glimpse_of_clarity() : PlayerScript("player_glimpse_of_clarity") { }
+
+    void OnSuccessfulSpellCast(Player* player, Spell* spell) override
+    {
+        TryGlimpseTrim(player, spell);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -2077,4 +2212,6 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_surging_vitality_buff);
     RegisterAuraScript(spell_gushing_wound_proc);
     RegisterAuraScript(spell_gushing_wound_dot);
+    RegisterAuraScript(spell_glimpse_of_clarity);
+    RegisterPlayerScript(player_glimpse_of_clarity);
 }

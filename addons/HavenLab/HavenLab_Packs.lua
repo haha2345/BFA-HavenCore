@@ -778,6 +778,38 @@ HL.PACKS = {
         end,
     },
 
+    glimpse = {
+        key = "glimpse",
+        title = "须臾洞察",
+        order = 18,
+        serverCmd = ".lab test glimpse",
+        hint = "挂 315574。平砍或技能开 Glimpse（RPPM 2）。\n出现 315573 后放有 CD 的职业技能，CD −3s，buff 减层。",
+        startText = "【须臾洞察】已挂 315574。等 315573 出现后放奥爆等有 CD 技能。减 CD 写成 CD_TRIM。",
+        startPrint = "已挂 315574。等 Glimpse 出现后放有 CD 的职业技能。看 CD_TRIM before−after=3000。",
+        ids = { 318239, 315574, 315573 },
+        labels = {
+            [318239] = "物品入口",
+            [315574] = "隐藏proc",
+            [315573] = "Glimpse",
+        },
+        chain = {
+            { id = 315574, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂上 315574。用 .lab test glimpse / .labglimpse。" },
+            { id = 315573, role = "Glimpse", want = "aura-self", procStep = true,
+              hintFail = "没有 315573。平砍或技能打一会儿（RPPM 2）。DBC Trigger 应自己挂上。" },
+            { id = 315573, role = "CD-3s", want = "labmsg", labType = "CD_TRIM",
+              expect = { trimMs = 3000 },
+              hintFail = "有 315573 但没有 CD_TRIM。放有 CD 的职业技能，不要放物品/腐蚀技能。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：315573 约 15 秒；用一次有 CD 技能后减层或消失。",
+                "trimMs=3000 溯源 Dummy 3。物品技能和腐蚀技能不应出 CD_TRIM。",
+                "6486 vs 6546 第 1 层不选定。真装 P5。不要和法器 Flash of Insight 混。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
