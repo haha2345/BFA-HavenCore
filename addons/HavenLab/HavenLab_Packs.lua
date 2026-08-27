@@ -568,6 +568,45 @@ HL.PACKS = {
         end,
     },
 
+    pulse = {
+        key = "pulse",
+        title = "急速脉搏",
+        order = 6,
+        serverCmd = ".lab test pulse",
+        snapshotOnStart = true,
+        snapshotSpell = 318227,
+        expect = { stat = "hasteRating", minDelta = 546 },
+        hint = "挂 318220。平砍或技能都能 proc（RPPM 5）。\n318227 急速 rating +546，4 秒，不叠层。",
+        startText = "【急速脉搏】已挂 318220。平砍或黄字打木桩。proc 写成 PULSE_PROC，buff 是 318227。",
+        startPrint = "已挂 318220。平砍或技能都能开脉搏。看 318227 与急速 rating +546。",
+        ids = { 318266, 318492, 318496, 318220, 318227 },
+        labels = {
+            [318266] = "一段驱动",
+            [318492] = "二段驱动",
+            [318496] = "三段驱动",
+            [318220] = "隐藏proc",
+            [318227] = "急速buff",
+        },
+        chain = {
+            { id = 318220, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂上 318220。用 .lab test pulse / .labpulse。" },
+            { id = 318220, role = "开脉搏", want = "labmsg", labType = "PULSE_PROC", procStep = true,
+              hintFail = "没有 PULSE_PROC。平砍或猛击打一会儿（RPPM 5，含白字）。" },
+            { id = 318227, role = "急速buff", want = "aura-self",
+              hintFail = "有 PULSE_PROC 但自己没有 318227。脚本 CastSpell 没挂上。" },
+            { id = 318227, role = "急速rating+546", want = "stat",
+              expect = { stat = "hasteRating", minDelta = 546 },
+              hintFail = "有 318227 但急速 rating 没涨到约 +546。一段 Dummy，禁止写死主路径。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：318227 约 4 秒掉；再 proc 刷新时长、不叠层。",
+                "白字能否 proc 信 DBC（含 White Melee）。面板急速% 随等级变，只验 rating。",
+                "第 1 层挂 hidden proc，不赌 LINKED 带 318220。真装 P5 再验驱动。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",

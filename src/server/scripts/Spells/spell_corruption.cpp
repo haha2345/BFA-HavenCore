@@ -57,6 +57,11 @@
  *   318286/479/480  rank 1/2/3 (Aura 285 LINKED -> 316814, dummy 14/33/63)
  *   316814          hidden proc, RPPM 1, yellow+heal+hostile+periodic+trap
  *   316823          The End Is Coming: 20s, max 20 stacks, MOD_RATING + periodic
+ *
+ * Racing Pulse (35662):
+ *   318266/492/496  rank 1/2/3 (Aura 285 LINKED -> 318220, dummy 546/728/1275)
+ *   318220          hidden proc, RPPM 5, white+yellow+heal+hostile+periodic+trap
+ *   318227          haste rating buff, 4s, no stacks, DBC BP=0 so we fill Dummy
  */
 
 #include "AreaTrigger.h"
@@ -146,6 +151,15 @@ enum StrikethroughSpells
     SPELL_STRIKETHROUGH_HIDDEN = 320249
 };
 
+enum RacingPulseSpells
+{
+    SPELL_RACING_PULSE_RANK_1 = 318266,
+    SPELL_RACING_PULSE_RANK_2 = 318492,
+    SPELL_RACING_PULSE_RANK_3 = 318496,
+    SPELL_RACING_PULSE_PROC   = 318220,
+    SPELL_RACING_PULSE_BUFF   = 318227
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -172,6 +186,9 @@ constexpr uint32 VOID_RITUAL_ALLY_NEED_FALLBACK = 2;
 // 320249 EFFECT_0 DBC BP is 0; fill crit-damage Dummy. Do not hardcode 2/3/4.
 // Driver EFFECT_1 is a live SPELL_AURA_MOD_CRITICAL_HEALING_AMOUNT — leave 320249 heal at 0.
 constexpr int32 STRIKETHROUGH_RANK1_CRIT_FALLBACK = 2;
+
+// 318227 DBC BP is 0; fill rank Dummy. Do not hardcode 546 as the only value.
+constexpr int32 RACING_PULSE_RANK1_RATING_FALLBACK = 546;
 
 namespace
 {
@@ -744,6 +761,43 @@ int32 StrikethroughCritDamagePct(Unit const* owner)
             STRIKETHROUGH_RANK1_CRIT_FALLBACK);
     }
     return STRIKETHROUGH_RANK1_CRIT_FALLBACK;
+}
+
+uint32 RacingPulseRankSpell(Unit const* owner)
+{
+    if (owner->HasAura(SPELL_RACING_PULSE_RANK_3))
+        return SPELL_RACING_PULSE_RANK_3;
+    if (owner->HasAura(SPELL_RACING_PULSE_RANK_2))
+        return SPELL_RACING_PULSE_RANK_2;
+    return SPELL_RACING_PULSE_RANK_1;
+}
+
+int32 RacingPulseRating(Unit const* owner)
+{
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(RacingPulseRankSpell(owner)))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
+            if (effect->BasePoints >= 1)
+                return effect->BasePoints;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "RacingPulse: rank EFFECT_0 missing, using rating %d",
+            RACING_PULSE_RANK1_RATING_FALLBACK);
+    }
+    return RACING_PULSE_RANK1_RATING_FALLBACK;
+}
+
+void CastRacingPulse(Unit* caster)
+{
+    if (!caster || !caster->IsAlive())
+        return;
+
+    int32 rating = RacingPulseRating(caster);
+    bool ok = caster->CastSpell(caster, SPELL_RACING_PULSE_BUFF, InfiniteStarsCastFlags());
+    LabNotify(caster, "PULSE_PROC", Trinity::StringFormat(
+        "rating=%d ok=%u", rating, ok ? 1u : 0u));
 }
 }
 
@@ -1459,6 +1513,61 @@ class spell_strikethrough_hidden : public AuraScript
     }
 };
 
+// 318220 - hidden proc. DBC already has RPPM 5 and white+yellow+heal+hostile+periodic+trap.
+class spell_racing_pulse_proc : public AuraScript
+{
+    PrepareAuraScript(spell_racing_pulse_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_RACING_PULSE_BUFF,
+            SPELL_RACING_PULSE_RANK_1, SPELL_RACING_PULSE_RANK_2, SPELL_RACING_PULSE_RANK_3 });
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        if (Unit* caster = GetTarget())
+            CastRacingPulse(caster);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_racing_pulse_proc::HandleProc);
+    }
+};
+
+// 318227 - haste rating, 4s, no stacks. DBC BP=0; fill from rank Dummy.
+class spell_racing_pulse_buff : public AuraScript
+{
+    PrepareAuraScript(spell_racing_pulse_buff);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_RACING_PULSE_PROC,
+            SPELL_RACING_PULSE_RANK_1, SPELL_RACING_PULSE_RANK_2, SPELL_RACING_PULSE_RANK_3 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+
+        Unit* owner = GetUnitOwner();
+        if (!owner || !owner->HasAura(SPELL_RACING_PULSE_PROC))
+        {
+            amount = 0;
+            return;
+        }
+
+        amount = RacingPulseRating(owner);
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_racing_pulse_buff::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RATING);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -1479,4 +1588,6 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_void_ritual_end_is_coming);
     RegisterAuraScript(spell_strikethrough_driver);
     RegisterAuraScript(spell_strikethrough_hidden);
+    RegisterAuraScript(spell_racing_pulse_proc);
+    RegisterAuraScript(spell_racing_pulse_buff);
 }
