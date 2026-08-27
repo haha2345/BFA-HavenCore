@@ -908,6 +908,38 @@ HL.PACKS = {
         end,
     },
 
+    delusion = {
+        key = "delusion",
+        title = "宏伟妄想",
+        order = 22,
+        serverCmd = ".lab test delusion",
+        hint = "挂 315184。木桩打不出。站会还手的怪或 .damage 挨打。\n彼岸之物追 8 秒，碰到才结算。不要测披风 313301。",
+        startText = "【宏伟妄想】已挂 315184。去挨打，不要打木桩。出怪写成 DELUSION_PROC，碰到写成 DELUSION_HIT。",
+        startPrint = "已挂 315184。木桩测不出。挨打看 DELUSION_PROC，被追上碰看 DELUSION_HIT。",
+        ids = { 315184 },
+        labels = {
+            [315184] = "妄想驱动",
+        },
+        summonEntries = {},
+        chain = {
+            { id = 315184, role = "驱动", want = "aura-self",
+              hintFail = "没挂上 315184。用 .lab test delusion / .labdelusion。真装要有效腐蚀≥40 才由 UpdateCorruption 挂上。" },
+            { id = 315184, role = "出彼岸之物", want = "labmsg", labType = "DELUSION_PROC", procStep = true,
+              hintFail = "没有 DELUSION_PROC。木桩打不出；站会还手的怪或 .damage（RPPM 1，taken）。trigger=0 说明 DBC TriggerSpell 空。" },
+            { id = 315184, role = "碰到结算", want = "labmsg", labType = "DELUSION_HIT",
+              hintFail = "有 DELUSION_PROC 但没有 DELUSION_HIT。可能没召唤出生物、entry 待回填，或 8 秒内没被追上。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：约 8 秒（DBC duration，缺则 8000ms fallback）。碰到走 melee reach，不射线。",
+                "不要用 313301 披风周期召唤。NPC ID 进游戏 .lookup creature 彼岸之物，不要用 158041。",
+                "summonEntries / 伤害法术 ID 进游戏 CLEU 回填。速度随腐蚀升：先信 DBC，缩放待验。",
+                "可见性「自己+同效果者」当前做不了，全可见并登记偏差。会拉怪。",
+                "阈值矩阵应挂 315184（DB2 MinCorruption 40）。脚本不写阈值比较。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",

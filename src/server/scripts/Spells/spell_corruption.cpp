@@ -108,6 +108,14 @@
  *                   EFFECT_1 Dummy 2 = pulse period seconds. 315270 is the companion pet — skip it.
  *   Summon/damage IDs and creature entry come from SpellInfo at runtime; leave
  *   pack summonEntries empty until in-game CLEU fills them.
+ *
+ * Grand Delusions (CorruptionEffects, MinCorruption 40):
+ *   315184          taken proc (RPPM 1). Do not compare corruption thresholds.
+ *                   313301 is the cloak extra — never bind it here.
+ *   Summon/damage IDs and creature entry come from SpellInfo at runtime; leave
+ *   pack summonEntries empty until in-game lookup/CLEU fills them.
+ *   Contact uses melee reach (unit body). No raycast. Visibility is all-visible
+ *   until a core-supported "self + same-aura" filter exists.
  */
 
 #include "AreaTrigger.h"
@@ -116,6 +124,7 @@
 #include "Log.h"
 #include "StringFormat.h"
 #include "Map.h"
+#include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "Random.h"
@@ -270,6 +279,12 @@ enum EyeOfCorruptionSpells
     SPELL_EYE_OF_CORRUPTION_PET = 315270 // companion pet, not the combat eye
 };
 
+enum GrandDelusionsSpells
+{
+    SPELL_GRAND_DELUSIONS = 315184,
+    SPELL_THING_FROM_BEYOND_CLOAK = 313301 // cloak extra, not the 40-tier row
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -410,6 +425,12 @@ TriggerCastFlags InfiniteStarsCastFlags()
 }
 
 TriggerCastFlags TwilightDamageCastFlags()
+{
+    return TriggerCastFlags(uint32(InfiniteStarsCastFlags()) | uint32(TRIGGERED_IGNORE_TARGET_CHECK));
+}
+
+// Same-faction owner must still take the contact hit (four-piece keeps owner faction).
+TriggerCastFlags DelusionHitCastFlags()
 {
     return TriggerCastFlags(uint32(InfiniteStarsCastFlags()) | uint32(TRIGGERED_IGNORE_TARGET_CHECK));
 }
@@ -1160,6 +1181,8 @@ bool IsGlimpseExcludedSpell(uint32 id)
         case SPELL_GRASPING_TENDRILS_SLOW:
         case SPELL_EYE_OF_CORRUPTION:
         case SPELL_EYE_OF_CORRUPTION_PET:
+        case SPELL_GRAND_DELUSIONS:
+        case SPELL_THING_FROM_BEYOND_CLOAK:
             return true;
         default:
             return false;
@@ -1491,6 +1514,238 @@ void CastEyeOfCorruption(Unit* owner)
     LabNotify(player, "EYE_PROC", Trinity::StringFormat(
         "trigger=%u entry=%u damage=%u radius=%.1f ok=%u",
         chain.triggerSpell, chain.summonEntry, chain.damageSpell, chain.radius, ok ? 1u : 0u));
+}
+
+constexpr uint32 DELUSION_DURATION_MS_FALLBACK = 8000;
+
+struct DelusionChain
+{
+    uint32 triggerSpell = 0;
+    uint32 summonEntry = 0;
+    uint32 damageSpell = 0;
+    uint32 durationMs = DELUSION_DURATION_MS_FALLBACK;
+};
+
+void InspectDelusionSpell(SpellInfo const* info, DelusionChain& chain, uint8 depth = 0)
+{
+    if (!info || depth > 3 || info->Id == SPELL_THING_FROM_BEYOND_CLOAK)
+        return;
+
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        SpellEffectInfo const* effect = info->GetEffect(SpellEffIndex(i));
+        if (!effect)
+            continue;
+        if (effect->Effect == SPELL_EFFECT_SUMMON && effect->MiscValue > 0)
+            chain.summonEntry = uint32(effect->MiscValue);
+        if (effect->Effect == SPELL_EFFECT_SCHOOL_DAMAGE)
+            chain.damageSpell = info->Id;
+        if (effect->TriggerSpell && effect->TriggerSpell != SPELL_THING_FROM_BEYOND_CLOAK)
+            InspectDelusionSpell(sSpellMgr->GetSpellInfo(effect->TriggerSpell), chain, depth + 1);
+    }
+}
+
+DelusionChain const& ResolveDelusionChain()
+{
+    static DelusionChain chain;
+    static bool loaded = false;
+    if (loaded)
+        return chain;
+    loaded = true;
+
+    SpellInfo const* driver = sSpellMgr->GetSpellInfo(SPELL_GRAND_DELUSIONS);
+    if (!driver)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            TC_LOG_ERROR("scripts", "GrandDelusions: 315184 missing");
+        }
+        return chain;
+    }
+
+    if (SpellEffectInfo const* triggerEff = driver->GetEffect(EFFECT_0))
+        if (triggerEff->TriggerSpell && triggerEff->TriggerSpell != SPELL_THING_FROM_BEYOND_CLOAK)
+            chain.triggerSpell = triggerEff->TriggerSpell;
+
+    if (chain.triggerSpell)
+    {
+        if (SpellInfo const* trigger = sSpellMgr->GetSpellInfo(chain.triggerSpell))
+        {
+            int32 duration = trigger->GetDuration();
+            if (duration > 0)
+                chain.durationMs = uint32(duration);
+            else
+            {
+                static bool logged = false;
+                if (!logged)
+                {
+                    logged = true;
+                    TC_LOG_ERROR("scripts", "GrandDelusions: trigger %u duration missing, using %u ms",
+                        chain.triggerSpell, DELUSION_DURATION_MS_FALLBACK);
+                }
+            }
+            InspectDelusionSpell(trigger, chain);
+        }
+    }
+
+    if (!chain.summonEntry)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            TC_LOG_ERROR("scripts", "GrandDelusions: summon MiscValue missing");
+        }
+    }
+    if (!chain.damageSpell)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            TC_LOG_ERROR("scripts", "GrandDelusions: school damage spell missing");
+        }
+    }
+
+    return chain;
+}
+
+struct npc_thing_from_beyond : public ScriptedAI
+{
+    explicit npc_thing_from_beyond(Creature* creature) : ScriptedAI(creature) { }
+
+    void BindOwner(Unit* owner)
+    {
+        if (!owner)
+        {
+            me->DespawnOrUnsummon();
+            return;
+        }
+
+        _ownerGuid = owner->GetGUID();
+        _hit = false;
+        _elapsed = 0;
+        me->SetFaction(owner->getFaction());
+        me->SetLevel(owner->getLevel());
+        me->SetReactState(REACT_PASSIVE);
+        me->GetMotionMaster()->Clear();
+        me->GetMotionMaster()->MoveChase(owner);
+    }
+
+    void IsSummonedBy(Unit* summoner) override
+    {
+        BindOwner(summoner);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        Unit* owner = ObjectAccessor::GetUnit(*me, _ownerGuid);
+        if (!owner)
+            owner = me->GetOwner();
+
+        if (!owner || !owner->IsAlive() || !owner->HasAura(SPELL_GRAND_DELUSIONS))
+        {
+            me->DespawnOrUnsummon();
+            return;
+        }
+
+        DelusionChain const& chain = ResolveDelusionChain();
+        _elapsed += diff;
+        if (_elapsed >= chain.durationMs)
+        {
+            me->DespawnOrUnsummon();
+            return;
+        }
+
+        if (_hit)
+            return;
+
+        if (!me->isMoving())
+            me->GetMotionMaster()->MoveChase(owner);
+
+        // Contact = unit body / melee reach. No raycast, no auto-swing.
+        if (!me->IsWithinMeleeRange(owner))
+            return;
+
+        _hit = true;
+        uint32 ok = 0;
+        if (chain.damageSpell)
+            ok = me->CastSpell(owner, chain.damageSpell, DelusionHitCastFlags(), nullptr, nullptr, owner->GetGUID()) ? 1u : 0u;
+
+        LabNotify(owner, "DELUSION_HIT", Trinity::StringFormat(
+            "entry=%u damage=%u ok=%u", me->GetEntry(), chain.damageSpell, ok));
+        me->DespawnOrUnsummon();
+    }
+
+private:
+    ObjectGuid _ownerGuid;
+    bool _hit = false;
+    uint32 _elapsed = 0;
+};
+
+void BindDelusionAI(Creature* thing, Unit* owner)
+{
+    if (!thing || !owner)
+        return;
+    thing->AIM_Initialize(new npc_thing_from_beyond(thing));
+    if (npc_thing_from_beyond* ai = dynamic_cast<npc_thing_from_beyond*>(thing->AI()))
+        ai->BindOwner(owner);
+}
+
+void CastGrandDelusions(Unit* owner)
+{
+    Player* player = owner ? owner->ToPlayer() : nullptr;
+    if (!player || !player->IsAlive())
+        return;
+
+    DelusionChain const& chain = ResolveDelusionChain();
+    if (!chain.triggerSpell)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            TC_LOG_ERROR("scripts", "GrandDelusions: 315184 TriggerSpell missing");
+        }
+        LabNotify(player, "DELUSION_PROC", "trigger=0 entry=0");
+        return;
+    }
+
+    bool ok = player->CastSpell(player, chain.triggerSpell, InfiniteStarsCastFlags());
+    Creature* thing = nullptr;
+    if (chain.summonEntry)
+    {
+        for (Creature* found : player->FindNearestCreatures(chain.summonEntry, 30.0f))
+        {
+            if (!found)
+                continue;
+            if (found->GetOwnerGUID() == player->GetGUID()
+                || (found->ToTempSummon() && found->ToTempSummon()->GetSummonerGUID() == player->GetGUID()))
+            {
+                thing = found;
+                break;
+            }
+        }
+    }
+
+    if (thing)
+        BindDelusionAI(thing, player);
+    else
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            TC_LOG_ERROR("scripts", "GrandDelusions: summon not bound entry=%u trigger=%u",
+                chain.summonEntry, chain.triggerSpell);
+        }
+    }
+
+    LabNotify(player, "DELUSION_PROC", Trinity::StringFormat(
+        "trigger=%u entry=%u damage=%u ok=%u",
+        chain.triggerSpell, chain.summonEntry, chain.damageSpell, ok ? 1u : 0u));
 }
 
 void ConsumeGlimpseStack(Player* player)
@@ -2730,6 +2985,29 @@ class spell_eye_of_corruption : public AuraScript
     }
 };
 
+// 315184 - CorruptionEffects Grand Delusions. Taken proc. Do not use cloak 313301.
+class spell_grand_delusions : public AuraScript
+{
+    PrepareAuraScript(spell_grand_delusions);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_GRAND_DELUSIONS });
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        if (Unit* owner = GetTarget())
+            CastGrandDelusions(owner);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_grand_delusions::HandleProc);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -2767,4 +3045,5 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_grasping_tendrils_proc);
     RegisterAuraScript(spell_grasping_tendrils_slow);
     RegisterAuraScript(spell_eye_of_corruption);
+    RegisterAuraScript(spell_grand_delusions);
 }
