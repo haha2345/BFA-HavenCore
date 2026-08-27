@@ -38,9 +38,9 @@
 
 ## 伤害结算的统一形状
 
-所有腐蚀伤害技能（317265 / 317159 / 后续）遵守：
+所有腐蚀伤害技能（317265 / 317159 / 317029 / 316835）遵守：
 
-- **只走 `SetHitDamage` / `SPELLVALUE_BASE_POINT0` 一条路**，让 school-damage 效果自己结算（暴击/全能/易伤走核心管线）。**禁止再叠 `DealDamage`**——A1 曾双倍扣血，已修（2026-08-26）。
+- 直伤只走 `SetHitDamage` / `SPELLVALUE_BASE_POINT0`；周期伤（316835）走 `DoEffectCalcAmount`。让 school-damage / periodic 自己结算（暴击/全能/易伤走核心管线）。**禁止再叠 `DealDamage`**——A1 曾双倍扣血，已修（2026-08-26）。
 - AT / 延迟事件跨帧传值只用 GUID + 显式传伤害（CastCustomSpell BP0），不存裸指针。
 - 每目标独立暴击；不做「腐蚀伤害不暴击」之类的臆测限制。
 
