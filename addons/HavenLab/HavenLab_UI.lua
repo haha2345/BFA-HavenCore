@@ -578,7 +578,7 @@ local function BuildMain()
 
     local prep = Label(left, "准备", "GameFontNormalSmall")
     prep:SetPoint("BOTTOMLEFT", 12, 94)
-    local dummy = Btn(left, "一排桩", 76, 22, function() HL:Send(".labaoe") end, "面前一排 5 个 + 右侧 1 个 + 背后 1 个临时木桩。测暮光：面向那一排打。")
+    local dummy = Btn(left, "一排桩", 76, 22, function() HL:Send(".labaoe") end, "面前一排 12 个 + 右侧 1 个 + 背后 1 个临时木桩。测暮光十目标/半伤：面向那一排打。")
     dummy:SetPoint("BOTTOMLEFT", 10, 68)
     local gm = Btn(left, "GM准备", 76, 22, function()
         HL:SendMany({ ".gm on", ".cheat god on", ".cheat cooldown on" })

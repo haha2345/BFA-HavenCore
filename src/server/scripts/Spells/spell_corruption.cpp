@@ -351,12 +351,20 @@ uint32 TwilightRankSpell(Unit const* caster)
 
 float TwilightHealthPct(Unit const* caster)
 {
-    int32 bp = TWILIGHT_RANK1_BP_FALLBACK;
     if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(TwilightRankSpell(caster)))
         if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            bp = effect->BasePoints;
-    // DBC stores 60/120/180; tooltip is $s1/10 percent of health.
-    return float(bp) / 10.0f / 100.0f;
+            if (effect->BasePoints > 0)
+                // DBC stores 60/120/180; tooltip is $s1/10 percent of health.
+                return float(effect->BasePoints) / 10.0f / 100.0f;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "TwilightDevastation: rank EFFECT_0 missing, using bp %d",
+            TWILIGHT_RANK1_BP_FALLBACK);
+    }
+    return float(TWILIGHT_RANK1_BP_FALLBACK) / 10.0f / 100.0f;
 }
 
 void NotifyTwilightVisual(Unit* caster, uint32 visual, uint32 hits, int32 damage, bool beamOk)
@@ -917,6 +925,10 @@ struct at_twilight_devastation : AreaTriggerAI
 
         SpellInfo const* damageInfo = sSpellMgr->GetSpellInfo(SPELL_TWILIGHT_DAMAGE);
         if (!caster->_IsValidAttackTarget(unit, damageInfo))
+            return;
+
+        // Same-tick enters keep calling OnUnitEnter after Remove(); cap before any settle.
+        if (_hitCount >= TWILIGHT_BEAM_MAX_TARGETS)
             return;
 
         // Each target is hit once per beam even if it re-enters the sphere.

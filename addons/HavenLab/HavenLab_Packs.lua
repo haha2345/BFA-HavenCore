@@ -109,6 +109,7 @@ HL.PACKS = {
               expect = { beam = 1 },
               hintFail = "有伤害但没有 TWILIGHT_VISUAL，或还没出斩。" },
             { id = 317159, role = "暗影伤害", want = "damage",
+              -- 2020-02 热修：最多 10 目标，第 6–10 半伤。来源：做法-A2 / 设计热修白名单
               expect = { school = 32, pctOfMaxHp = 0.06, tolerance = 0.2, maxTargets = 10, halfFrom = 6 },
               hintFail = "没有 317159 暗影伤害。光柱沿面向飞约 4 秒/28 码，扫到才结算；脸没对准就是 0。" },
         },
@@ -126,7 +127,8 @@ HL.PACKS = {
                 lines[#lines + 1] = string.format("暮光斩击 %d 次（最大 %d %s）。法术 ID 317159 暗影。",
                     dmgN, s159.damageMax or 0, s159.school or "暗影")
             end
-            lines[#lines + 1] = "官方约 1 次/分钟（吃急速，4 秒内置 CD）。只打已进战目标，不拉新怪。远程要站进约 25 码并面向目标。"
+            lines[#lines + 1] = "官方约 1 次/分钟（吃急速，4 秒 ICD）。扫到就打，会拉未进战的怪（blizz-like，不当 bug）。"
+            lines[#lines + 1] = "待进游戏验收：.labaoe 12 只一线，CLEU 恰好 10 条 317159，第 6–10 约半伤（容差 ±15%），第 11/12 无伤；2 号站路径上无 PvP 不掉血。"
             return lines
         end,
     },

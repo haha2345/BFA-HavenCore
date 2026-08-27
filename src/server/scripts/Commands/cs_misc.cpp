@@ -1469,13 +1469,22 @@ public:
             float dist;
             float angle;
         };
+        // 12 in a line (4–26 yd) so Twilight 10-cap / 6–10 half-damage can be checked;
+        // side + back stay for the facing-miss cases.
         Spot const spots[] =
         {
-            {  5.0f, 0.0f },
-            {  9.0f, 0.0f },
-            { 13.0f, 0.0f },
-            { 17.0f, 0.0f },
-            { 21.0f, 0.0f },
+            {  4.0f, 0.0f },
+            {  6.0f, 0.0f },
+            {  8.0f, 0.0f },
+            { 10.0f, 0.0f },
+            { 12.0f, 0.0f },
+            { 14.0f, 0.0f },
+            { 16.0f, 0.0f },
+            { 18.0f, 0.0f },
+            { 20.0f, 0.0f },
+            { 22.0f, 0.0f },
+            { 24.0f, 0.0f },
+            { 26.0f, 0.0f },
             { 12.0f, float(M_PI) / 2.0f },
             {  6.0f, float(M_PI) }
         };
@@ -1490,7 +1499,7 @@ public:
         }
 
         handler->PSendSysMessage(
-            "labaoe: spawned %u temp dummies (cleared %u). Face the line of 5; side and back should miss Twilight. 15 min, not saved to DB.",
+            "labaoe: spawned %u temp dummies (cleared %u). Face the line of 12 (Twilight: 10 hits, 6th-10th half). Side and back should miss. 15 min, not saved to DB.",
             spawned, cleared);
         return true;
     }
