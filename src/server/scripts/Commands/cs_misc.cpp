@@ -109,6 +109,7 @@ public:
             { "labgear",          rbac::RBAC_PERM_COMMAND_ADDITEM,          false, &HandleLabGearCommand,          "" },
             { "labglimpse",       rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabGlimpseCommand,       "" },
             { "labgrasping",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabGraspingCommand,      "" },
+            { "labeye",           rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabEyeCommand,           "" },
             { "labtruth",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTruthCommand,         "" },
             { "labstars",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabStarsCommand,         "" },
             { "labmind",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabMindCommand,          "" },
@@ -1343,7 +1344,8 @@ public:
             318272, 318179, 318187,
             318239, 315574, 315573,
             318303, 318484, 316799, 316801,
-            315175, 315176
+            315175, 315176,
+            315169
         };
         for (uint32 id : passives)
             player->RemoveAurasDueToSpell(id);
@@ -1383,6 +1385,7 @@ public:
             { "glimpse",       315574, "labglimpse",       "glimpse",        "Other corruption test auras removed." },
             { "truth",         316799, "labtruth",         "ineffable truth", "Other corruption test auras removed." },
             { "grasping",      315175, "labgrasping",      "grasping tendrils", "Other corruption test auras removed." },
+            { "eye",           315169, "labeye",           "eye of corruption", "Other corruption test auras removed." },
         };
 
         if (!key || !*key)
@@ -1418,7 +1421,7 @@ public:
         LabTestDef const* def = FindLabTest(key);
         if (!def)
         {
-            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum vitality wound glimpse truth grasping", key ? key : "");
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum vitality wound glimpse truth grasping eye", key ? key : "");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1446,7 +1449,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping|eye>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1454,7 +1457,7 @@ public:
         char key[64] = {};
         if (sscanf(args, "%63s", key) != 1)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping|eye>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1524,6 +1527,11 @@ public:
     static bool HandleLabGraspingCommand(ChatHandler* handler, char const* /*args*/)
     {
         return ApplyLabTest(handler, "grasping");
+    }
+
+    static bool HandleLabEyeCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        return ApplyLabTest(handler, "eye");
     }
 
     static bool HandleLabAoeCommand(ChatHandler* handler, char const* /*args*/)

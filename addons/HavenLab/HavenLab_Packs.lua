@@ -877,6 +877,37 @@ HL.PACKS = {
         end,
     },
 
+    eye = {
+        key = "eye",
+        title = "腐蚀之眼",
+        order = 21,
+        serverCmd = ".lab test eye",
+        hint = "挂 315169。用技能打木桩（不是挨打）。\n出眼后走进去挨跳、走开停。315270 是宠物，不要测那个。",
+        startText = "【腐蚀之眼】已挂 315169。用技能打木桩。出眼写成 EYE_PROC，靠近跳写成 EYE_PULSE。",
+        startPrint = "已挂 315169。技能打木桩等 EYE_PROC。走进去看 EYE_PULSE inrange=1。",
+        ids = { 315169 },
+        labels = {
+            [315169] = "眼驱动",
+        },
+        summonEntries = {},
+        chain = {
+            { id = 315169, role = "驱动", want = "aura-self",
+              hintFail = "没挂上 315169。用 .lab test eye / .labeye。真装要有效腐蚀≥20 才由 UpdateCorruption 挂上。" },
+            { id = 315169, role = "出眼", want = "labmsg", labType = "EYE_PROC", procStep = true,
+              hintFail = "没有 EYE_PROC。用技能打（RPPM 1，黄字）。trigger=0 说明 DBC TriggerSpell 空。" },
+            { id = 315169, role = "靠近跳", want = "labmsg", labType = "EYE_PULSE",
+              hintFail = "有 EYE_PROC 但没有 EYE_PULSE。可能没召唤出生物，或 entry 待回填。走进眼睛再等 2s。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：约 8 秒；每 2 秒（Dummy 2）靠近才跳；走开 inrange=0。",
+                "不要用 315270 宠物。summonEntries / 伤害法术 ID 进游戏 CLEU 回填。",
+                "范围和伤害随腐蚀升：先信 DBC 半径，不要把 Wowhead 875*corr-1000 / corr/5 写成官方。",
+                "阈值矩阵应挂 315169（DB2 MinCorruption 20）。脚本不写阈值比较。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",

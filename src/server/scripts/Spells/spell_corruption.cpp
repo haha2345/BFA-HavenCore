@@ -102,6 +102,12 @@
  *   315175          taken proc (RPPM 1). Do not compare corruption thresholds here.
  *   315176          5s snare. Amount = min(effectiveCorruption+10, 99).
  *                   99 cap is the 2020-02 hotfix whitelist, not a DBC field.
+ *
+ * Eye of Corruption (CorruptionEffects, MinCorruption 20):
+ *   315169          class-ability proc. EFFECT_0 TriggerSpell from DBC (do not guess).
+ *                   EFFECT_1 Dummy 2 = pulse period seconds. 315270 is the companion pet — skip it.
+ *   Summon/damage IDs and creature entry come from SpellInfo at runtime; leave
+ *   pack summonEntries empty until in-game CLEU fills them.
  */
 
 #include "AreaTrigger.h"
@@ -115,6 +121,7 @@
 #include "Random.h"
 #include "ScriptedCreature.h"
 #include "ScriptMgr.h"
+#include "TemporarySummon.h"
 #include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
@@ -257,6 +264,12 @@ enum GraspingTendrilsSpells
     SPELL_GRASPING_TENDRILS_SLOW = 315176
 };
 
+enum EyeOfCorruptionSpells
+{
+    SPELL_EYE_OF_CORRUPTION = 315169,
+    SPELL_EYE_OF_CORRUPTION_PET = 315270 // companion pet, not the combat eye
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -308,6 +321,11 @@ constexpr int32 INEFFABLE_TRUTH_RANK1_PCT_FALLBACK = 30;
 // Wowhead / 清单: slow = effective corruption + 10, cap 99 (2020-02 hotfix).
 constexpr int32 GRASPING_TENDRILS_BONUS_PCT = 10;
 constexpr int32 GRASPING_TENDRILS_CAP_PCT = 99;
+
+// Dummy 2 on 315169 is the pulse period. Duration 8s is Wowhead; prefer DBC duration.
+constexpr uint32 EYE_PULSE_MS_FALLBACK = 2000;
+constexpr uint32 EYE_DURATION_MS_FALLBACK = 8000;
+constexpr float EYE_RADIUS_FALLBACK = 10.0f; // not DBC — log once if radius missing
 
 namespace
 {
@@ -1140,6 +1158,8 @@ bool IsGlimpseExcludedSpell(uint32 id)
         case SPELL_INEFFABLE_TRUTH_BUFF:
         case SPELL_GRASPING_TENDRILS_PROC:
         case SPELL_GRASPING_TENDRILS_SLOW:
+        case SPELL_EYE_OF_CORRUPTION:
+        case SPELL_EYE_OF_CORRUPTION_PET:
             return true;
         default:
             return false;
@@ -1269,6 +1289,208 @@ void CastGraspingTendrils(Unit* owner)
     bool ok = player->CastCustomSpell(SPELL_GRASPING_TENDRILS_SLOW, SPELLVALUE_BASE_POINT0, pct, player, InfiniteStarsCastFlags());
     LabNotify(player, "TENDRIL_SLOW", Trinity::StringFormat(
         "pct=%d corr=%.0f ok=%u", pct, EffectiveCorruptionRating(player), ok ? 1u : 0u));
+}
+
+struct EyeChain
+{
+    uint32 triggerSpell = 0;
+    uint32 summonEntry = 0;
+    uint32 damageSpell = 0;
+    float radius = 0.0f;
+    uint32 pulseMs = EYE_PULSE_MS_FALLBACK;
+    uint32 durationMs = EYE_DURATION_MS_FALLBACK;
+};
+
+void InspectSpellForEye(SpellInfo const* info, EyeChain& chain, uint8 depth = 0)
+{
+    if (!info || depth > 3)
+        return;
+
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        SpellEffectInfo const* effect = info->GetEffect(SpellEffIndex(i));
+        if (!effect)
+            continue;
+
+        if (effect->Effect == SPELL_EFFECT_SUMMON && effect->MiscValue > 0)
+            chain.summonEntry = uint32(effect->MiscValue);
+
+        if (effect->Effect == SPELL_EFFECT_SCHOOL_DAMAGE)
+            chain.damageSpell = info->Id;
+        if (effect->Effect == SPELL_EFFECT_APPLY_AURA && effect->ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE)
+            chain.damageSpell = info->Id;
+
+        float radius = effect->CalcRadius();
+        if (radius > chain.radius)
+            chain.radius = radius;
+
+        if (effect->TriggerSpell && effect->TriggerSpell != SPELL_EYE_OF_CORRUPTION_PET
+            && effect->TriggerSpell != SPELL_EYE_OF_CORRUPTION)
+            InspectSpellForEye(sSpellMgr->GetSpellInfo(effect->TriggerSpell), chain, depth + 1);
+    }
+}
+
+EyeChain const& ResolveEyeChain()
+{
+    static EyeChain chain;
+    static bool loaded = false;
+    if (loaded)
+        return chain;
+    loaded = true;
+
+    SpellInfo const* driver = sSpellMgr->GetSpellInfo(SPELL_EYE_OF_CORRUPTION);
+    if (!driver)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            TC_LOG_ERROR("scripts", "EyeOfCorruption: 315169 missing");
+        }
+        return chain;
+    }
+
+    if (SpellEffectInfo const* triggerEff = driver->GetEffect(EFFECT_0))
+        if (triggerEff->TriggerSpell && triggerEff->TriggerSpell != SPELL_EYE_OF_CORRUPTION_PET)
+            chain.triggerSpell = triggerEff->TriggerSpell;
+
+    if (SpellEffectInfo const* dummy = driver->GetEffect(EFFECT_1))
+        if (dummy->BasePoints >= 1)
+            chain.pulseMs = uint32(dummy->BasePoints) * IN_MILLISECONDS;
+
+    if (chain.triggerSpell)
+    {
+        if (SpellInfo const* trigger = sSpellMgr->GetSpellInfo(chain.triggerSpell))
+        {
+            int32 duration = trigger->GetDuration();
+            if (duration > 0)
+                chain.durationMs = uint32(duration);
+            InspectSpellForEye(trigger, chain);
+        }
+    }
+
+    if (chain.radius <= 0.0f)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            TC_LOG_ERROR("scripts", "EyeOfCorruption: DBC radius missing, using %.1f yd", EYE_RADIUS_FALLBACK);
+        }
+        chain.radius = EYE_RADIUS_FALLBACK;
+    }
+
+    return chain;
+}
+
+struct npc_eye_of_corruption : public Scripted_NoMovementAI
+{
+    explicit npc_eye_of_corruption(Creature* creature) : Scripted_NoMovementAI(creature) { }
+
+    void BindOwner(Unit* owner)
+    {
+        if (!owner)
+        {
+            me->DespawnOrUnsummon();
+            return;
+        }
+
+        _ownerGuid = owner->GetGUID();
+        me->SetFaction(owner->getFaction());
+        me->SetLevel(owner->getLevel());
+        me->SetReactState(REACT_PASSIVE);
+        me->AddUnitState(UNIT_STATE_ROOT);
+        _timer = 0;
+        _elapsed = 0;
+    }
+
+    void IsSummonedBy(Unit* summoner) override
+    {
+        BindOwner(summoner);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        Unit* owner = ObjectAccessor::GetUnit(*me, _ownerGuid);
+        if (!owner)
+            owner = me->GetOwner();
+
+        if (!owner || !owner->IsAlive() || !owner->HasAura(SPELL_EYE_OF_CORRUPTION))
+        {
+            me->DespawnOrUnsummon();
+            return;
+        }
+
+        EyeChain const& chain = ResolveEyeChain();
+        _elapsed += diff;
+        if (_elapsed >= chain.durationMs)
+        {
+            me->DespawnOrUnsummon();
+            return;
+        }
+
+        _timer += diff;
+        if (_timer < chain.pulseMs)
+            return;
+        _timer = 0;
+
+        bool inRange = owner->GetDistance(me) <= chain.radius;
+        uint32 ok = 0;
+        if (inRange && chain.damageSpell)
+            ok = me->CastSpell(owner, chain.damageSpell, InfiniteStarsCastFlags(), nullptr, nullptr, owner->GetGUID()) ? 1u : 0u;
+
+        LabNotify(owner, "EYE_PULSE", Trinity::StringFormat(
+            "inrange=%u damage=%u ok=%u", inRange ? 1u : 0u, chain.damageSpell, ok));
+    }
+
+private:
+    ObjectGuid _ownerGuid;
+    uint32 _timer = 0;
+    uint32 _elapsed = 0;
+};
+
+void BindEyeAI(Creature* eye, Unit* owner)
+{
+    if (!eye || !owner)
+        return;
+    eye->AIM_Initialize(new npc_eye_of_corruption(eye));
+    if (npc_eye_of_corruption* ai = dynamic_cast<npc_eye_of_corruption*>(eye->AI()))
+        ai->BindOwner(owner);
+}
+
+void CastEyeOfCorruption(Unit* owner)
+{
+    Player* player = owner ? owner->ToPlayer() : nullptr;
+    if (!player || !player->IsAlive())
+        return;
+
+    EyeChain const& chain = ResolveEyeChain();
+    if (!chain.triggerSpell)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            TC_LOG_ERROR("scripts", "EyeOfCorruption: 315169 TriggerSpell missing");
+        }
+        LabNotify(player, "EYE_PROC", "trigger=0 entry=0 damage=0");
+        return;
+    }
+
+    bool ok = player->CastSpell(player, chain.triggerSpell, InfiniteStarsCastFlags());
+    Creature* eye = nullptr;
+    if (chain.summonEntry)
+        if (Creature* found = player->FindNearestCreature(chain.summonEntry, 20.0f))
+            if (found->GetOwnerGUID() == player->GetGUID()
+                || (found->ToTempSummon() && found->ToTempSummon()->GetSummonerGUID() == player->GetGUID()))
+                eye = found;
+
+    if (eye)
+        BindEyeAI(eye, player);
+
+    LabNotify(player, "EYE_PROC", Trinity::StringFormat(
+        "trigger=%u entry=%u damage=%u radius=%.1f ok=%u",
+        chain.triggerSpell, chain.summonEntry, chain.damageSpell, chain.radius, ok ? 1u : 0u));
 }
 
 void ConsumeGlimpseStack(Player* player)
@@ -2485,6 +2707,29 @@ class spell_grasping_tendrils_slow : public AuraScript
     }
 };
 
+// 315169 - CorruptionEffects Eye of Corruption. Class abilities; do not compare thresholds.
+class spell_eye_of_corruption : public AuraScript
+{
+    PrepareAuraScript(spell_eye_of_corruption);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_EYE_OF_CORRUPTION });
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        if (Unit* owner = GetTarget())
+            CastEyeOfCorruption(owner);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_eye_of_corruption::HandleProc);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -2521,4 +2766,5 @@ void AddSC_corruption_spell_scripts()
     RegisterPlayerScript(player_ineffable_truth);
     RegisterAuraScript(spell_grasping_tendrils_proc);
     RegisterAuraScript(spell_grasping_tendrils_slow);
+    RegisterAuraScript(spell_eye_of_corruption);
 }
