@@ -846,6 +846,37 @@ HL.PACKS = {
         end,
     },
 
+    grasping = {
+        key = "grasping",
+        title = "蔓生触须",
+        order = 20,
+        serverCmd = ".lab test grasping",
+        hint = "挂 315175。木桩打不出。站会还手的怪或 .damage 挨打。\n315176 减速 5 秒，幅度=有效腐蚀+10，上限 99%。开「移速」看 SPEED。",
+        startText = "【蔓生触须】已挂 315175。去挨打，不要打木桩。减速写成 TENDRIL_SLOW。",
+        startPrint = "已挂 315175。木桩测不出。挨打看 315176 与 TENDRIL_SLOW。开移速监控看 SPEED。",
+        ids = { 315175, 315176 },
+        labels = {
+            [315175] = "触须驱动",
+            [315176] = "减速",
+        },
+        chain = {
+            { id = 315175, role = "驱动", want = "aura-self",
+              hintFail = "没挂上 315175。用 .lab test grasping / .labgrasping。真装要有效腐蚀≥1 才由 UpdateCorruption 挂上。" },
+            { id = 315175, role = "开减速", want = "labmsg", labType = "TENDRIL_SLOW", procStep = true,
+              hintFail = "没有 TENDRIL_SLOW。木桩打不出；站会还手的怪或 .damage（RPPM 1，taken）。" },
+            { id = 315176, role = "减速", want = "aura-self",
+              hintFail = "有 TENDRIL_SLOW 但自己没有 315176。脚本 CastCustomSpell 没挂上。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：315176 约 5 秒；幅度=有效腐蚀+10，上限 99（2020-02 热修）。",
+                "无腐蚀装时 corr≈0，pct 应为 10。开移速监控看 SPEED 100%→约 90%。",
+                "热修后不是魔法，驱散魔法清不掉。不要在脚本里写腐蚀阈值比较。",
+                "GetCorruption /dump 待验。阈值矩阵应挂 315175（DB2 MinCorruption 1）。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",

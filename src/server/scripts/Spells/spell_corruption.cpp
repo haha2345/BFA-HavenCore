@@ -97,6 +97,11 @@
  *   316801          10s buff. Aura 143/173 are NYI — fill Dummy, then scale
  *                   remaining CDs on Apply/Remove and new CDs on cooldown start.
  *                   Rate is 100/(100+Dummy); never tick CDs every frame.
+ *
+ * Grasping Tendrils (CorruptionEffects, MinCorruption 1):
+ *   315175          taken proc (RPPM 1). Do not compare corruption thresholds here.
+ *   315176          5s snare. Amount = min(effectiveCorruption+10, 99).
+ *                   99 cap is the 2020-02 hotfix whitelist, not a DBC field.
  */
 
 #include "AreaTrigger.h"
@@ -246,6 +251,12 @@ enum IneffableTruthSpells
     SPELL_INEFFABLE_TRUTH_BUFF   = 316801
 };
 
+enum GraspingTendrilsSpells
+{
+    SPELL_GRASPING_TENDRILS_PROC = 315175,
+    SPELL_GRASPING_TENDRILS_SLOW = 315176
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -293,6 +304,10 @@ constexpr int32 GLIMPSE_TRIM_MS_FALLBACK = 3000;
 
 // 316801 DBC BP is 50 on both effects. Strength is the driver Dummy (30/50).
 constexpr int32 INEFFABLE_TRUTH_RANK1_PCT_FALLBACK = 30;
+
+// Wowhead / 清单: slow = effective corruption + 10, cap 99 (2020-02 hotfix).
+constexpr int32 GRASPING_TENDRILS_BONUS_PCT = 10;
+constexpr int32 GRASPING_TENDRILS_CAP_PCT = 99;
 
 namespace
 {
@@ -1123,6 +1138,8 @@ bool IsGlimpseExcludedSpell(uint32 id)
         case SPELL_INEFFABLE_TRUTH_RANK_2:
         case SPELL_INEFFABLE_TRUTH_PROC:
         case SPELL_INEFFABLE_TRUTH_BUFF:
+        case SPELL_GRASPING_TENDRILS_PROC:
+        case SPELL_GRASPING_TENDRILS_SLOW:
             return true;
         default:
             return false;
@@ -1213,6 +1230,45 @@ void ScaleExistingCooldowns(Player* player, int32 pct, bool apply)
         if (delta)
             history->ModifyCooldown(info->Id, delta);
     }
+}
+
+float EffectiveCorruptionRating(Player const* player)
+{
+    if (!player)
+        return 0.0f;
+    return player->GetRatingBonusValue(CR_CORRUPTION) - player->GetRatingBonusValue(CR_CORRUPTION_RESISTANCE);
+}
+
+int32 GraspingTendrilsBonusPct()
+{
+    if (SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_GRASPING_TENDRILS_PROC))
+        if (SpellEffectInfo const* effect = info->GetEffect(EFFECT_0))
+            if (effect->BasePoints >= GRASPING_TENDRILS_BONUS_PCT)
+                return effect->BasePoints;
+
+    return GRASPING_TENDRILS_BONUS_PCT;
+}
+
+int32 GraspingTendrilsSlowPct(Player const* player)
+{
+    int32 pct = int32(EffectiveCorruptionRating(player)) + GraspingTendrilsBonusPct();
+    if (pct < 0)
+        pct = 0;
+    if (pct > GRASPING_TENDRILS_CAP_PCT)
+        pct = GRASPING_TENDRILS_CAP_PCT;
+    return pct;
+}
+
+void CastGraspingTendrils(Unit* owner)
+{
+    Player* player = owner ? owner->ToPlayer() : nullptr;
+    if (!player || !player->IsAlive())
+        return;
+
+    int32 pct = GraspingTendrilsSlowPct(player);
+    bool ok = player->CastCustomSpell(SPELL_GRASPING_TENDRILS_SLOW, SPELLVALUE_BASE_POINT0, pct, player, InfiniteStarsCastFlags());
+    LabNotify(player, "TENDRIL_SLOW", Trinity::StringFormat(
+        "pct=%d corr=%.0f ok=%u", pct, EffectiveCorruptionRating(player), ok ? 1u : 0u));
 }
 
 void ConsumeGlimpseStack(Player* player)
@@ -2378,6 +2434,57 @@ public:
     }
 };
 
+// 315175 - CorruptionEffects Grasping Tendrils. Taken proc; do not compare thresholds.
+class spell_grasping_tendrils_proc : public AuraScript
+{
+    PrepareAuraScript(spell_grasping_tendrils_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_GRASPING_TENDRILS_SLOW });
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        if (Unit* owner = GetTarget())
+            CastGraspingTendrils(owner);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_grasping_tendrils_proc::HandleProc);
+    }
+};
+
+// 315176 - 5s snare. Amount = min(effectiveCorruption+10, 99).
+class spell_grasping_tendrils_slow : public AuraScript
+{
+    PrepareAuraScript(spell_grasping_tendrils_slow);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_GRASPING_TENDRILS_PROC });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        Player* player = GetUnitOwner() ? GetUnitOwner()->ToPlayer() : nullptr;
+        if (!player)
+        {
+            amount = 0;
+            return;
+        }
+        amount = GraspingTendrilsSlowPct(player);
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_grasping_tendrils_slow::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_DECREASE_SPEED);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -2412,4 +2519,6 @@ void AddSC_corruption_spell_scripts()
     RegisterPlayerScript(player_glimpse_of_clarity);
     RegisterAuraScript(spell_ineffable_truth);
     RegisterPlayerScript(player_ineffable_truth);
+    RegisterAuraScript(spell_grasping_tendrils_proc);
+    RegisterAuraScript(spell_grasping_tendrils_slow);
 }

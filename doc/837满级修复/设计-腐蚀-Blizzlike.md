@@ -64,6 +64,7 @@ DBC 表达不了、但属于 35662 最终行为的数字，允许硬编码，集
 | 虚空回响 | 2020-01-27：仅 GCD 技能；ICD 700ms；客户端 ProcFlags=0 | `spell_proc` 复原掩码 69904；C++ 滤无 GCD。坍缩几率 DBC 无字段，第 1 层用 SimC 模型 `ECHOING_VOID_COLLAPSE_CHANCE=0.15` |
 | 虚空仪式 | Dummy 7/10/13→14/33/63。附近人数 DBC 有、半径/倍率没有 | `VOID_RITUAL_ALLY_RANGE_YD=8`（非 DBC）。无人时 **SimC 模型近似** `VOID_RITUAL_SOLO_RPPM_MULT=5/6`：proc 后再掷，期望值等价 RPPM×5/6，**没有** RPPM 坏运气补偿。不是 35662 DBC。进游戏统计明显偏离再换，不预先重写。 |
 | 无尽之星 | 双入口 1.5s 去重（工程去重，非热修） | `317262` 冷却 |
+| 蔓生触须 | 2020-02-11：不再是魔法；减速幅度上限 99% | `GRASPING_TENDRILS_CAP_PCT=99`、`GRASPING_TENDRILS_BONUS_PCT=10`（清单/Wowhead：有效腐蚀+10）。驱散类型信 DBC，脚本不改 |
 
 以后每加一条热修值，登记到这张表。来源用蓝贴/Wowhead 热修记录核对，不抄现役数值。
 
