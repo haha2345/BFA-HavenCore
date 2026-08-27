@@ -116,6 +116,11 @@
  *   pack summonEntries empty until in-game lookup/CLEU fills them.
  *   Contact uses melee reach (unit body). No raycast. Visibility is all-visible
  *   until a core-supported "self + same-aura" filter exists.
+ *
+ * Cascading Disaster (CorruptionEffects, MinCorruption 60):
+ *   315857          aura presence only. On Thing-from-Beyond contact, fire the
+ *                   tendril and eye *trigger* paths (CastGraspingTendrils /
+ *                   CastEyeOfCorruption). Do not re-apply 315175/315169.
  */
 
 #include "AreaTrigger.h"
@@ -283,6 +288,11 @@ enum GrandDelusionsSpells
 {
     SPELL_GRAND_DELUSIONS = 315184,
     SPELL_THING_FROM_BEYOND_CLOAK = 313301 // cloak extra, not the 40-tier row
+};
+
+enum CascadingDisasterSpells
+{
+    SPELL_CASCADING_DISASTER = 315857
 };
 
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
@@ -1183,6 +1193,7 @@ bool IsGlimpseExcludedSpell(uint32 id)
         case SPELL_EYE_OF_CORRUPTION_PET:
         case SPELL_GRAND_DELUSIONS:
         case SPELL_THING_FROM_BEYOND_CLOAK:
+        case SPELL_CASCADING_DISASTER:
             return true;
         default:
             return false;
@@ -1516,6 +1527,16 @@ void CastEyeOfCorruption(Unit* owner)
         chain.triggerSpell, chain.summonEntry, chain.damageSpell, chain.radius, ok ? 1u : 0u));
 }
 
+void TryCascadingDisaster(Unit* owner)
+{
+    if (!owner || !owner->HasAura(SPELL_CASCADING_DISASTER))
+        return;
+
+    CastGraspingTendrils(owner);
+    CastEyeOfCorruption(owner);
+    LabNotify(owner, "CASCADE", "tendril=1 eye=1");
+}
+
 constexpr uint32 DELUSION_DURATION_MS_FALLBACK = 8000;
 
 struct DelusionChain
@@ -1676,6 +1697,7 @@ struct npc_thing_from_beyond : public ScriptedAI
 
         LabNotify(owner, "DELUSION_HIT", Trinity::StringFormat(
             "entry=%u damage=%u ok=%u", me->GetEntry(), chain.damageSpell, ok));
+        TryCascadingDisaster(owner);
         me->DespawnOrUnsummon();
     }
 

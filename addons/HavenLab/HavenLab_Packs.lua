@@ -940,6 +940,42 @@ HL.PACKS = {
         end,
     },
 
+    cascade = {
+        key = "cascade",
+        title = "层叠灾难",
+        order = 23,
+        serverCmd = ".lab test cascade",
+        hint = "只挂 315857。不要再 .labdelusion（会清掉 315857）。\n补 .aura 315184 才能出彼岸之物。挨打被碰后看 CASCADE + TENDRIL_SLOW + EYE_PROC。",
+        startText = "【层叠灾难】已挂 315857。再 .aura 315184，去挨打。被彼岸之物碰到写成 CASCADE。",
+        startPrint = "已挂 315857。再 .aura 315184（不要 .labdelusion）。挨打被碰看 CASCADE。",
+        ids = { 315857, 315176, 315169 },
+        labels = {
+            [315857] = "层叠驱动",
+            [315176] = "触须减速",
+            [315169] = "眼驱动",
+        },
+        summonEntries = {},
+        chain = {
+            { id = 315857, role = "驱动", want = "aura-self",
+              hintFail = "没挂上 315857。用 .lab test cascade / .labcascade。真装要有效腐蚀≥60 才由 UpdateCorruption 挂上。" },
+            { id = 315857, role = "命中层叠", want = "labmsg", labType = "CASCADE", procStep = true,
+              hintFail = "没有 CASCADE。先 .aura 315184，站会还手的怪挨打，被追上碰到才会层叠。不要再打 .labdelusion（会卸 315857）。" },
+            { id = 315176, role = "立刻减速", want = "labmsg", labType = "TENDRIL_SLOW",
+              hintFail = "有 CASCADE 但没有 TENDRIL_SLOW。命中处应调用 CastGraspingTendrils，不是再套 315175。" },
+            { id = 315169, role = "立刻出眼", want = "labmsg", labType = "EYE_PROC",
+              hintFail = "有 CASCADE 但没有 EYE_PROC。命中处应调用 CastEyeOfCorruption，不是再套 315169。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：被彼岸之物碰到立刻减速 + 出眼。不要再套 315175/315169。",
+                "Lab 只挂 315857：必须另 .aura 315184，否则怪会因无妄想光环 despawn。",
+                "要看 EYE_PULSE：再 .aura 315169（眼 AI 要 owner 有 315169，不是层叠门槛）。",
+                "双端：只有被自己那只怪碰到的人出 CASCADE。脚本不写阈值比较。",
+                "阈值矩阵应挂 315857（DB2 MinCorruption 60）。315857 无独立 spell_script_names。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
