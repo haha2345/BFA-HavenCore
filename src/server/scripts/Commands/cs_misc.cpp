@@ -112,6 +112,7 @@ public:
             { "labeye",           rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabEyeCommand,           "" },
             { "labdelusion",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabDelusionCommand,      "" },
             { "labcascade",       rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabCascadeCommand,       "" },
+            { "labdoom",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabDoomCommand,          "" },
             { "labtruth",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTruthCommand,         "" },
             { "labstars",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabStarsCommand,         "" },
             { "labmind",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabMindCommand,          "" },
@@ -1349,7 +1350,8 @@ public:
             315175, 315176,
             315169,
             315184,
-            315857
+            315857,
+            315179
         };
         for (uint32 id : passives)
             player->RemoveAurasDueToSpell(id);
@@ -1392,6 +1394,7 @@ public:
             { "eye",           315169, "labeye",           "eye of corruption", "Other corruption test auras removed." },
             { "delusion",      315184, "labdelusion",      "grand delusions", "Other corruption test auras removed." },
             { "cascade",       315857, "labcascade",       "cascading disaster", "Other corruption test auras removed." },
+            { "doom",          315179, "labdoom",          "inevitable doom", "Other corruption test auras removed." },
         };
 
         if (!key || !*key)
@@ -1427,7 +1430,7 @@ public:
         LabTestDef const* def = FindLabTest(key);
         if (!def)
         {
-            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum vitality wound glimpse truth grasping eye delusion cascade", key ? key : "");
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum vitality wound glimpse truth grasping eye delusion cascade doom", key ? key : "");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1455,7 +1458,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping|eye|delusion|cascade>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping|eye|delusion|cascade|doom>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1463,7 +1466,7 @@ public:
         char key[64] = {};
         if (sscanf(args, "%63s", key) != 1)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping|eye|delusion|cascade>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping|eye|delusion|cascade|doom>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1548,6 +1551,11 @@ public:
     static bool HandleLabCascadeCommand(ChatHandler* handler, char const* /*args*/)
     {
         return ApplyLabTest(handler, "cascade");
+    }
+
+    static bool HandleLabDoomCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        return ApplyLabTest(handler, "doom");
     }
 
     static bool HandleLabAoeCommand(ChatHandler* handler, char const* /*args*/)

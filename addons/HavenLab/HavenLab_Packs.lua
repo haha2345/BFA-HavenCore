@@ -976,6 +976,32 @@ HL.PACKS = {
         end,
     },
 
+    doom = {
+        key = "doom",
+        title = "不可避免的厄运",
+        order = 24,
+        serverCmd = ".lab test doom",
+        hint = "挂 315179。仓库无 SpellEffect dump，先零脚本。\n看受伤变大、治疗/吸收变小；再加腐蚀看是否更狠。不要抄 PTR 早期每点表。",
+        startText = "【不可避免的厄运】已挂 315179。先看光环在。三条 taken 修正是否随有效腐蚀变，进游戏定案。",
+        startPrint = "已挂 315179。零脚本先验。挨打/治疗看幅度；BP=0 或静态再补 CalcAmount。",
+        ids = { 315179 },
+        labels = {
+            [315179] = "厄运驱动",
+        },
+        chain = {
+            { id = 315179, role = "驱动", want = "aura-self",
+              hintFail = "没挂上 315179。用 .lab test doom / .labdoom。真装要有效腐蚀≥80 才由 UpdateCorruption 挂上。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：三条 taken（受伤放大 / 治疗减少 / 吸收减少）是否已随有效腐蚀变。",
+                "已变 → 保持零脚本。BP=0 或静态 → 再写 CalcAmount，系数只读运行时 Dummy，禁止抄 PTR 表。",
+                "不要新 LabNotify TYPE（零脚本无服务端消息）。脚本不写阈值比较。",
+                "阈值矩阵应挂 315179（DB2 MinCorruption 80）。无 spell_script_names。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
