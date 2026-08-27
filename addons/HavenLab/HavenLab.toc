@@ -2,7 +2,7 @@
 ## Title: |cffffd100HavenLab|r 技能调试台
 ## Notes: 数据驱动腐蚀测试：星/暮光/回响/触须/虚空仪式，链路结论与属性爬坡
 ## Author: 837-lab
-## Version: 2.0.3
+## Version: 2.0.4
 ## SavedVariables: HavenLabDB
 
 HavenLab.lua

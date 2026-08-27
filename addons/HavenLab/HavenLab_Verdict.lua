@@ -206,6 +206,16 @@ function HL:EvalStep(step)
         local key = step.expect and step.expect.stat or "haste"
         local minDelta = step.expect and step.expect.minDelta or 0.01
         local delta = s.statDelta and s.statDelta[key]
+        if type(delta) ~= "number" and self.packBaseline and self.DiffSnapshots then
+            local now = self.lastSnapshot or (self.StatSnapshot and self:StatSnapshot())
+            local diff = self:DiffSnapshots(self.packBaseline, now)
+            delta = diff and diff[key]
+            if type(delta) == "number" then
+                s.statDelta = diff
+                s.statBefore = self.packBaseline
+                s.statAfter = now
+            end
+        end
         if type(delta) == "number" and math.abs(delta) >= minDelta then
             result.status = "pass"
             result.detail = string.format("%s %+.1f", key, delta)

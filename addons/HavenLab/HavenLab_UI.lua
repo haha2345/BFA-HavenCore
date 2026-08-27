@@ -534,33 +534,30 @@ local function BuildMain()
     how:SetPoint("TOPLEFT", 12, -10)
 
     ui.packBtns = {}
-    local packDefs = {
-        { key = "stars", label = "无尽之星", tip = "挂 317257。用猛击等技能打木桩。落星写成 STAR_VISUAL。" },
-        { key = "twilight", label = "暮光毁灭", tip = "挂 317147。面对木桩打。斩击写成 TWILIGHT_VISUAL。" },
-        { key = "echo", label = "虚空回响", tip = "挂 317014。用带 GCD 的技能打。坍缩写成 ECHO_COLLAPSE。" },
-        { key = "tentacle", label = "扭曲附肢", tip = "挂 316815。平砍或技能都会出触须。写成 TENTACLE_SPAWN。" },
-        { key = "ritual", label = "虚空仪式", tip = "挂 316814。用技能打。开仪式写成 RITUAL_PROC，爬坡写成 RITUAL_TICK。" },
-    }
-    for i, def in ipairs(packDefs) do
-        local b = Btn(left, def.label, 80, 26, function()
-            HL:StartPackTest(def.key)
+    local packList = HL.VisiblePacks and HL:VisiblePacks() or {}
+    for i, pack in ipairs(packList) do
+        local key = pack.key
+        local b = Btn(left, pack.title or key, 80, 22, function()
+            HL:StartPackTest(key)
             RefreshFilters()
             RefreshChain()
-        end, def.tip)
-        b._key = def.key
+        end, pack.hint or pack.startPrint)
+        b._key = key
         local col = (i - 1) % 3
         local row = math.floor((i - 1) / 3)
-        b:SetPoint("TOPLEFT", 10 + col * 84, -32 - row * 28)
+        b:SetPoint("TOPLEFT", 10 + col * 84, -32 - row * 24)
         ui.packBtns[i] = b
     end
+    local packRows = math.max(2, math.ceil(#packList / 3))
+    local hintTop = -36 - packRows * 24 - 8
 
     ui.hint = Label(left, "用技能打木桩。出星看记录里的 STAR_VISUAL，\n不用盯着天。buff 栏没有 317257 是正常的。", "GameFontDisableSmall")
-    ui.hint:SetPoint("TOPLEFT", 12, -100)
+    ui.hint:SetPoint("TOPLEFT", 12, hintTop)
     ui.hint:SetWidth(244)
     ui.hint:SetJustifyH("LEFT")
 
     ui.chainText = Label(left, "", "GameFontHighlightSmall")
-    ui.chainText:SetPoint("TOPLEFT", 12, -124)
+    ui.chainText:SetPoint("TOPLEFT", 12, hintTop - 24)
     ui.chainText:SetWidth(244)
     ui.chainText:SetJustifyH("LEFT")
     ui.chainText:SetSpacing(2)

@@ -1,7 +1,7 @@
 local ADDON, HL = ...
 HavenLab = HL
 
-HL.version = "2.0.3"
+HL.version = "2.0.4"
 HL.logs = {}
 HL.stats = {}
 HL.historyIndex = 0
@@ -294,6 +294,24 @@ function HL:StartPackTest(key)
     end
     if pack.serverCmd then
         self:Send(pack.serverCmd)
+    end
+    -- Snapshot after the .lab command applies, not from a chat timer.
+    if pack.snapshotOnStart and pack.snapshotSpell and type(C_Timer) == "table" and C_Timer.After then
+        local sid = pack.snapshotSpell
+        C_Timer.After(0.35, function()
+            if not HL.StatSnapshot then
+                return
+            end
+            local after = HL:StatSnapshot()
+            local s = HL:Stat(sid)
+            if HL.packBaseline then
+                s.statDelta = HL:DiffSnapshots(HL.packBaseline, after)
+                s.statBefore = HL.packBaseline
+                s.statAfter = after
+            end
+            HL:UI("chain")
+            HL:UI("statsnap")
+        end)
     end
     self:PushLog({
         t = time(),
