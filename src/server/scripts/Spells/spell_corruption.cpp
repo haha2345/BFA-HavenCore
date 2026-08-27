@@ -79,6 +79,11 @@
  *                   Base was hotfixed to 0; rating is Scaled 343/458/801
  *   318212          hidden proc, RPPM 2, TAKEN melee/spell/periodic/heal
  *   318211          vers rating buff, 20s, no stacks, DBC BP=0 so we fill Scaled
+ *
+ * Gushing Wound (35662):
+ *   318272          rank 1 (Aura 285 LINKED -> 318179). Coefficient is ilvl, P5
+ *   318179          hidden proc, RPPM 4 haste, yellow melee/ranged + hostile spells
+ *   318187          target shadow bleed, 7s / 1s, BP=0; tick = Dummy13% of max(AP,SP)
  */
 
 #include "AreaTrigger.h"
@@ -204,6 +209,13 @@ enum SurgingVitalitySpells
     SPELL_SURGING_VITALITY_BUFF   = 318211
 };
 
+enum GushingWoundSpells
+{
+    SPELL_GUSHING_WOUND_RANK = 318272,
+    SPELL_GUSHING_WOUND_PROC = 318179,
+    SPELL_GUSHING_WOUND_DOT  = 318187
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -242,6 +254,9 @@ constexpr int32 DEADLY_MOMENTUM_RANK1_RATING_FALLBACK = 31;
 
 // Driver Base was hotfixed to 0. Rank-1 dump Scaled is 343. Do not use Icy Veins 312.
 constexpr int32 SURGING_VITALITY_RANK1_RATING_FALLBACK = 343;
+
+// 318187 EFFECT_1 Dummy is 13 after hotfix (was 10). Per-tick %, not divided by 7 ticks.
+constexpr int32 GUSHING_WOUND_TICK_PCT_FALLBACK = 13;
 
 namespace
 {
@@ -971,6 +986,60 @@ void CastSurgingVitality(Unit* caster)
     bool ok = caster->CastSpell(caster, SPELL_SURGING_VITALITY_BUFF, InfiniteStarsCastFlags());
     LabNotify(caster, "VITAL_PROC", Trinity::StringFormat(
         "rating=%d ok=%u", rating, ok ? 1u : 0u));
+}
+
+int32 GushingWoundTickPct()
+{
+    if (SpellInfo const* dot = sSpellMgr->GetSpellInfo(SPELL_GUSHING_WOUND_DOT))
+        if (SpellEffectInfo const* effect = dot->GetEffect(EFFECT_1))
+            if (effect->BasePoints >= 1)
+                return effect->BasePoints;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "GushingWound: 318187 EFFECT_1 missing, using %d%%",
+            GUSHING_WOUND_TICK_PCT_FALLBACK);
+    }
+    return GUSHING_WOUND_TICK_PCT_FALLBACK;
+}
+
+int32 GushingWoundTickDamage(Unit const* owner)
+{
+    float ap = std::max(owner->GetTotalAttackPowerValue(BASE_ATTACK), owner->GetTotalAttackPowerValue(RANGED_ATTACK));
+    float sp = float(owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW));
+    int32 damage = int32(std::max(ap, sp) * (float(GushingWoundTickPct()) / 100.0f));
+    return damage < 1 ? 1 : damage;
+}
+
+Unit* ResolveGushingWoundTarget(Unit* caster, ProcEventInfo& eventInfo)
+{
+    if (Unit* procTarget = eventInfo.GetProcTarget())
+        if (procTarget->IsAlive() && procTarget != caster)
+            return procTarget;
+
+    if (Unit* actionTarget = eventInfo.GetActionTarget())
+        if (actionTarget->IsAlive() && actionTarget != caster)
+            return actionTarget;
+
+    if (Unit* victim = caster->GetVictim())
+        if (victim->IsAlive() && victim != caster)
+            return victim;
+
+    return caster->SelectNearbyTarget(nullptr, 50.0f);
+}
+
+void CastGushingWound(Unit* caster, Unit* target)
+{
+    if (!caster || !caster->IsAlive() || !target || !target->IsAlive() || target == caster)
+        return;
+    if (!caster->_IsValidAttackTarget(target, sSpellMgr->GetSpellInfo(SPELL_GUSHING_WOUND_DOT)))
+        return;
+
+    bool ok = caster->CastSpell(target, SPELL_GUSHING_WOUND_DOT, InfiniteStarsCastFlags());
+    LabNotify(caster, "WOUND_PROC", Trinity::StringFormat(
+        "target=%s ok=%u", target->GetName().c_str(), ok ? 1u : 0u));
 }
 }
 
@@ -1912,6 +1981,72 @@ class spell_surging_vitality_buff : public AuraScript
     }
 };
 
+// 318179 - hidden proc. DBC already has RPPM 4 haste and yellow+hostile flags.
+class spell_gushing_wound_proc : public AuraScript
+{
+    PrepareAuraScript(spell_gushing_wound_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_GUSHING_WOUND_DOT, SPELL_GUSHING_WOUND_RANK });
+    }
+
+    void HandleProc(ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+        Unit* caster = GetTarget();
+        if (!caster)
+            return;
+        if (Unit* target = ResolveGushingWoundTarget(caster, eventInfo))
+            CastGushingWound(caster, target);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_gushing_wound_proc::HandleProc);
+    }
+};
+
+// 318187 - target bleed. DBC BP=0; fill Dummy% of max(AP,SP). Do not divide by tick count.
+class spell_gushing_wound_dot : public AuraScript
+{
+    PrepareAuraScript(spell_gushing_wound_dot);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_GUSHING_WOUND_PROC, SPELL_GUSHING_WOUND_RANK });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = false;
+
+        Unit* owner = GetCaster();
+        if (!owner || !owner->HasAura(SPELL_GUSHING_WOUND_PROC))
+        {
+            amount = 0;
+            return;
+        }
+
+        amount = GushingWoundTickDamage(owner);
+    }
+
+    void HandlePeriodic(AuraEffect const* aurEff)
+    {
+        if (aurEff->GetAmount() <= 0)
+            return;
+
+        if (Unit* owner = GetCaster())
+            LabNotify(owner, "WOUND_TICK", Trinity::StringFormat("damage=%d", aurEff->GetAmount()));
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_gushing_wound_dot::CalculateAmount, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_gushing_wound_dot::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -1940,4 +2075,6 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_deadly_momentum_buff);
     RegisterAuraScript(spell_surging_vitality_proc);
     RegisterAuraScript(spell_surging_vitality_buff);
+    RegisterAuraScript(spell_gushing_wound_proc);
+    RegisterAuraScript(spell_gushing_wound_dot);
 }

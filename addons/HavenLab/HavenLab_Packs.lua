@@ -746,6 +746,38 @@ HL.PACKS = {
         end,
     },
 
+    wound = {
+        key = "wound",
+        title = "龟裂创伤",
+        order = 17,
+        serverCmd = ".lab test wound",
+        hint = "挂 318179。用黄字打木桩（平砍不开）。\n318187 暗影渗血 7 秒，每跳 Dummy 13% max(AP,SP)，不要 ÷7。",
+        startText = "【龟裂创伤】已挂 318179。猛击等黄字打木桩。proc 写成 WOUND_PROC，跳伤写成 WOUND_TICK。",
+        startPrint = "已挂 318179。用黄字打。看 318187 暗影跳伤。平砍不开。",
+        ids = { 318272, 318179, 318187 },
+        labels = {
+            [318272] = "一段驱动",
+            [318179] = "隐藏proc",
+            [318187] = "渗血DoT",
+        },
+        chain = {
+            { id = 318179, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂上 318179。用 .lab test wound / .labwound。" },
+            { id = 318179, role = "开渗血", want = "labmsg", labType = "WOUND_PROC", procStep = true,
+              hintFail = "没有 WOUND_PROC。用猛击等黄字打（RPPM 4，平砍不开）。" },
+            { id = 318187, role = "渗血跳伤", want = "damage",
+              expect = { school = 32 },
+              hintFail = "有 WOUND_PROC 但没有 318187 暗影跳伤。看 Cast 目标是不是当前敌人。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：约 7 秒 / 约 7 跳；刷新是重置满时长（不是 SimC pandemic）。",
+                "跳伤 = Dummy 13% × max(AP,SP)，不要 ÷7，不要写死 Icy Veins 70%。驱动系数 2.37 是装等，P5。",
+                "DBC 可暴击。CLEU 是否真暴击、跳数 6 还是 7，进游戏再定。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
