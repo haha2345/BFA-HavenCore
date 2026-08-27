@@ -580,11 +580,19 @@ uint32 VoidRitualRankSpell(Unit const* owner)
 
 int32 VoidRitualRatingPerStack(Unit const* owner)
 {
-    int32 rating = VOID_RITUAL_RANK1_RATING_FALLBACK;
     if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(VoidRitualRankSpell(owner)))
         if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            rating = effect->BasePoints;
-    return rating < 1 ? VOID_RITUAL_RANK1_RATING_FALLBACK : rating;
+            if (effect->BasePoints >= 1)
+                return effect->BasePoints;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "VoidRitual: rank EFFECT_0 missing, using rating %d",
+            VOID_RITUAL_RANK1_RATING_FALLBACK);
+    }
+    return VOID_RITUAL_RANK1_RATING_FALLBACK;
 }
 
 uint32 VoidRitualAllyNeed(Unit const* owner)
@@ -599,6 +607,13 @@ uint32 VoidRitualAllyNeed(Unit const* owner)
             if (effect->BasePoints > 0)
                 return uint32(effect->BasePoints);
 
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "VoidRitual: ally-need Dummy missing, using %u",
+            VOID_RITUAL_ALLY_NEED_FALLBACK);
+    }
     return VOID_RITUAL_ALLY_NEED_FALLBACK;
 }
 
@@ -607,6 +622,8 @@ uint32 VoidRitualNearbyAllies(Unit* caster)
     if (!caster)
         return 0;
 
+    // Grid search already drops other phases; keep an explicit IsInPhase
+    // so a later scan helper cannot silently count phased-out allies.
     std::vector<Player*> players;
     caster->GetPlayerListInGrid(players, VOID_RITUAL_ALLY_RANGE_YD);
 
@@ -614,6 +631,8 @@ uint32 VoidRitualNearbyAllies(Unit* caster)
     for (Player* player : players)
     {
         if (!player || player == caster || !player->IsAlive())
+            continue;
+        if (!caster->IsInPhase(player))
             continue;
         if (!caster->IsFriendlyTo(player))
             continue;

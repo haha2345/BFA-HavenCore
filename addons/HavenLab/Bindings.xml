@@ -1,0 +1,8 @@
+<Bindings>
+  <Binding name="HAVENLAB_TOGGLE" header="HAVENLAB">
+    if HavenLab then HavenLab:Toggle() end
+  </Binding>
+  <Binding name="HAVENLAB_CMD">
+    if HavenLab then HavenLab:FocusCommand() end
+  </Binding>
+</Bindings>
