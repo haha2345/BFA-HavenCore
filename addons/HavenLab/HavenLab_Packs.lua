@@ -646,6 +646,67 @@ HL.PACKS = {
         end,
     },
 
+    momentum = {
+        key = "momentum",
+        title = "致命之势",
+        order = 8,
+        serverCmd = ".lab test momentum",
+        snapshotOnStart = true,
+        snapshotSpell = 318219,
+        expect = { stat = "critRating", minDelta = 31 },
+        hint = "挂 318218。只有暴击才 proc（RPPM 5）。\n318219 暴击 rating +31/层，最多 5 层，30 秒。",
+        startText = "【致命之势】已挂 318218。打出暴击。proc 写成 MOMENTUM_PROC，buff 是 318219。",
+        startPrint = "已挂 318218。只有暴击开致命之势。看 318219 与暴击 rating +31。",
+        ids = { 318268, 318493, 318497, 318218, 318219 },
+        labels = {
+            [318268] = "一段驱动",
+            [318493] = "二段驱动",
+            [318497] = "三段驱动",
+            [318218] = "隐藏proc",
+            [318219] = "暴击buff",
+        },
+        chain = {
+            { id = 318218, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂上 318218。用 .lab test momentum / .labmomentum。" },
+            { id = 318218, role = "开致命", want = "labmsg", labType = "MOMENTUM_PROC", procStep = true,
+              hintFail = "没有 MOMENTUM_PROC。打出暴击（平击不应进，也不应吃掉 RPPM）。" },
+            { id = 318219, role = "暴击buff", want = "aura-self",
+              hintFail = "有 MOMENTUM_PROC 但自己没有 318219。脚本 CastSpell 没挂上。" },
+            { id = 318219, role = "暴击rating+31", want = "stat",
+              expect = { stat = "critRating", minDelta = 31 },
+              hintFail = "有 318219 但暴击 rating 没涨到约 +31。一段 Dummy，禁止写死主路径。" },
+        },
+        extraVerdict = function(self)
+            local lines = {
+                "待进游戏验收：318219 约 30 秒掉（信 35662，不信 SimC 15s）。满层后再 proc 是否整段刷新。",
+                "仅暴击进 RPPM（DoCheckProc）。平击不应消耗次数。叠到 5 不做成硬失败。",
+                "CalcAmount 只填每层 Dummy，引擎再乘层。脚本不要自己 Dummy×层。",
+            }
+            if self and self.LabMessages then
+                local procs = self:LabMessages("MOMENTUM_PROC") or {}
+                local maxStacks, bad = 0, 0
+                for i = 1, #procs do
+                    local kv = procs[i].kv or {}
+                    local st = tonumber(kv.stacks) or 0
+                    local rt = tonumber(kv.rating) or 0
+                    if st > maxStacks then maxStacks = st end
+                    if st >= 1 and rt ~= st * 31 then
+                        bad = bad + 1
+                    end
+                end
+                if #procs > 0 then
+                    lines[#lines + 1] = string.format(
+                        "MOMENTUM_PROC %d 次，层数最高 %d（DBC 上限 5）。", #procs, maxStacks)
+                    if bad > 0 then
+                        lines[#lines + 1] = string.format(
+                            "%d 次 rating 不是层×31（二段/三段或通知乘层对不上）。", bad)
+                    end
+                end
+            end
+            return lines
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",

@@ -67,6 +67,12 @@
  *   318269/494/498  rank 1/2/3 (Aura 285 LINKED -> 318214, dummy 392/523/915)
  *   318214          hidden proc, RPPM 3, white+yellow+heal+hostile+periodic+trap
  *   318216          mastery rating buff, 10s, no stacks, DBC BP=0 so we fill Dummy
+ *
+ * Deadly Momentum (35662):
+ *   318268/493/497  rank 1/2/3 (Aura 285 LINKED -> 318218, dummy 31/41/72)
+ *   318218          hidden proc, RPPM 5; DBC mask is wide so C++ keeps crits only
+ *   318219          crit rating buff, 30s, max 5 stacks, DBC BP=0 so we fill Dummy
+ *                   (engine multiplies MOD_RATING by stacks — do not multiply here)
  */
 
 #include "AreaTrigger.h"
@@ -174,6 +180,15 @@ enum HonedMindSpells
     SPELL_HONED_MIND_BUFF   = 318216
 };
 
+enum DeadlyMomentumSpells
+{
+    SPELL_DEADLY_MOMENTUM_RANK_1 = 318268,
+    SPELL_DEADLY_MOMENTUM_RANK_2 = 318493,
+    SPELL_DEADLY_MOMENTUM_RANK_3 = 318497,
+    SPELL_DEADLY_MOMENTUM_PROC   = 318218,
+    SPELL_DEADLY_MOMENTUM_BUFF   = 318219
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -206,6 +221,9 @@ constexpr int32 RACING_PULSE_RANK1_RATING_FALLBACK = 546;
 
 // 318216 DBC BP is 0; fill rank Dummy. Do not hardcode 392 as the only value.
 constexpr int32 HONED_MIND_RANK1_RATING_FALLBACK = 392;
+
+// 318219 DBC BP is 0; fill per-stack Dummy. Engine multiplies by stacks.
+constexpr int32 DEADLY_MOMENTUM_RANK1_RATING_FALLBACK = 31;
 
 namespace
 {
@@ -852,6 +870,48 @@ void CastHonedMind(Unit* caster)
     bool ok = caster->CastSpell(caster, SPELL_HONED_MIND_BUFF, InfiniteStarsCastFlags());
     LabNotify(caster, "MIND_PROC", Trinity::StringFormat(
         "rating=%d ok=%u", rating, ok ? 1u : 0u));
+}
+
+uint32 DeadlyMomentumRankSpell(Unit const* owner)
+{
+    if (owner->HasAura(SPELL_DEADLY_MOMENTUM_RANK_3))
+        return SPELL_DEADLY_MOMENTUM_RANK_3;
+    if (owner->HasAura(SPELL_DEADLY_MOMENTUM_RANK_2))
+        return SPELL_DEADLY_MOMENTUM_RANK_2;
+    return SPELL_DEADLY_MOMENTUM_RANK_1;
+}
+
+int32 DeadlyMomentumRatingPerStack(Unit const* owner)
+{
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(DeadlyMomentumRankSpell(owner)))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
+            if (effect->BasePoints >= 1)
+                return effect->BasePoints;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "DeadlyMomentum: rank EFFECT_0 missing, using rating %d",
+            DEADLY_MOMENTUM_RANK1_RATING_FALLBACK);
+    }
+    return DEADLY_MOMENTUM_RANK1_RATING_FALLBACK;
+}
+
+void CastDeadlyMomentum(Unit* caster)
+{
+    if (!caster || !caster->IsAlive())
+        return;
+
+    bool ok = caster->CastSpell(caster, SPELL_DEADLY_MOMENTUM_BUFF, InfiniteStarsCastFlags());
+    uint32 stacks = 1;
+    if (Aura const* aura = caster->GetAura(SPELL_DEADLY_MOMENTUM_BUFF))
+        stacks = aura->GetStackAmount();
+    if (stacks < 1)
+        stacks = 1;
+    int32 rating = DeadlyMomentumRatingPerStack(caster) * int32(stacks);
+    LabNotify(caster, "MOMENTUM_PROC", Trinity::StringFormat(
+        "stacks=%u rating=%d ok=%u", stacks, rating, ok ? 1u : 0u));
 }
 }
 
@@ -1677,6 +1737,67 @@ class spell_honed_mind_buff : public AuraScript
     }
 };
 
+// 318218 - hidden proc. DBC mask is the same wide set as Racing Pulse; keep crits only.
+class spell_deadly_momentum_proc : public AuraScript
+{
+    PrepareAuraScript(spell_deadly_momentum_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_DEADLY_MOMENTUM_BUFF,
+            SPELL_DEADLY_MOMENTUM_RANK_1, SPELL_DEADLY_MOMENTUM_RANK_2, SPELL_DEADLY_MOMENTUM_RANK_3 });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        return (eventInfo.GetHitMask() & PROC_HIT_CRITICAL) != 0;
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        if (Unit* caster = GetTarget())
+            CastDeadlyMomentum(caster);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_deadly_momentum_proc::CheckProc);
+        OnProc += AuraProcFn(spell_deadly_momentum_proc::HandleProc);
+    }
+};
+
+// 318219 - crit rating, 30s, max 5 stacks. Fill per-stack Dummy; engine multiplies.
+class spell_deadly_momentum_buff : public AuraScript
+{
+    PrepareAuraScript(spell_deadly_momentum_buff);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_DEADLY_MOMENTUM_PROC,
+            SPELL_DEADLY_MOMENTUM_RANK_1, SPELL_DEADLY_MOMENTUM_RANK_2, SPELL_DEADLY_MOMENTUM_RANK_3 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+
+        Unit* owner = GetUnitOwner();
+        if (!owner || !owner->HasAura(SPELL_DEADLY_MOMENTUM_PROC))
+        {
+            amount = 0;
+            return;
+        }
+
+        amount = DeadlyMomentumRatingPerStack(owner);
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_deadly_momentum_buff::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RATING);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -1701,4 +1822,6 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_racing_pulse_buff);
     RegisterAuraScript(spell_honed_mind_proc);
     RegisterAuraScript(spell_honed_mind_buff);
+    RegisterAuraScript(spell_deadly_momentum_proc);
+    RegisterAuraScript(spell_deadly_momentum_buff);
 }

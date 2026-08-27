@@ -109,6 +109,7 @@ public:
             { "labgear",          rbac::RBAC_PERM_COMMAND_ADDITEM,          false, &HandleLabGearCommand,          "" },
             { "labstars",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabStarsCommand,         "" },
             { "labmind",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabMindCommand,          "" },
+            { "labmomentum",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabMomentumCommand,      "" },
             { "labpulse",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabPulseCommand,         "" },
             { "labritual",        rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabRitualCommand,        "" },
             { "labtentacle",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTentacleCommand,      "" },
@@ -1329,9 +1330,10 @@ public:
             315590, 315591, 315592,
             315277, 315281, 315282, 320249,
             315607, 315608, 315609,
-            // P3 Racing Pulse / Honed Mind
+            // P3 Racing Pulse / Honed Mind / Deadly Momentum
             318266, 318492, 318496, 318220, 318227,
-            318269, 318494, 318498, 318214, 318216
+            318269, 318494, 318498, 318214, 318216,
+            318268, 318493, 318497, 318218, 318219
         };
         for (uint32 id : passives)
             player->RemoveAurasDueToSpell(id);
@@ -1365,6 +1367,7 @@ public:
             { "avoidant",      315607, "labavoidant",      "avoidant",      "Other corruption test auras removed." },
             { "pulse",         318220, "labpulse",         "racing pulse",  "Other corruption test auras removed." },
             { "mind",          318214, "labmind",          "honed mind",    "Other corruption test auras removed." },
+            { "momentum",      318218, "labmomentum",      "deadly momentum", "Other corruption test auras removed." },
         };
 
         if (!key || !*key)
@@ -1400,7 +1403,7 @@ public:
         LabTestDef const* def = FindLabTest(key);
         if (!def)
         {
-            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind", key ? key : "");
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum", key ? key : "");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1428,7 +1431,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1436,7 +1439,7 @@ public:
         char key[64] = {};
         if (sscanf(args, "%63s", key) != 1)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1476,6 +1479,11 @@ public:
     static bool HandleLabMindCommand(ChatHandler* handler, char const* /*args*/)
     {
         return ApplyLabTest(handler, "mind");
+    }
+
+    static bool HandleLabMomentumCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        return ApplyLabTest(handler, "momentum");
     }
 
     static bool HandleLabAoeCommand(ChatHandler* handler, char const* /*args*/)
