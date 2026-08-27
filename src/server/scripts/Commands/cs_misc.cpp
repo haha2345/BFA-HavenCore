@@ -108,6 +108,7 @@ public:
             { "labecho",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabEchoCommand,          "" },
             { "labgear",          rbac::RBAC_PERM_COMMAND_ADDITEM,          false, &HandleLabGearCommand,          "" },
             { "labstars",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabStarsCommand,         "" },
+            { "labmind",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabMindCommand,          "" },
             { "labpulse",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabPulseCommand,         "" },
             { "labritual",        rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabRitualCommand,        "" },
             { "labtentacle",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTentacleCommand,      "" },
@@ -1328,8 +1329,9 @@ public:
             315590, 315591, 315592,
             315277, 315281, 315282, 320249,
             315607, 315608, 315609,
-            // P3 Racing Pulse
-            318266, 318492, 318496, 318220, 318227
+            // P3 Racing Pulse / Honed Mind
+            318266, 318492, 318496, 318220, 318227,
+            318269, 318494, 318498, 318214, 318216
         };
         for (uint32 id : passives)
             player->RemoveAurasDueToSpell(id);
@@ -1362,6 +1364,7 @@ public:
             { "strikethrough", 315277, "labstrikethrough", "strikethrough", "Other corruption test auras removed." },
             { "avoidant",      315607, "labavoidant",      "avoidant",      "Other corruption test auras removed." },
             { "pulse",         318220, "labpulse",         "racing pulse",  "Other corruption test auras removed." },
+            { "mind",          318214, "labmind",          "honed mind",    "Other corruption test auras removed." },
         };
 
         if (!key || !*key)
@@ -1397,7 +1400,7 @@ public:
         LabTestDef const* def = FindLabTest(key);
         if (!def)
         {
-            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse", key ? key : "");
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind", key ? key : "");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1425,7 +1428,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1433,7 +1436,7 @@ public:
         char key[64] = {};
         if (sscanf(args, "%63s", key) != 1)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1468,6 +1471,11 @@ public:
     static bool HandleLabPulseCommand(ChatHandler* handler, char const* /*args*/)
     {
         return ApplyLabTest(handler, "pulse");
+    }
+
+    static bool HandleLabMindCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        return ApplyLabTest(handler, "mind");
     }
 
     static bool HandleLabAoeCommand(ChatHandler* handler, char const* /*args*/)

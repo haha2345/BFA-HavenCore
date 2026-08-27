@@ -607,6 +607,45 @@ HL.PACKS = {
         end,
     },
 
+    mind = {
+        key = "mind",
+        title = "磨砺心灵",
+        order = 7,
+        serverCmd = ".lab test mind",
+        snapshotOnStart = true,
+        snapshotSpell = 318216,
+        expect = { stat = "masteryRating", minDelta = 392 },
+        hint = "挂 318214。平砍或技能都能 proc（RPPM 3）。\n318216 精通 rating +392，10 秒，不叠层。",
+        startText = "【磨砺心灵】已挂 318214。平砍或黄字打木桩。proc 写成 MIND_PROC，buff 是 318216。",
+        startPrint = "已挂 318214。平砍或技能都能开心灵。看 318216 与精通 rating +392。",
+        ids = { 318269, 318494, 318498, 318214, 318216 },
+        labels = {
+            [318269] = "一段驱动",
+            [318494] = "二段驱动",
+            [318498] = "三段驱动",
+            [318214] = "隐藏proc",
+            [318216] = "精通buff",
+        },
+        chain = {
+            { id = 318214, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂上 318214。用 .lab test mind / .labmind。" },
+            { id = 318214, role = "开心灵", want = "labmsg", labType = "MIND_PROC", procStep = true,
+              hintFail = "没有 MIND_PROC。平砍或猛击打一会儿（RPPM 3，含白字）。" },
+            { id = 318216, role = "精通buff", want = "aura-self",
+              hintFail = "有 MIND_PROC 但自己没有 318216。脚本 CastSpell 没挂上。" },
+            { id = 318216, role = "精通rating+392", want = "stat",
+              expect = { stat = "masteryRating", minDelta = 392 },
+              hintFail = "有 318216 但精通 rating 没涨到约 +392。一段 Dummy，禁止写死主路径。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：318216 约 10 秒掉；再 proc 刷新时长、不叠层。",
+                "白字能否 proc 信 DBC（含 White Melee）。面板精通% 随等级变，只验 rating。",
+                "第 1 层挂 hidden proc，不赌 LINKED 带 318214。真装 P5 再验驱动。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",

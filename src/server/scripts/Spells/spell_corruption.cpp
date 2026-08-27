@@ -62,6 +62,11 @@
  *   318266/492/496  rank 1/2/3 (Aura 285 LINKED -> 318220, dummy 546/728/1275)
  *   318220          hidden proc, RPPM 5, white+yellow+heal+hostile+periodic+trap
  *   318227          haste rating buff, 4s, no stacks, DBC BP=0 so we fill Dummy
+ *
+ * Honed Mind (35662):
+ *   318269/494/498  rank 1/2/3 (Aura 285 LINKED -> 318214, dummy 392/523/915)
+ *   318214          hidden proc, RPPM 3, white+yellow+heal+hostile+periodic+trap
+ *   318216          mastery rating buff, 10s, no stacks, DBC BP=0 so we fill Dummy
  */
 
 #include "AreaTrigger.h"
@@ -160,6 +165,15 @@ enum RacingPulseSpells
     SPELL_RACING_PULSE_BUFF   = 318227
 };
 
+enum HonedMindSpells
+{
+    SPELL_HONED_MIND_RANK_1 = 318269,
+    SPELL_HONED_MIND_RANK_2 = 318494,
+    SPELL_HONED_MIND_RANK_3 = 318498,
+    SPELL_HONED_MIND_PROC   = 318214,
+    SPELL_HONED_MIND_BUFF   = 318216
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -189,6 +203,9 @@ constexpr int32 STRIKETHROUGH_RANK1_CRIT_FALLBACK = 2;
 
 // 318227 DBC BP is 0; fill rank Dummy. Do not hardcode 546 as the only value.
 constexpr int32 RACING_PULSE_RANK1_RATING_FALLBACK = 546;
+
+// 318216 DBC BP is 0; fill rank Dummy. Do not hardcode 392 as the only value.
+constexpr int32 HONED_MIND_RANK1_RATING_FALLBACK = 392;
 
 namespace
 {
@@ -797,6 +814,43 @@ void CastRacingPulse(Unit* caster)
     int32 rating = RacingPulseRating(caster);
     bool ok = caster->CastSpell(caster, SPELL_RACING_PULSE_BUFF, InfiniteStarsCastFlags());
     LabNotify(caster, "PULSE_PROC", Trinity::StringFormat(
+        "rating=%d ok=%u", rating, ok ? 1u : 0u));
+}
+
+uint32 HonedMindRankSpell(Unit const* owner)
+{
+    if (owner->HasAura(SPELL_HONED_MIND_RANK_3))
+        return SPELL_HONED_MIND_RANK_3;
+    if (owner->HasAura(SPELL_HONED_MIND_RANK_2))
+        return SPELL_HONED_MIND_RANK_2;
+    return SPELL_HONED_MIND_RANK_1;
+}
+
+int32 HonedMindRating(Unit const* owner)
+{
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(HonedMindRankSpell(owner)))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
+            if (effect->BasePoints >= 1)
+                return effect->BasePoints;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "HonedMind: rank EFFECT_0 missing, using rating %d",
+            HONED_MIND_RANK1_RATING_FALLBACK);
+    }
+    return HONED_MIND_RANK1_RATING_FALLBACK;
+}
+
+void CastHonedMind(Unit* caster)
+{
+    if (!caster || !caster->IsAlive())
+        return;
+
+    int32 rating = HonedMindRating(caster);
+    bool ok = caster->CastSpell(caster, SPELL_HONED_MIND_BUFF, InfiniteStarsCastFlags());
+    LabNotify(caster, "MIND_PROC", Trinity::StringFormat(
         "rating=%d ok=%u", rating, ok ? 1u : 0u));
 }
 }
@@ -1568,6 +1622,61 @@ class spell_racing_pulse_buff : public AuraScript
     }
 };
 
+// 318214 - hidden proc. DBC already has RPPM 3 and white+yellow+heal+hostile+periodic+trap.
+class spell_honed_mind_proc : public AuraScript
+{
+    PrepareAuraScript(spell_honed_mind_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_HONED_MIND_BUFF,
+            SPELL_HONED_MIND_RANK_1, SPELL_HONED_MIND_RANK_2, SPELL_HONED_MIND_RANK_3 });
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        if (Unit* caster = GetTarget())
+            CastHonedMind(caster);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_honed_mind_proc::HandleProc);
+    }
+};
+
+// 318216 - mastery rating, 10s, no stacks. DBC BP=0; fill from rank Dummy.
+class spell_honed_mind_buff : public AuraScript
+{
+    PrepareAuraScript(spell_honed_mind_buff);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_HONED_MIND_PROC,
+            SPELL_HONED_MIND_RANK_1, SPELL_HONED_MIND_RANK_2, SPELL_HONED_MIND_RANK_3 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+
+        Unit* owner = GetUnitOwner();
+        if (!owner || !owner->HasAura(SPELL_HONED_MIND_PROC))
+        {
+            amount = 0;
+            return;
+        }
+
+        amount = HonedMindRating(owner);
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_honed_mind_buff::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RATING);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -1590,4 +1699,6 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_strikethrough_hidden);
     RegisterAuraScript(spell_racing_pulse_proc);
     RegisterAuraScript(spell_racing_pulse_buff);
+    RegisterAuraScript(spell_honed_mind_proc);
+    RegisterAuraScript(spell_honed_mind_buff);
 }
