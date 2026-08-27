@@ -46,6 +46,12 @@
  *   317020          stacks on the player (max 99)
  *   317022          collapse periodic -> 317029 every 1s (shared with Hivemind)
  *   317029          shadow AoE BP=0, 15 yd; script fills maxHP * (dummy/100)%
+ *
+ * Twisted Appendage (35662):
+ *   318481/482/483  rank 1/2/3 (Aura 285 LINKED -> 316815, dummy 21/75/142)
+ *   316815          hidden proc, RPPM 1 no haste, ProcFlags 69908 (autos+abilities)
+ *   316818          summon 162764 for 10s, radius 3
+ *   316835          Mind Flay: shadow periodic, 10s / 1s, BP=0
  */
 
 #include "AreaTrigger.h"
@@ -57,6 +63,7 @@
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "Random.h"
+#include "ScriptedCreature.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
 #include "SpellAuraEffects.h"
@@ -106,6 +113,17 @@ enum EchoingVoidSpells
     SPELL_ECHOING_VOID_DAMAGE   = 317029
 };
 
+enum TwistedAppendageSpells
+{
+    SPELL_TWISTED_APPENDAGE_RANK_1 = 318481,
+    SPELL_TWISTED_APPENDAGE_RANK_2 = 318482,
+    SPELL_TWISTED_APPENDAGE_RANK_3 = 318483,
+    SPELL_TWISTED_APPENDAGE_PROC   = 316815,
+    SPELL_TWISTED_APPENDAGE_SUMMON = 316818,
+    SPELL_TWISTED_APPENDAGE_FLAY   = 316835,
+    NPC_TWISTED_APPENDAGE          = 162764
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -119,6 +137,8 @@ constexpr float ECHOING_VOID_COLLAPSE_CHANCE = 0.15f;
 constexpr int32 ECHOING_VOID_RANK1_BP_FALLBACK = 40; // tooltip $s1/100 = 0.4% max HP
 constexpr uint32 ECHOING_VOID_PERIOD_FALLBACK_MS = 1000;
 constexpr int32 ECHOING_VOID_DURATION_SLACK_MS = 400;
+
+constexpr int32 TWISTED_APPENDAGE_RANK1_PCT_FALLBACK = 21; // tooltip $s2/100 * max(AP, SP)
 
 namespace
 {
@@ -453,6 +473,79 @@ void HandleEchoingVoidProc(Unit* caster, ProcEventInfo& eventInfo)
     if (Aura const* stackAura = caster->GetAura(SPELL_ECHOING_VOID_STACKS))
         stacks = stackAura->GetStackAmount();
     NotifyEchoStack(caster, stacks);
+}
+
+uint32 TwistedAppendageRankSpell(Unit const* owner)
+{
+    if (owner->HasAura(SPELL_TWISTED_APPENDAGE_RANK_3))
+        return SPELL_TWISTED_APPENDAGE_RANK_3;
+    if (owner->HasAura(SPELL_TWISTED_APPENDAGE_RANK_2))
+        return SPELL_TWISTED_APPENDAGE_RANK_2;
+    return SPELL_TWISTED_APPENDAGE_RANK_1;
+}
+
+int32 TwistedAppendageTickDamage(Unit const* owner)
+{
+    float ap = std::max(owner->GetTotalAttackPowerValue(BASE_ATTACK), owner->GetTotalAttackPowerValue(RANGED_ATTACK));
+    float sp = float(owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW));
+    int32 pct = TWISTED_APPENDAGE_RANK1_PCT_FALLBACK;
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(TwistedAppendageRankSpell(owner)))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_1))
+            pct = effect->BasePoints;
+
+    int32 damage = int32(std::max(ap, sp) * (float(pct) / 100.0f));
+    return damage < 1 ? 1 : damage;
+}
+
+// Aura caster is the player (originalCaster) so ticks can crit and CLEU is
+// player-to-creature. Fall back to the tentacle's owner if that is missing.
+Unit* TwistedAppendageOwner(Unit* caster)
+{
+    if (!caster)
+        return nullptr;
+    if (Unit* owner = caster->GetOwner())
+        return owner;
+    return caster;
+}
+
+Unit* ResolveTentacleTarget(Unit* owner)
+{
+    if (Unit* victim = owner->GetVictim())
+        if (victim->IsAlive() && victim != owner)
+            return victim;
+
+    if (Player* player = owner->ToPlayer())
+        if (Unit* selected = player->GetSelectedUnit())
+            if (selected->IsAlive() && selected != owner)
+                if (owner->_IsValidAttackTarget(selected, sSpellMgr->GetSpellInfo(SPELL_TWISTED_APPENDAGE_FLAY)))
+                    return selected;
+
+    return owner->SelectNearbyTarget(nullptr, 50.0f);
+}
+
+void CastTwistedAppendage(Unit* caster)
+{
+    if (!caster || !caster->IsAlive())
+        return;
+
+    bool ok = caster->CastSpell(caster, SPELL_TWISTED_APPENDAGE_SUMMON, InfiniteStarsCastFlags());
+    Unit* target = ResolveTentacleTarget(caster);
+    LabNotify(caster, "TENTACLE_SPAWN", Trinity::StringFormat(
+        "summon=%u target=%s ok=%u",
+        SPELL_TWISTED_APPENDAGE_SUMMON,
+        target ? target->GetName().c_str() : "none",
+        ok ? 1u : 0u));
+}
+
+// Channel 316835: keep CASTING so UpdateAI does not recast every tick.
+TriggerCastFlags TwistedAppendageFlayFlags()
+{
+    return TriggerCastFlags(
+        TRIGGERED_IGNORE_GCD |
+        TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD |
+        TRIGGERED_IGNORE_POWER_AND_REAGENT_COST |
+        TRIGGERED_DONT_REPORT_CAST_ERROR |
+        TRIGGERED_DISALLOW_PROC_EVENTS);
 }
 }
 
@@ -850,6 +943,162 @@ class spell_echoing_void_damage : public SpellScript
     }
 };
 
+// 316815 - hidden proc. DBC already has RPPM 1 and ProcFlags 69908 (autos+abilities).
+class spell_twisted_appendage_proc : public AuraScript
+{
+    PrepareAuraScript(spell_twisted_appendage_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_TWISTED_APPENDAGE_SUMMON, SPELL_TWISTED_APPENDAGE_FLAY,
+            SPELL_TWISTED_APPENDAGE_RANK_1, SPELL_TWISTED_APPENDAGE_RANK_2, SPELL_TWISTED_APPENDAGE_RANK_3 });
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        if (Unit* caster = GetTarget())
+            CastTwistedAppendage(caster);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_twisted_appendage_proc::HandleProc);
+    }
+};
+
+// 316835 - Mind Flay periodic, BP=0. Fill max(AP,SP)*(rank dummy/100) from the owner.
+// Shared creature entry: no 316815 on the owner -> leave amount at 0.
+// originalCaster is the player: ticks use player crit and player-to-creature CLEU.
+class spell_twisted_appendage_flay : public AuraScript
+{
+    PrepareAuraScript(spell_twisted_appendage_flay);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_TWISTED_APPENDAGE_PROC,
+            SPELL_TWISTED_APPENDAGE_RANK_1, SPELL_TWISTED_APPENDAGE_RANK_2, SPELL_TWISTED_APPENDAGE_RANK_3 });
+    }
+
+    void HandleApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    {
+        // Player originalCaster would haste the period/duration. Official tick is 1s / 10s.
+        // DBC has no ATTR5_START_PERIODIC_AT_APPLY; first tick at +1s misses the 10th
+        // when the 10s tentacle despawns. Mind Flay ticks on apply.
+        if (SpellInfo const* info = GetSpellInfo())
+        {
+            int32 duration = info->GetDuration();
+            if (duration > 0)
+            {
+                SetMaxDuration(duration);
+                SetDuration(duration);
+            }
+        }
+
+        if (AuraEffect* effect = const_cast<AuraEffect*>(aurEff))
+        {
+            effect->CalculatePeriodic(nullptr, false, false);
+            effect->SetPeriodicTimer(0);
+        }
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = false;
+
+        Unit* owner = TwistedAppendageOwner(GetCaster());
+        if (!owner || !owner->HasAura(SPELL_TWISTED_APPENDAGE_PROC))
+            return;
+
+        amount = TwistedAppendageTickDamage(owner);
+    }
+
+    void HandlePeriodic(AuraEffect const* aurEff)
+    {
+        if (aurEff->GetAmount() <= 0)
+            return;
+
+        Unit* owner = TwistedAppendageOwner(GetCaster());
+        if (!owner)
+            return;
+
+        LabNotify(owner, "TENTACLE_TICK", Trinity::StringFormat("damage=%d", aurEff->GetAmount()));
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_twisted_appendage_flay::HandleApply, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_twisted_appendage_flay::CalculateAmount, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_twisted_appendage_flay::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
+    }
+};
+
+// 162764 - Twisted Appendage. Only mind-flays when the owner wears 316815.
+struct npc_twisted_appendage : public Scripted_NoMovementAI
+{
+    npc_twisted_appendage(Creature* creature) : Scripted_NoMovementAI(creature) { }
+
+    void IsSummonedBy(Unit* summoner) override
+    {
+        if (!summoner || !summoner->HasAura(SPELL_TWISTED_APPENDAGE_PROC))
+        {
+            me->DespawnOrUnsummon();
+            return;
+        }
+
+        me->SetFaction(summoner->getFaction());
+        me->SetLevel(summoner->getLevel());
+        me->SetReactState(REACT_PASSIVE);
+        me->AddUnitState(UNIT_STATE_ROOT);
+
+        Unit* target = ResolveTentacleTarget(summoner);
+        _flayTarget = target ? target->GetGUID() : ObjectGuid::Empty;
+        StartFlay(target);
+    }
+
+    void UpdateAI(uint32 /*diff*/) override
+    {
+        Unit* owner = me->GetOwner();
+        if (!owner || !owner->IsAlive() || !owner->HasAura(SPELL_TWISTED_APPENDAGE_PROC))
+        {
+            if (me->IsSummon())
+                me->DespawnOrUnsummon();
+            return;
+        }
+
+        if (me->HasUnitState(UNIT_STATE_CASTING))
+            return;
+
+        Unit* target = ObjectAccessor::GetUnit(*me, _flayTarget);
+        if (!target || !target->IsAlive())
+        {
+            target = ResolveTentacleTarget(owner);
+            _flayTarget = target ? target->GetGUID() : ObjectGuid::Empty;
+        }
+
+        StartFlay(target);
+    }
+
+private:
+    ObjectGuid _flayTarget;
+
+    void StartFlay(Unit* target)
+    {
+        Unit* owner = me->GetOwner();
+        if (!target || !owner || me->HasUnitState(UNIT_STATE_CASTING))
+            return;
+        if (target->HasAura(SPELL_TWISTED_APPENDAGE_FLAY, owner->GetGUID()))
+            return;
+
+        // melee=false: pull into combat, do not auto-swing.
+        if (me->Attack(target, false))
+            DoStartNoMovement(target);
+
+        // originalCaster = owner: crit + player-to-creature CLEU. Channel stays on the tentacle.
+        me->CastSpell(target, SPELL_TWISTED_APPENDAGE_FLAY, TwistedAppendageFlayFlags(), nullptr, nullptr, owner->GetGUID());
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -863,4 +1112,7 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_echoing_void_proc);
     RegisterAuraScript(spell_echoing_void_collapse);
     RegisterSpellScript(spell_echoing_void_damage);
+    RegisterAuraScript(spell_twisted_appendage_proc);
+    RegisterAuraScript(spell_twisted_appendage_flay);
+    RegisterCreatureAI(npc_twisted_appendage);
 }

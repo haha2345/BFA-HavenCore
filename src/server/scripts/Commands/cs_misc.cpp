@@ -73,8 +73,9 @@ public:
     {
         static std::vector<ChatCommand> labCommandTable =
         {
-            { "clear", rbac::RBAC_PERM_COMMAND_UNAURA, false, &HandleLabClearCommand, "" },
-            { "test",  rbac::RBAC_PERM_COMMAND_AURA,   false, &HandleLabTestCommand,  "" },
+            { "clear", rbac::RBAC_PERM_COMMAND_UNAURA,   false, &HandleLabClearCommand, "" },
+            { "dummy", rbac::RBAC_PERM_COMMAND_NPC_ADD, false, &HandleLabDummyCommand, "" },
+            { "test",  rbac::RBAC_PERM_COMMAND_AURA,    false, &HandleLabTestCommand,  "" },
         };
         static std::vector<ChatCommand> commandTable =
         {
@@ -103,9 +104,11 @@ public:
             { "kick",             rbac::RBAC_PERM_COMMAND_KICK,              true, &HandleKickPlayerCommand,       "" },
             { "lab",              rbac::RBAC_PERM_COMMAND_AURA,             false, nullptr,                       "", labCommandTable },
             { "labaoe",           rbac::RBAC_PERM_COMMAND_NPC_ADD,          false, &HandleLabAoeCommand,           "" },
+            { "labdummy",         rbac::RBAC_PERM_COMMAND_NPC_ADD,          false, &HandleLabDummyCommand,         "" },
             { "labecho",          rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabEchoCommand,          "" },
             { "labgear",          rbac::RBAC_PERM_COMMAND_ADDITEM,          false, &HandleLabGearCommand,          "" },
             { "labstars",         rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabStarsCommand,         "" },
+            { "labtentacle",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTentacleCommand,      "" },
             { "labtwilight",      rbac::RBAC_PERM_COMMAND_AURA,             false, &HandleLabTwilightCommand,      "" },
             { "linkgrave",        rbac::RBAC_PERM_COMMAND_LINKGRAVE,        false, &HandleLinkGraveCommand,        "" },
             { "listfreeze",       rbac::RBAC_PERM_COMMAND_LISTFREEZE,       false, &HandleListFreezeCommand,       "" },
@@ -1299,11 +1302,18 @@ public:
         player->RemoveAurasDueToSpell(318280);
         player->RemoveAurasDueToSpell(318485);
         player->RemoveAurasDueToSpell(318486);
+        // Twisted Appendage
+        player->RemoveAurasDueToSpell(316815);
+        player->RemoveAurasDueToSpell(316818);
+        player->RemoveAurasDueToSpell(318481);
+        player->RemoveAurasDueToSpell(318482);
+        player->RemoveAurasDueToSpell(318483);
+        player->RemoveAllMinionsByEntry(162764);
         if (selected && selected != player)
             selected->RemoveAurasDueToSpell(317265);
     }
 
-    // New signature effect = one row. Aliases .labstars/.labtwilight/.labecho call this.
+    // New signature effect = one row. Aliases .labstars/.labtwilight/.labecho/.labtentacle call this.
     struct LabTestDef
     {
         char const* key;
@@ -1317,9 +1327,10 @@ public:
     {
         static LabTestDef const tests[] =
         {
-            { "stars",    317257, "labstars",    "stars",         "Twilight/echo auras removed." },
-            { "twilight", 317147, "labtwilight", "twilight",      "Star/echo auras removed." },
-            { "echo",     317014, "labecho",     "echoing void",  "Star/twilight auras removed." },
+            { "stars",    317257, "labstars",    "stars",         "Twilight/echo/tentacle auras removed." },
+            { "twilight", 317147, "labtwilight", "twilight",      "Star/echo/tentacle auras removed." },
+            { "echo",     317014, "labecho",     "echoing void",  "Star/twilight/tentacle auras removed." },
+            { "tentacle", 316815, "labtentacle", "tentacle",      "Star/twilight/echo auras removed." },
         };
 
         if (!key || !*key)
@@ -1355,7 +1366,7 @@ public:
         LabTestDef const* def = FindLabTest(key);
         if (!def)
         {
-            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo", key ? key : "");
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle", key ? key : "");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1383,7 +1394,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1391,7 +1402,7 @@ public:
         char key[64] = {};
         if (sscanf(args, "%63s", key) != 1)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1411,6 +1422,11 @@ public:
     static bool HandleLabEchoCommand(ChatHandler* handler, char const* /*args*/)
     {
         return ApplyLabTest(handler, "echo");
+    }
+
+    static bool HandleLabTentacleCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        return ApplyLabTest(handler, "tentacle");
     }
 
     static bool HandleLabAoeCommand(ChatHandler* handler, char const* /*args*/)
@@ -1463,6 +1479,67 @@ public:
         handler->PSendSysMessage(
             "labaoe: spawned %u temp dummies (cleared %u). Face the line of 5; side and back should miss Twilight. 15 min, not saved to DB.",
             spawned, cleared);
+        return true;
+    }
+
+    static bool HandleLabDummyCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        Player* player = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr;
+        if (!player)
+            return false;
+
+        constexpr uint32 unscaledEntry = 190001;
+        constexpr uint32 raidDummyEntry = 31146;
+        if (!sObjectMgr->GetCreatureTemplate(unscaledEntry))
+        {
+            handler->PSendSysMessage("labdummy: creature %u missing. Restart worldserver after applying the unscaled dummy SQL.", unscaledEntry);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        uint32 cleared = 0;
+        uint32 const sweep[] = { unscaledEntry, raidDummyEntry };
+        for (uint32 entry : sweep)
+        {
+            for (Creature* creature : player->FindNearestCreatures(entry, 80.0f))
+            {
+                if (!creature || creature->GetSpawnId())
+                    continue;
+                creature->DespawnOrUnsummon();
+                ++cleared;
+            }
+        }
+
+        player->CombatStop();
+        player->getHostileRefManager().deleteReferences();
+
+        uint32 nearbyRaid = 0;
+        for (Creature* creature : player->FindNearestCreatures(raidDummyEntry, 60.0f))
+        {
+            if (creature && creature->IsAlive())
+                ++nearbyRaid;
+        }
+
+        Position pos = player->GetFirstCollisionPosition(5.0f, 0.0f);
+        pos.SetOrientation(pos.GetAngle(*player));
+        Creature* dummy = player->SummonCreature(unscaledEntry, pos, TEMPSUMMON_TIMED_DESPAWN, 15 * MINUTE * IN_MILLISECONDS);
+        if (!dummy)
+        {
+            handler->SendSysMessage("labdummy: summon failed");
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        player->SetSelection(dummy->GetGUID());
+        handler->PSendSysMessage(
+            "labdummy: spawned %u %s. no scaling, real HP, 15 min temp, not saved. CLEU target must be this name.",
+            unscaledEntry, dummy->GetName().c_str());
+        if (cleared)
+            handler->PSendSysMessage("labdummy: cleared %u nearby temp summons.", cleared);
+        if (nearbyRaid)
+            handler->PSendSysMessage(
+                "labdummy: WARNING %u raid dummy 31146 within 60 yd. Tentacle may hop. Walk away and .labdummy again.",
+                nearbyRaid);
         return true;
     }
 
