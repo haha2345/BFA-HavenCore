@@ -1002,6 +1002,33 @@ HL.PACKS = {
         end,
     },
 
+    consequences = {
+        key = "consequences",
+        title = "末路恶果",
+        order = 25,
+        serverCmd = ".lab test consequences",
+        hint = "挂 337612。关 .cheat god。进战斗才跳（待验）。\n周期约 25% 最大生命。337816 是热修同名子技能，CLEU 再定要不要认。",
+        startText = "【末路恶果】已挂 337612。关无敌，进战斗看跳伤。先零脚本。",
+        startPrint = "已挂 337612。关 god。进战斗看约 25% 生命跳。脱战也跳再补脚本。",
+        ids = { 337612, 337816 },
+        labels = {
+            [337612] = "恶果驱动",
+            [337816] = "疑似周期子技能",
+        },
+        chain = {
+            { id = 337612, role = "驱动", want = "aura-self",
+              hintFail = "没挂上 337612。用 .lab test consequences / .labconsequences。真装要有效腐蚀≥200 才由 UpdateCorruption 挂上。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：进战斗立刻跳、每秒约 25% 最大生命（清单/Wowhead，不是 dump BP）。",
+                "周期伤已是 25% 生命 → 保持零脚本。脱战也跳 / 能免疫 / 吸收吃掉 → 再补最小脚本，旗信 DBC，不手写 25。",
+                "337816 仅当 CLEU 证明是跳伤 ID 才进脚本。不要新 LabNotify TYPE。",
+                "阈值矩阵应挂 337612（DB2 MinCorruption 200）。无 spell_script_names。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
