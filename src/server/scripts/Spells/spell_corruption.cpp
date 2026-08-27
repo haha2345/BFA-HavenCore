@@ -90,6 +90,13 @@
  *   315574          hidden proc, RPPM 2, Dummy 3s / 1 next spell
  *   315573          15s buff, Dummy 3. Next class CD is trimmed; then consume a stack.
  *                   315573 has no ProcFlags — trim lives on PlayerScript, not OnProc.
+ *
+ * Ineffable Truth (35662):
+ *   318303/484      rank 1/2 (Aura 285 LINKED -> 316799, dummy 30/50)
+ *   316799          hidden proc, RPPM 1, yellow+heal+hostile (no white)
+ *   316801          10s buff. Aura 143/173 are NYI — fill Dummy, then scale
+ *                   remaining CDs on Apply/Remove and new CDs on cooldown start.
+ *                   Rate is 100/(100+Dummy); never tick CDs every frame.
  */
 
 #include "AreaTrigger.h"
@@ -231,6 +238,14 @@ enum GlimpseOfClaritySpells
     SPELL_FLASH_OF_INSIGHT_PROC = 316717
 };
 
+enum IneffableTruthSpells
+{
+    SPELL_INEFFABLE_TRUTH_RANK_1 = 318303,
+    SPELL_INEFFABLE_TRUTH_RANK_2 = 318484,
+    SPELL_INEFFABLE_TRUTH_PROC   = 316799,
+    SPELL_INEFFABLE_TRUTH_BUFF   = 316801
+};
+
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
 constexpr float TWILIGHT_BEAM_RANGE_YD   = 28.0f;
 constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
@@ -275,6 +290,9 @@ constexpr int32 GUSHING_WOUND_TICK_PCT_FALLBACK = 13;
 
 // 315573 / 315574 Dummy is 3 seconds. Do not hardcode 3000 as the only value.
 constexpr int32 GLIMPSE_TRIM_MS_FALLBACK = 3000;
+
+// 316801 DBC BP is 50 on both effects. Strength is the driver Dummy (30/50).
+constexpr int32 INEFFABLE_TRUTH_RANK1_PCT_FALLBACK = 30;
 
 namespace
 {
@@ -1101,9 +1119,99 @@ bool IsGlimpseExcludedSpell(uint32 id)
         case SPELL_GLIMPSE_BUFF:
         case SPELL_FLASH_OF_INSIGHT_ITEM:
         case SPELL_FLASH_OF_INSIGHT_PROC:
+        case SPELL_INEFFABLE_TRUTH_RANK_1:
+        case SPELL_INEFFABLE_TRUTH_RANK_2:
+        case SPELL_INEFFABLE_TRUTH_PROC:
+        case SPELL_INEFFABLE_TRUTH_BUFF:
             return true;
         default:
             return false;
+    }
+}
+
+bool IsIneffableTruthOwnSpell(uint32 id)
+{
+    switch (id)
+    {
+        case SPELL_INEFFABLE_TRUTH_RANK_1:
+        case SPELL_INEFFABLE_TRUTH_RANK_2:
+        case SPELL_INEFFABLE_TRUTH_PROC:
+        case SPELL_INEFFABLE_TRUTH_BUFF:
+            return true;
+        default:
+            return false;
+    }
+}
+
+int32 ReadIneffableTruthDummy(uint32 spellId)
+{
+    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(spellId))
+        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
+            if (effect->BasePoints >= 1)
+                return effect->BasePoints;
+    return 0;
+}
+
+int32 IneffableTruthPct(Unit const* owner)
+{
+    if (owner)
+    {
+        if (owner->HasAura(SPELL_INEFFABLE_TRUTH_RANK_2))
+            if (int32 pct = ReadIneffableTruthDummy(SPELL_INEFFABLE_TRUTH_RANK_2))
+                return pct;
+        if (owner->HasAura(SPELL_INEFFABLE_TRUTH_RANK_1))
+            if (int32 pct = ReadIneffableTruthDummy(SPELL_INEFFABLE_TRUTH_RANK_1))
+                return pct;
+    }
+
+    // .lab test truth hangs 316799 only — read rank-1 SpellInfo Dummy.
+    if (int32 pct = ReadIneffableTruthDummy(SPELL_INEFFABLE_TRUTH_RANK_1))
+        return pct;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "IneffableTruth: rank Dummy missing, using %d%%",
+            INEFFABLE_TRUTH_RANK1_PCT_FALLBACK);
+    }
+    return INEFFABLE_TRUTH_RANK1_PCT_FALLBACK;
+}
+
+void ApplyIneffableTruthRate(int32& ms, int32 pct)
+{
+    if (ms > 0 && pct > 0)
+        ms = int32(int64(ms) * 100 / (100 + pct));
+}
+
+void ScaleExistingCooldowns(Player* player, int32 pct, bool apply)
+{
+    if (!player || pct <= 0)
+        return;
+
+    SpellHistory* history = player->GetSpellHistory();
+    if (!history)
+        return;
+
+    for (PlayerSpellMap::value_type const& kv : player->GetSpellMap())
+    {
+        if (!kv.second || kv.second->state == PLAYERSPELL_REMOVED)
+            continue;
+
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(kv.first);
+        if (!info || IsIneffableTruthOwnSpell(info->Id) || IsGlimpseExcludedSpell(info->Id))
+            continue;
+
+        uint32 remain = history->GetRemainingCooldown(info);
+        if (!remain || remain > uint32(DAY * IN_MILLISECONDS))
+            continue;
+
+        int64 scaled = apply
+            ? (int64(remain) * 100) / (100 + pct)
+            : (int64(remain) * (100 + pct)) / 100;
+        int32 delta = int32(scaled - int64(remain));
+        if (delta)
+            history->ModifyCooldown(info->Id, delta);
     }
 }
 
@@ -2182,6 +2290,94 @@ public:
     }
 };
 
+// 316801 - 10s recharge buff. Aura 143/173 are NYI; Dummy comes from the driver.
+class spell_ineffable_truth : public AuraScript
+{
+    PrepareAuraScript(spell_ineffable_truth);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_INEFFABLE_TRUTH_PROC,
+            SPELL_INEFFABLE_TRUTH_RANK_1, SPELL_INEFFABLE_TRUTH_RANK_2 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        amount = IneffableTruthPct(GetUnitOwner());
+    }
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* owner = GetUnitOwner();
+        int32 pct = IneffableTruthPct(owner);
+        if (!_scaled)
+        {
+            if (Player* player = owner ? owner->ToPlayer() : nullptr)
+            {
+                ScaleExistingCooldowns(player, pct, true);
+                _pct = pct;
+                _scaled = true;
+            }
+        }
+
+        int32 mult = pct > 0 ? (100 * 100 / (100 + pct)) : 100;
+        LabNotify(owner, "RECHARGE", Trinity::StringFormat("pct=%d mult=%d", pct, mult));
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (!_scaled)
+            return;
+
+        Unit* owner = GetUnitOwner();
+        if (Player* player = owner ? owner->ToPlayer() : nullptr)
+            ScaleExistingCooldowns(player, _pct, false);
+        _scaled = false;
+        _pct = 0;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_ineffable_truth::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RECOVERY_RATE);
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_ineffable_truth::CalculateAmount, EFFECT_1, SPELL_AURA_MOD_RECOVERY_RATE_2);
+        AfterEffectApply += AuraEffectApplyFn(spell_ineffable_truth::HandleApply, EFFECT_0, SPELL_AURA_MOD_RECOVERY_RATE, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_ineffable_truth::HandleRemove, EFFECT_0, SPELL_AURA_MOD_RECOVERY_RATE, AURA_EFFECT_HANDLE_REAL);
+    }
+
+private:
+    bool _scaled = false;
+    int32 _pct = 0;
+};
+
+class player_ineffable_truth : public PlayerScript
+{
+public:
+    player_ineffable_truth() : PlayerScript("player_ineffable_truth") { }
+
+    void OnCooldownStart(Player* player, SpellInfo const* spellInfo, uint32 itemId, int32& cooldown, uint32& /*categoryId*/, int32& categoryCooldown) override
+    {
+        if (!player || !spellInfo || !player->HasAura(SPELL_INEFFABLE_TRUTH_BUFF))
+            return;
+        if (itemId || spellInfo->IsPassive())
+            return;
+        if (IsIneffableTruthOwnSpell(spellInfo->Id) || IsGlimpseExcludedSpell(spellInfo->Id))
+            return;
+
+        int32 pct = IneffableTruthPct(player);
+        ApplyIneffableTruthRate(cooldown, pct);
+        ApplyIneffableTruthRate(categoryCooldown, pct);
+    }
+
+    void OnChargeRecoveryTimeStart(Player* player, uint32 /*chargeCategoryId*/, int32& chargeRecoveryTime) override
+    {
+        if (!player || !player->HasAura(SPELL_INEFFABLE_TRUTH_BUFF))
+            return;
+
+        ApplyIneffableTruthRate(chargeRecoveryTime, IneffableTruthPct(player));
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -2214,4 +2410,6 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_gushing_wound_dot);
     RegisterAuraScript(spell_glimpse_of_clarity);
     RegisterPlayerScript(player_glimpse_of_clarity);
+    RegisterAuraScript(spell_ineffable_truth);
+    RegisterPlayerScript(player_ineffable_truth);
 }

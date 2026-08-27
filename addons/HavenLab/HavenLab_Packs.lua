@@ -810,6 +810,40 @@ HL.PACKS = {
         end,
     },
 
+    truth = {
+        key = "truth",
+        title = "不可言喻的真相",
+        order = 19,
+        serverCmd = ".lab test truth",
+        hint = "挂 316799。技能/治疗/敌对法术可 proc（RPPM 1，无白字）。\n316801 10 秒，职业技能 CD 恢复 +30%。",
+        startText = "【不可言喻的真相】已挂 316799。打桩等 316801。RECHARGE pct=30。",
+        startPrint = "已挂 316799。等 316801 后放有 CD 的职业技能，看转盘变快。RECHARGE pct=30。",
+        ids = { 318303, 318484, 316799, 316801 },
+        labels = {
+            [318303] = "一段驱动",
+            [318484] = "二段驱动",
+            [316799] = "隐藏proc",
+            [316801] = "加速buff",
+        },
+        chain = {
+            { id = 316799, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂上 316799。用 .lab test truth / .labtruth。" },
+            { id = 316801, role = "加速buff", want = "aura-self", procStep = true,
+              hintFail = "没有 316801。技能打一会儿（RPPM 1，无白字）。DBC Trigger 应自己挂上。" },
+            { id = 316801, role = "RECHARGE", want = "labmsg", labType = "RECHARGE",
+              expect = { pct = 30 },
+              hintFail = "有 316801 但没有 RECHARGE pct=30。核心 143/173 是 NYI，脚本应在 Apply 发消息。" },
+        },
+        extraVerdict = function()
+            return {
+                "待进游戏验收：316801 约 10 秒；窗口内新开的职业 CD 按 100/(100+30) 缩短。",
+                "pct=30 溯源 318303 Dummy。Lab 只挂 316799 时回退读 SpellInfo Dummy 30。",
+                "已有 buff 再 proc：默认刷新 10s（SimC TODO）。已在转的充能剩余、物品充能是否加速，进游戏再定。",
+                "职业技能过滤先宽后窄。二段 Dummy 50 用 .aura 318484 再验。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
