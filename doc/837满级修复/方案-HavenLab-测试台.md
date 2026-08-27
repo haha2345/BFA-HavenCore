@@ -153,7 +153,7 @@ struct LabTestDef { char const* key; std::vector<uint32> removeAuras; uint32 add
 
 报告输出:`挂 <id> 后 急速 +6.2%(21.0→27.2),持续 4.0s`。
 
-### 7. 腐蚀值面板(B 系统 / 2a)
+### 7. 腐蚀值面板(B 系统 / 2a) — **代码完成，待进游戏验收**
 
 - 数据:`GetCorruption()` / `GetCorruptionResistance()`(8.3 全局 API,**进游戏验证**;不可用则从人物面板 CR 值退化读取,再不行手输)。
 - UI:右栏顶部一行 `腐蚀 75 − 抵抗 0 = 有效 75`,变化时写一条日志。
@@ -166,7 +166,7 @@ struct LabTestDef { char const* key; std::vector<uint32> removeAuras; uint32 add
 - tooltip 扫描:隐藏 tooltip `SetInventoryItem` 逐行找腐蚀字样(全局串 `ITEM_MOD_CORRUPTION` 对应中文"腐蚀"行),显示每件装备的腐蚀值,加总和 `GetCorruption()` 互验。
 - 验收即 2a/2b 文档步骤:穿 → 值涨 + 外壳光环上;脱 → 都掉。全程不需要人肉截 buff 栏。
 
-### 9. 移速监控(蔓生触须)
+### 9. 移速监控(蔓生触须) — **代码完成，待进游戏验收**
 
 - 开关式(默认关,面板按钮开):0.2s 轮询 `GetUnitSpeed("player")`,相对基准变化 >3% 记日志 `SPEED 100%→70%,持续 3.4s`。
 - 只为 Grasping Tendrils 减速验证;彼岸之物追击不做自动判定(人眼看得见,成本不值)。

@@ -22,6 +22,7 @@
 
 | 日期 | 内容 | 说明 |
 |------|------|------|
+| 2026-08-27 | P4 前置：腐蚀值面板 + 移速监控 **代码完成，待进游戏验收** | 右栏腐蚀矩阵；`THRESHOLDS` 填 DB2 Aura。`/dump GetCorruption()` 待验。 |
 | 2026-08-27 | P3 不可言喻的真相 **代码完成，待进游戏验收** | 143/173 NYI；Apply/Remove + `OnCooldownStart` 按 Dummy 30/50 缩放 CD。truth pack `RECHARGE pct=30`。 |
 | 2026-08-27 | P3 须臾洞察 **代码完成，待进游戏验收** | `OnSuccessfulSpellCast` 减 CD Dummy 3s。glimpse pack `CD_TRIM trimMs=3000`。 |
 | 2026-08-27 | P3 龟裂创伤 **代码完成，待进游戏验收** | 318187 跳伤 Dummy 13% × max(AP,SP)。wound pack 暗影 damage。 |

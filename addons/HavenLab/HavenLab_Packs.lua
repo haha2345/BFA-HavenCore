@@ -2,12 +2,14 @@ local _, HL = ...
 
 -- 纯数据 + 包特有话术。新效果只加一张表，不改引擎。
 
+-- Aura IDs from 35662 CorruptionEffects.db2（清单 B 表启用行）。不是猜的外壳。
 HL.THRESHOLDS = {
-    { min = 1,  label = "蔓生触须", auras = {} },
-    { min = 20, label = "腐蚀之眼", auras = {} },
-    { min = 40, label = "宏伟妄想", auras = {} },
-    { min = 60, label = "层叠灾难", auras = {} },
-    { min = 80, label = "不可避免的厄运", auras = {} },
+    { min = 1,   label = "蔓生触须",     auras = { 315175 } },
+    { min = 20,  label = "腐蚀之眼",     auras = { 315169 } },
+    { min = 40,  label = "宏伟妄想",     auras = { 315184 } },
+    { min = 60,  label = "层叠灾难",     auras = { 315857 } },
+    { min = 80,  label = "不可避免的厄运", auras = { 315179 } },
+    { min = 200, label = "末路恶果",     auras = { 337612 } },
 }
 
 HL.SHELL_IDS = {
