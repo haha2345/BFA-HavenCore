@@ -14,9 +14,17 @@ HL.THRESHOLDS = {
 
 HL.SHELL_IDS = {
     [324889] = true, [324890] = true, [324891] = true,
+    [318274] = true, [318487] = true, [318488] = true,
     [318276] = true, [318477] = true, [318478] = true,
     [318280] = true, [318485] = true, [318486] = true,
+    [318481] = true, [318482] = true, [318483] = true,
     [318286] = true, [318479] = true, [318480] = true,
+    [318266] = true, [318492] = true, [318496] = true,
+    [318269] = true, [318494] = true, [318498] = true,
+    [318268] = true, [318493] = true, [318497] = true,
+    [318270] = true, [318495] = true, [318499] = true,
+    [318272] = true, [318239] = true, [318303] = true, [318484] = true,
+    [315277] = true, [315281] = true, [315282] = true,
 }
 
 HL.PACKS = {

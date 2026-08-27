@@ -160,7 +160,7 @@ struct LabTestDef { char const* key; std::vector<uint32> removeAuras; uint32 add
 - 阈值矩阵:B 表 5 档(1/20/40/60/80)每档一行 `阈值 | 应挂 | 实挂`。"应挂"= 有效腐蚀 ≥ 阈值;"实挂"= 扫自己光环里对应 aura ID。
 - **坏效果 aura ID 现在未知**:pack 数据留 `thresholds = { {1, {光环ID...}}, ... }` 占位,ID 从进游戏 `.lookup spell` + 挂上后 `.debug`/CLEU 抓,抓到填进 [腐蚀特效清单.md](腐蚀特效清单.md) 和这张表。矩阵在 ID 填上前显示"未登记"。
 
-### 8. 穿/脱装备验证(2a/2b 验收核心)
+### 8. 穿/脱装备验证(2a/2b 验收核心) — **代码完成，待进游戏验收**
 
 - 监听 `PLAYER_EQUIPMENT_CHANGED`:记一条 `EQUIP` 日志,内容 = 槽位、物品链接、腐蚀值前后、0.2s 后对比自己光环里 `腐蚀 -` 系(324889 等 pack 登记的外壳 ID)的增减。
 - tooltip 扫描:隐藏 tooltip `SetInventoryItem` 逐行找腐蚀字样(全局串 `ITEM_MOD_CORRUPTION` 对应中文"腐蚀"行),显示每件装备的腐蚀值,加总和 `GetCorruption()` 互验。
@@ -175,7 +175,7 @@ struct LabTestDef { char const* key; std::vector<uint32> removeAuras; uint32 add
 
 ## 批次三(随时可插,不阻塞任何阶段):10
 
-### 10. 效果总览 / 回归面板
+### 10. 效果总览 / 回归面板 — **代码完成，待进游戏验收**
 
 - 新窗口(主面板加"总览"按钮):数据源 = `HavenLab_Packs.lua` 注册的全部效果,每行 `效果 | 第0层 | 第1层 | 第2层 | 最后测试时间`。
 - 状态**手动勾选**(自动判定不可靠,引擎结论只做参考显示),存 SavedVariables。

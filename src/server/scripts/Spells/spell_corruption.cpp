@@ -128,6 +128,7 @@
 #include "Chat.h"
 #include "Log.h"
 #include "StringFormat.h"
+#include "Item.h"
 #include "Map.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
@@ -352,6 +353,146 @@ constexpr uint32 EYE_PULSE_MS_FALLBACK = 2000;
 constexpr uint32 EYE_DURATION_MS_FALLBACK = 8000;
 constexpr float EYE_RADIUS_FALLBACK = 10.0f; // not DBC — log once if radius missing
 
+void CorruptionRankItemContext(Unit const* owner, uint32 rankId, uint32& itemId, int32& itemLevel)
+{
+    itemId = 0;
+    itemLevel = -1;
+    Player const* player = owner ? owner->ToPlayer() : nullptr;
+    if (!player)
+        return;
+
+    Aura const* aura = player->GetAura(rankId);
+    if (!aura || aura->GetCastItemGUID().IsEmpty())
+        return;
+
+    if (Item* item = player->GetItemByGuid(aura->GetCastItemGUID()))
+    {
+        itemId = item->GetEntry();
+        itemLevel = int32(item->GetItemLevel(player));
+    }
+}
+
+// P5: sum Dummy from every worn rank (not highest). CalcValue picks up item-level scaling.
+int32 SumCorruptionRankDummy(Unit const* owner, uint32 const* rankIds, uint8 rankCount,
+    SpellEffIndex effectIndex, bool useCalc, int32 fallback, char const* logKey)
+{
+    int32 sum = 0;
+    bool any = false;
+    if (owner)
+    {
+        for (uint8 i = 0; i < rankCount; ++i)
+        {
+            if (!rankIds[i] || !owner->HasAura(rankIds[i]))
+                continue;
+            any = true;
+            SpellInfo const* rank = sSpellMgr->GetSpellInfo(rankIds[i]);
+            if (!rank)
+                continue;
+            SpellEffectInfo const* effect = rank->GetEffect(effectIndex);
+            if (!effect)
+                continue;
+            int32 value = 0;
+            if (useCalc)
+            {
+                uint32 itemId = 0;
+                int32 itemLevel = -1;
+                CorruptionRankItemContext(owner, rankIds[i], itemId, itemLevel);
+                value = effect->CalcValue(owner, nullptr, owner, nullptr, itemId, itemLevel);
+            }
+            else
+                value = effect->BasePoints;
+            if (value > 0)
+                sum += value;
+        }
+    }
+
+    if (sum >= 1)
+        return sum;
+
+    if (!any)
+    {
+        if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(rankIds[0]))
+            if (SpellEffectInfo const* effect = rank->GetEffect(effectIndex))
+            {
+                int32 value = useCalc ? effect->CalcValue(owner) : effect->BasePoints;
+                if (value >= 1)
+                    return value;
+            }
+    }
+
+    static std::set<std::string> logged;
+    if (logged.insert(logKey).second)
+        TC_LOG_ERROR("scripts", "%s: rank dummy missing, using %d", logKey, fallback);
+    return fallback;
+}
+
+struct CorruptionDriverFamily
+{
+    uint32 ranks[3];
+    uint8 rankCount;
+    uint32 hiddenProc;
+};
+
+CorruptionDriverFamily const* FindCorruptionDriverFamily(uint32 spellId)
+{
+    static CorruptionDriverFamily const families[] =
+    {
+        { { SPELL_INFINITE_STARS_RANK_1, SPELL_INFINITE_STARS_RANK_2, SPELL_INFINITE_STARS_RANK_3 }, 3, SPELL_INFINITE_STARS_HIDDEN_PROC },
+        { { SPELL_TWILIGHT_DEVASTATION_RANK_1, SPELL_TWILIGHT_DEVASTATION_RANK_2, SPELL_TWILIGHT_DEVASTATION_RANK_3 }, 3, SPELL_TWILIGHT_PROC },
+        { { SPELL_ECHOING_VOID_RANK_1, SPELL_ECHOING_VOID_RANK_2, SPELL_ECHOING_VOID_RANK_3 }, 3, SPELL_ECHOING_VOID_PROC },
+        { { SPELL_TWISTED_APPENDAGE_RANK_1, SPELL_TWISTED_APPENDAGE_RANK_2, SPELL_TWISTED_APPENDAGE_RANK_3 }, 3, SPELL_TWISTED_APPENDAGE_PROC },
+        { { SPELL_VOID_RITUAL_RANK_1, SPELL_VOID_RITUAL_RANK_2, SPELL_VOID_RITUAL_RANK_3 }, 3, SPELL_VOID_RITUAL_PROC },
+        { { SPELL_RACING_PULSE_RANK_1, SPELL_RACING_PULSE_RANK_2, SPELL_RACING_PULSE_RANK_3 }, 3, SPELL_RACING_PULSE_PROC },
+        { { SPELL_HONED_MIND_RANK_1, SPELL_HONED_MIND_RANK_2, SPELL_HONED_MIND_RANK_3 }, 3, SPELL_HONED_MIND_PROC },
+        { { SPELL_DEADLY_MOMENTUM_RANK_1, SPELL_DEADLY_MOMENTUM_RANK_2, SPELL_DEADLY_MOMENTUM_RANK_3 }, 3, SPELL_DEADLY_MOMENTUM_PROC },
+        { { SPELL_SURGING_VITALITY_RANK_1, SPELL_SURGING_VITALITY_RANK_2, SPELL_SURGING_VITALITY_RANK_3 }, 3, SPELL_SURGING_VITALITY_PROC },
+        { { SPELL_GUSHING_WOUND_RANK, 0, 0 }, 1, SPELL_GUSHING_WOUND_PROC },
+        { { SPELL_GLIMPSE_ITEM, 0, 0 }, 1, SPELL_GLIMPSE_PROC },
+        { { SPELL_INEFFABLE_TRUTH_RANK_1, SPELL_INEFFABLE_TRUTH_RANK_2, 0 }, 2, SPELL_INEFFABLE_TRUTH_PROC },
+        { { SPELL_STRIKETHROUGH_RANK_1, SPELL_STRIKETHROUGH_RANK_2, SPELL_STRIKETHROUGH_RANK_3 }, 3, SPELL_STRIKETHROUGH_HIDDEN },
+    };
+
+    for (CorruptionDriverFamily const& family : families)
+        for (uint8 i = 0; i < family.rankCount; ++i)
+            if (family.ranks[i] == spellId)
+                return &family;
+    return nullptr;
+}
+
+void SyncCorruptionHiddenProc(Unit* owner, CorruptionDriverFamily const& family)
+{
+    if (!owner)
+        return;
+
+    bool any = false;
+    for (uint8 i = 0; i < family.rankCount; ++i)
+        if (family.ranks[i] && owner->HasAura(family.ranks[i]))
+            any = true;
+
+    if (any)
+    {
+        if (!owner->HasAura(family.hiddenProc))
+            owner->CastSpell(owner, family.hiddenProc, true);
+    }
+    else
+        owner->RemoveAurasDueToSpell(family.hiddenProc);
+}
+
+uint32 InfiniteStarsWrapperRank(uint32 wrapperId)
+{
+    switch (wrapperId)
+    {
+        case SPELL_CORRUPTION_INFINITE_STARS_3:
+            return SPELL_INFINITE_STARS_RANK_3;
+        case SPELL_CORRUPTION_INFINITE_STARS_2:
+            return SPELL_INFINITE_STARS_RANK_2;
+        case SPELL_CORRUPTION_INFINITE_STARS_1:
+            return SPELL_INFINITE_STARS_RANK_1;
+        default:
+            return 0;
+    }
+}
+
 namespace
 {
 // 35662 Spell dump fallbacks if GetEffect is missing.
@@ -399,21 +540,9 @@ int32 InfiniteStarsBaseDamage(Unit const* caster)
 {
     float ap = std::max(caster->GetTotalAttackPowerValue(BASE_ATTACK), caster->GetTotalAttackPowerValue(RANGED_ATTACK));
     float sp = float(caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE));
-    int32 pct = INFINITE_STARS_RANK1_PCT_FALLBACK;
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(InfiniteStarsRankSpell(caster)))
-    {
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_1))
-            pct = effect->BasePoints;
-        else
-        {
-            static bool logged = false;
-            if (!logged)
-            {
-                logged = true;
-                TC_LOG_ERROR("scripts", "InfiniteStars: rank EFFECT_1 missing, using %d%%", INFINITE_STARS_RANK1_PCT_FALLBACK);
-            }
-        }
-    }
+    uint32 const ranks[] = { SPELL_INFINITE_STARS_RANK_1, SPELL_INFINITE_STARS_RANK_2, SPELL_INFINITE_STARS_RANK_3 };
+    int32 pct = SumCorruptionRankDummy(caster, ranks, 3, EFFECT_1, true,
+        INFINITE_STARS_RANK1_PCT_FALLBACK, "InfiniteStars");
 
     int32 damage = int32(std::max(ap, sp) * (float(pct) / 100.0f));
     return damage < 1 ? 1 : damage;
@@ -548,20 +677,11 @@ uint32 TwilightRankSpell(Unit const* caster)
 
 float TwilightHealthPct(Unit const* caster)
 {
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(TwilightRankSpell(caster)))
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            if (effect->BasePoints > 0)
-                // DBC stores 60/120/180; tooltip is $s1/10 percent of health.
-                return float(effect->BasePoints) / 10.0f / 100.0f;
-
-    static bool logged = false;
-    if (!logged)
-    {
-        logged = true;
-        TC_LOG_ERROR("scripts", "TwilightDevastation: rank EFFECT_0 missing, using bp %d",
-            TWILIGHT_RANK1_BP_FALLBACK);
-    }
-    return float(TWILIGHT_RANK1_BP_FALLBACK) / 10.0f / 100.0f;
+    uint32 const ranks[] = { SPELL_TWILIGHT_DEVASTATION_RANK_1, SPELL_TWILIGHT_DEVASTATION_RANK_2, SPELL_TWILIGHT_DEVASTATION_RANK_3 };
+    int32 bp = SumCorruptionRankDummy(caster, ranks, 3, EFFECT_0, true,
+        TWILIGHT_RANK1_BP_FALLBACK, "TwilightDevastation");
+    // DBC stores 60/120/180; tooltip is $s1/10 percent of health.
+    return float(bp) / 10.0f / 100.0f;
 }
 
 void NotifyTwilightVisual(Unit* caster, uint32 visual, uint32 hits, int32 damage, bool beamOk)
@@ -629,20 +749,11 @@ uint32 EchoingVoidRankSpell(Unit const* caster)
 
 float EchoingVoidHealthPct(Unit const* caster)
 {
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(EchoingVoidRankSpell(caster)))
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            if (effect->BasePoints > 0)
-                // DBC stores 40/60/100; tooltip is $s1/100 percent of health (rank 1 = 0.4%).
-                return float(effect->BasePoints) / 100.0f / 100.0f;
-
-    static bool logged = false;
-    if (!logged)
-    {
-        logged = true;
-        TC_LOG_ERROR("scripts", "EchoingVoid: rank EFFECT_0 missing, using bp %d",
-            ECHOING_VOID_RANK1_BP_FALLBACK);
-    }
-    return float(ECHOING_VOID_RANK1_BP_FALLBACK) / 100.0f / 100.0f;
+    uint32 const ranks[] = { SPELL_ECHOING_VOID_RANK_1, SPELL_ECHOING_VOID_RANK_2, SPELL_ECHOING_VOID_RANK_3 };
+    int32 bp = SumCorruptionRankDummy(caster, ranks, 3, EFFECT_0, true,
+        ECHOING_VOID_RANK1_BP_FALLBACK, "EchoingVoid");
+    // DBC stores 40/60/100; tooltip is $s1/100 percent of health (rank 1 = 0.4%).
+    return float(bp) / 100.0f / 100.0f;
 }
 
 uint32 EchoingVoidPeriodMs()
@@ -740,10 +851,9 @@ int32 TwistedAppendageTickDamage(Unit const* owner)
 {
     float ap = std::max(owner->GetTotalAttackPowerValue(BASE_ATTACK), owner->GetTotalAttackPowerValue(RANGED_ATTACK));
     float sp = float(owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW));
-    int32 pct = TWISTED_APPENDAGE_RANK1_PCT_FALLBACK;
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(TwistedAppendageRankSpell(owner)))
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_1))
-            pct = effect->BasePoints;
+    uint32 const ranks[] = { SPELL_TWISTED_APPENDAGE_RANK_1, SPELL_TWISTED_APPENDAGE_RANK_2, SPELL_TWISTED_APPENDAGE_RANK_3 };
+    int32 pct = SumCorruptionRankDummy(owner, ranks, 3, EFFECT_1, true,
+        TWISTED_APPENDAGE_RANK1_PCT_FALLBACK, "TwistedAppendage");
 
     int32 damage = int32(std::max(ap, sp) * (float(pct) / 100.0f));
     return damage < 1 ? 1 : damage;
@@ -811,19 +921,9 @@ uint32 VoidRitualRankSpell(Unit const* owner)
 
 int32 VoidRitualRatingPerStack(Unit const* owner)
 {
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(VoidRitualRankSpell(owner)))
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            if (effect->BasePoints >= 1)
-                return effect->BasePoints;
-
-    static bool logged = false;
-    if (!logged)
-    {
-        logged = true;
-        TC_LOG_ERROR("scripts", "VoidRitual: rank EFFECT_0 missing, using rating %d",
-            VOID_RITUAL_RANK1_RATING_FALLBACK);
-    }
-    return VOID_RITUAL_RANK1_RATING_FALLBACK;
+    uint32 const ranks[] = { SPELL_VOID_RITUAL_RANK_1, SPELL_VOID_RITUAL_RANK_2, SPELL_VOID_RITUAL_RANK_3 };
+    return SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, true,
+        VOID_RITUAL_RANK1_RATING_FALLBACK, "VoidRitual");
 }
 
 uint32 VoidRitualAllyNeed(Unit const* owner)
@@ -916,19 +1016,9 @@ uint32 StrikethroughRankSpell(Unit const* owner)
 
 int32 StrikethroughCritDamagePct(Unit const* owner)
 {
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(StrikethroughRankSpell(owner)))
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            if (effect->BasePoints > 0)
-                return effect->BasePoints;
-
-    static bool logged = false;
-    if (!logged)
-    {
-        logged = true;
-        TC_LOG_ERROR("scripts", "Strikethrough: rank EFFECT_0 missing, using %d%%",
-            STRIKETHROUGH_RANK1_CRIT_FALLBACK);
-    }
-    return STRIKETHROUGH_RANK1_CRIT_FALLBACK;
+    uint32 const ranks[] = { SPELL_STRIKETHROUGH_RANK_1, SPELL_STRIKETHROUGH_RANK_2, SPELL_STRIKETHROUGH_RANK_3 };
+    return SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, true,
+        STRIKETHROUGH_RANK1_CRIT_FALLBACK, "Strikethrough");
 }
 
 uint32 RacingPulseRankSpell(Unit const* owner)
@@ -942,19 +1032,9 @@ uint32 RacingPulseRankSpell(Unit const* owner)
 
 int32 RacingPulseRating(Unit const* owner)
 {
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(RacingPulseRankSpell(owner)))
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            if (effect->BasePoints >= 1)
-                return effect->BasePoints;
-
-    static bool logged = false;
-    if (!logged)
-    {
-        logged = true;
-        TC_LOG_ERROR("scripts", "RacingPulse: rank EFFECT_0 missing, using rating %d",
-            RACING_PULSE_RANK1_RATING_FALLBACK);
-    }
-    return RACING_PULSE_RANK1_RATING_FALLBACK;
+    uint32 const ranks[] = { SPELL_RACING_PULSE_RANK_1, SPELL_RACING_PULSE_RANK_2, SPELL_RACING_PULSE_RANK_3 };
+    return SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, true,
+        RACING_PULSE_RANK1_RATING_FALLBACK, "RacingPulse");
 }
 
 void CastRacingPulse(Unit* caster)
@@ -979,19 +1059,9 @@ uint32 HonedMindRankSpell(Unit const* owner)
 
 int32 HonedMindRating(Unit const* owner)
 {
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(HonedMindRankSpell(owner)))
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            if (effect->BasePoints >= 1)
-                return effect->BasePoints;
-
-    static bool logged = false;
-    if (!logged)
-    {
-        logged = true;
-        TC_LOG_ERROR("scripts", "HonedMind: rank EFFECT_0 missing, using rating %d",
-            HONED_MIND_RANK1_RATING_FALLBACK);
-    }
-    return HONED_MIND_RANK1_RATING_FALLBACK;
+    uint32 const ranks[] = { SPELL_HONED_MIND_RANK_1, SPELL_HONED_MIND_RANK_2, SPELL_HONED_MIND_RANK_3 };
+    return SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, true,
+        HONED_MIND_RANK1_RATING_FALLBACK, "HonedMind");
 }
 
 void CastHonedMind(Unit* caster)
@@ -1016,19 +1086,9 @@ uint32 DeadlyMomentumRankSpell(Unit const* owner)
 
 int32 DeadlyMomentumRatingPerStack(Unit const* owner)
 {
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(DeadlyMomentumRankSpell(owner)))
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            if (effect->BasePoints >= 1)
-                return effect->BasePoints;
-
-    static bool logged = false;
-    if (!logged)
-    {
-        logged = true;
-        TC_LOG_ERROR("scripts", "DeadlyMomentum: rank EFFECT_0 missing, using rating %d",
-            DEADLY_MOMENTUM_RANK1_RATING_FALLBACK);
-    }
-    return DEADLY_MOMENTUM_RANK1_RATING_FALLBACK;
+    uint32 const ranks[] = { SPELL_DEADLY_MOMENTUM_RANK_1, SPELL_DEADLY_MOMENTUM_RANK_2, SPELL_DEADLY_MOMENTUM_RANK_3 };
+    return SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, true,
+        DEADLY_MOMENTUM_RANK1_RATING_FALLBACK, "DeadlyMomentum");
 }
 
 void CastDeadlyMomentum(Unit* caster)
@@ -1058,23 +1118,9 @@ uint32 SurgingVitalityRankSpell(Unit const* owner)
 
 int32 SurgingVitalityRating(Unit const* owner)
 {
-    // BasePoints is 0 after the hotfix. Read SpellScaling * coefficient via CalcValue.
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(SurgingVitalityRankSpell(owner)))
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-        {
-            int32 value = effect->CalcValue(owner);
-            if (value >= 1)
-                return value;
-        }
-
-    static bool logged = false;
-    if (!logged)
-    {
-        logged = true;
-        TC_LOG_ERROR("scripts", "SurgingVitality: rank EFFECT_0 CalcValue missing, using rating %d",
-            SURGING_VITALITY_RANK1_RATING_FALLBACK);
-    }
-    return SURGING_VITALITY_RANK1_RATING_FALLBACK;
+    uint32 const ranks[] = { SPELL_SURGING_VITALITY_RANK_1, SPELL_SURGING_VITALITY_RANK_2, SPELL_SURGING_VITALITY_RANK_3 };
+    return SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, true,
+        SURGING_VITALITY_RANK1_RATING_FALLBACK, "SurgingVitality");
 }
 
 void CastSurgingVitality(Unit* caster)
@@ -1142,7 +1188,7 @@ void CastGushingWound(Unit* caster, Unit* target)
         "target=%s ok=%u", target->GetName().c_str(), ok ? 1u : 0u));
 }
 
-int32 GlimpseTrimMs()
+int32 GlimpseTrimMs(Unit const* /*owner*/)
 {
     if (SpellInfo const* buff = sSpellMgr->GetSpellInfo(SPELL_GLIMPSE_BUFF))
         if (SpellEffectInfo const* effect = buff->GetEffect(EFFECT_0))
@@ -1214,39 +1260,11 @@ bool IsIneffableTruthOwnSpell(uint32 id)
     }
 }
 
-int32 ReadIneffableTruthDummy(uint32 spellId)
-{
-    if (SpellInfo const* rank = sSpellMgr->GetSpellInfo(spellId))
-        if (SpellEffectInfo const* effect = rank->GetEffect(EFFECT_0))
-            if (effect->BasePoints >= 1)
-                return effect->BasePoints;
-    return 0;
-}
-
 int32 IneffableTruthPct(Unit const* owner)
 {
-    if (owner)
-    {
-        if (owner->HasAura(SPELL_INEFFABLE_TRUTH_RANK_2))
-            if (int32 pct = ReadIneffableTruthDummy(SPELL_INEFFABLE_TRUTH_RANK_2))
-                return pct;
-        if (owner->HasAura(SPELL_INEFFABLE_TRUTH_RANK_1))
-            if (int32 pct = ReadIneffableTruthDummy(SPELL_INEFFABLE_TRUTH_RANK_1))
-                return pct;
-    }
-
-    // .lab test truth hangs 316799 only — read rank-1 SpellInfo Dummy.
-    if (int32 pct = ReadIneffableTruthDummy(SPELL_INEFFABLE_TRUTH_RANK_1))
-        return pct;
-
-    static bool logged = false;
-    if (!logged)
-    {
-        logged = true;
-        TC_LOG_ERROR("scripts", "IneffableTruth: rank Dummy missing, using %d%%",
-            INEFFABLE_TRUTH_RANK1_PCT_FALLBACK);
-    }
-    return INEFFABLE_TRUTH_RANK1_PCT_FALLBACK;
+    uint32 const ranks[] = { SPELL_INEFFABLE_TRUTH_RANK_1, SPELL_INEFFABLE_TRUTH_RANK_2 };
+    return SumCorruptionRankDummy(owner, ranks, 2, EFFECT_0, true,
+        INEFFABLE_TRUTH_RANK1_PCT_FALLBACK, "IneffableTruth");
 }
 
 void ApplyIneffableTruthRate(int32& ms, int32 pct)
@@ -1803,7 +1821,7 @@ void TryGlimpseTrim(Player* player, Spell* spell)
     if (!history)
         return;
 
-    int32 trim = GlimpseTrimMs();
+    int32 trim = GlimpseTrimMs(player);
     uint32 before = history->GetRemainingCooldown(info);
     if (info->ChargeCategoryId)
         history->ReduceChargeCooldown(info->ChargeCategoryId, uint32(trim));
@@ -1817,25 +1835,55 @@ void TryGlimpseTrim(Player* player, Spell* spell)
 }
 }
 
-// 324889/324890/324891 - 腐蚀 - 无尽之星 (DBC has no aura effect; AfterCast applies the hidden proc)
+// 324889/324890/324891 - wrapper has no aura. AfterCast applies the rank driver; family hook syncs 317257.
 class spell_corruption_infinite_stars : public SpellScript
 {
     PrepareSpellScript(spell_corruption_infinite_stars);
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_INFINITE_STARS_HIDDEN_PROC });
+        return ValidateSpellInfo({ SPELL_INFINITE_STARS_RANK_1, SPELL_INFINITE_STARS_HIDDEN_PROC });
     }
 
     void HandleAfterCast()
     {
-        if (Unit* caster = GetCaster())
-            caster->CastSpell(caster, SPELL_INFINITE_STARS_HIDDEN_PROC, true);
+        Unit* caster = GetCaster();
+        SpellInfo const* info = GetSpellInfo();
+        if (!caster || !info)
+            return;
+        if (uint32 rank = InfiniteStarsWrapperRank(info->Id))
+            caster->CastSpell(caster, rank, true, GetCastItem());
     }
 
     void Register() override
     {
         AfterCast += SpellCastFn(spell_corruption_infinite_stars::HandleAfterCast);
+    }
+};
+
+// Rank drivers (ItemEffect ON_EQUIP). Keep hidden proc up while any rank of the family remains.
+class spell_corruption_rank_driver : public AuraScript
+{
+    PrepareAuraScript(spell_corruption_rank_driver);
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* owner = GetTarget())
+            if (CorruptionDriverFamily const* family = FindCorruptionDriverFamily(GetId()))
+                SyncCorruptionHiddenProc(owner, *family);
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* owner = GetTarget())
+            if (CorruptionDriverFamily const* family = FindCorruptionDriverFamily(GetId()))
+                SyncCorruptionHiddenProc(owner, *family);
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_corruption_rank_driver::HandleApply, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_corruption_rank_driver::HandleRemove, EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -3033,6 +3081,7 @@ class spell_grand_delusions : public AuraScript
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
+    RegisterAuraScript(spell_corruption_rank_driver);
     RegisterAuraScript(spell_infinite_stars_proc);
     RegisterSpellScript(spell_infinite_stars_selector);
     RegisterSpellScript(spell_infinite_stars_damage);
