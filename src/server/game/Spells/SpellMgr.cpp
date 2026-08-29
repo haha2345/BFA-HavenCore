@@ -3865,6 +3865,17 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->CasterAuraSpell = 0;
     });
 
+    // Thing From Beyond contact damage (Grand Delusions, corruption 40 tier).
+    // Retail gates 315197 on the 319695 chase lock, applied by the summon's
+    // auto-attack override chain (319694, aura 361) which this core does not
+    // implement. Contact is resolved by npc_thing_from_beyond instead, and a
+    // self-cast of the hidden negative 319695 is rejected in CheckCast, so the
+    // prerequisite can never be met — drop it.
+    ApplySpellFix({ 315197 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->TargetAuraSpell = 0;
+    });
+
     // DH - Felblade - Charge damage
     ApplySpellFix({ 213241 }, [](SpellInfo* spellInfo)
     {

@@ -2021,11 +2021,6 @@ struct npc_thing_from_beyond : public ScriptedAI
         // slowly to ever reach melee range before the 8s despawn.
         if (Player const* player = owner->ToPlayer())
             me->SetSpeedRate(MOVE_RUN, ThingFromBeyondSpeedPct(player) / 100.0f);
-        // Retail marks the chase target at summon; without this lock the
-        // contact damage 315197 fails CheckCast (TargetAuraSpell=319695).
-        // Needs IGNORE_TARGET_CHECK itself: a hidden negative self-aura is
-        // rejected as BAD_TARGETS and that forgiveness is flag-gated.
-        owner->CastSpell(owner, SPELL_THING_FROM_BEYOND_TARGET_LOCK, DelusionHitCastFlags());
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MoveChase(owner);
     }
@@ -2096,11 +2091,8 @@ struct npc_thing_from_beyond : public ScriptedAI
         }
 
         LabNotify(owner, "DELUSION_HIT", Trinity::StringFormat(
-            "entry=%u damage=%u ok=%u lock=%u tgt=%d exp=%d",
-            me->GetEntry(), chain.damageSpell, ok,
-            owner->HasAura(SPELL_THING_FROM_BEYOND_TARGET_LOCK) ? 1u : 0u,
-            targetCheck, explicitCheck));
-        owner->RemoveAurasDueToSpell(SPELL_THING_FROM_BEYOND_TARGET_LOCK);
+            "entry=%u damage=%u ok=%u tgt=%d exp=%d",
+            me->GetEntry(), chain.damageSpell, ok, targetCheck, explicitCheck));
         TryCascadingDisaster(owner);
         me->DespawnOrUnsummon();
     }
@@ -2159,11 +2151,16 @@ void CastGrandDelusions(Unit* owner)
         }
     }
 
+    // clone/tint report whether the two visual auras actually landed on the
+    // summon: 318393 copies the owner's model, 316559 should add the retail
+    // void-shadow tint. tint=1 with no visible darkening means aura 368 needs
+    // client-side support beyond the aura slot itself.
     LabNotify(player, "DELUSION_PROC", Trinity::StringFormat(
-        "trigger=%u entry=%u damage=%u speed=%.0f ok=%u lock=%u",
+        "trigger=%u entry=%u damage=%u speed=%.0f ok=%u clone=%u tint=%u",
         chain.triggerSpell, chain.summonEntry, chain.damageSpell,
         ThingFromBeyondSpeedPct(player), ok ? 1u : 0u,
-        player->HasAura(SPELL_THING_FROM_BEYOND_TARGET_LOCK) ? 1u : 0u));
+        thing && thing->HasAura(SPELL_THING_FROM_BEYOND_CLONE) ? 1u : 0u,
+        thing && thing->HasAura(SPELL_THING_FROM_BEYOND_TINT) ? 1u : 0u));
 }
 
 void ConsumeGlimpseStack(Player* player)
