@@ -2423,6 +2423,63 @@ int32 LashOfTheVoidDamage(Unit const* owner)
     int32 value = effect->CalcValue(owner, nullptr, owner, nullptr, itemId, itemLevel);
     return value < 1 ? 1 : value;
 }
+
+// 318293 EFFECT_0 LINKED_2 BP=5 is the breath health pct. Do not also list 316698
+// (both BP=5); Task 2 devour double-counted when item + hidden proc were summed.
+int32 SearingBreathHealthPct(Unit const* owner)
+{
+    uint32 const ranks[] = { SPELL_SEARING_FLAMES_ITEM };
+    int32 pct = SumCorruptionRankDummy(owner, ranks, 1, EFFECT_0, true,
+        SEARING_BREATH_PCT_FALLBACK, "SearingFlames");
+    return pct < 1 ? SEARING_BREATH_PCT_FALLBACK : pct;
+}
+
+uint32 SearingFlamesMaxStacks()
+{
+    if (SpellInfo const* buff = sSpellMgr->GetSpellInfo(SPELL_SEARING_FLAMES_BUFF))
+        if (buff->StackAmount >= 1)
+            return buff->StackAmount;
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "SearingFlames: StackAmount missing, using %u",
+            SEARING_FLAMES_MAX_STACKS_FALLBACK);
+    }
+    return SEARING_FLAMES_MAX_STACKS_FALLBACK;
+}
+
+void TrySearingBreath(Unit* caster, Unit* facingTarget)
+{
+    if (!caster)
+        return;
+    Aura* buff = caster->GetAura(SPELL_SEARING_FLAMES_BUFF);
+    uint32 maxStacks = SearingFlamesMaxStacks();
+    if (!buff)
+    {
+        caster->CastSpell(caster, SPELL_SEARING_FLAMES_BUFF, InfiniteStarsCastFlags());
+        buff = caster->GetAura(SPELL_SEARING_FLAMES_BUFF);
+        if (buff)
+            buff->SetStackAmount(1);
+        LabNotify(caster, "SEARING_STACK", "stacks=1");
+        return;
+    }
+
+    uint32 stacks = uint32(buff->GetStackAmount()) + 1;
+    if (stacks < maxStacks)
+    {
+        buff->SetStackAmount(int32(stacks));
+        LabNotify(caster, "SEARING_STACK", Trinity::StringFormat("stacks=%u", stacks));
+        return;
+    }
+
+    if (facingTarget && facingTarget != caster)
+        caster->SetInFront(facingTarget);
+    bool ok = caster->CastSpell(caster, SPELL_SEARING_FLAMES_BREATH, InfiniteStarsCastFlags());
+    buff->Remove();
+    LabNotify(caster, "SEARING_BREATH", Trinity::StringFormat(
+        "pct=%d ok=%u", SearingBreathHealthPct(caster), ok ? 1u : 0u));
+}
 }
 
 // 324889/324890/324891 - wrapper has no aura. AfterCast applies the rank driver; family hook syncs 317257.
@@ -4033,6 +4090,64 @@ class spell_lash_of_the_void_damage : public SpellScript
     }
 };
 
+// White hits are excluded by spell_proc mask 69904. Do NOT also require
+// StartRecoveryTime: no-GCD damaging yellows still stack. Do NOT require
+// GetDamage()>0: one multi-hit cast is already gated by the 100ms ICD.
+class spell_searing_flames_proc : public AuraScript
+{
+    PrepareAuraScript(spell_searing_flames_proc);
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Spell const* procSpell = eventInfo.GetProcSpell();
+        return procSpell && procSpell->GetSpellInfo();
+    }
+
+    void HandleProc(ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+        TrySearingBreath(GetTarget(), eventInfo.GetActionTarget());
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* owner = GetTarget())
+            owner->RemoveAurasDueToSpell(SPELL_SEARING_FLAMES_BUFF);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_searing_flames_proc::CheckProc);
+        OnProc += AuraProcFn(spell_searing_flames_proc::HandleProc);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_searing_flames_proc::HandleRemove,
+            EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 316704 EFFECT_0 SCHOOL_DAMAGE TargetA=104 cone 60deg 12yd. No FilterTargets:
+// SelectImplicitConeTargets already does LoS (2020-02-04) and collision (2020-02-05).
+// No caster-trigger second effect (unlike 317291), so OnHit + SetHitDamage is OK.
+class spell_searing_breath : public SpellScript
+{
+    PrepareSpellScript(spell_searing_breath);
+
+    void HandleHit()
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        int64 damage = int64(caster->GetMaxHealth()) * SearingBreathHealthPct(caster) / 100;
+        if (damage < 1)
+            damage = 1;
+        SetHitDamage(int32(damage));
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_searing_breath::HandleHit);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -4082,6 +4197,8 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_whispered_truths);
     RegisterAuraScript(spell_lash_of_the_void);
     RegisterSpellScript(spell_lash_of_the_void_damage);
+    RegisterAuraScript(spell_searing_flames_proc);
+    RegisterSpellScript(spell_searing_breath);
     RegisterAreaTriggerAI(at_eye_of_corruption);
     RegisterCreatureAI(npc_thing_from_beyond);
     LogCorruptionSpellInfo("InevitableDoom.dump", SPELL_INEVITABLE_DOOM);

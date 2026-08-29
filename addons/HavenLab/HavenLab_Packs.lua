@@ -1158,6 +1158,32 @@ HL.PACKS = {
         },
     },
 
+    searing = {
+        key = "searing",
+        title = "灼热烈焰",
+        order = 34,
+        serverCmd = ".lab test searing",
+        hint = "用伤害技能打。平砍和治疗不应叠层。第 30 次伤害技能立刻喷（不是第 31 次）。身后木桩不应吃锥伤。",
+        startText = "【测试开始】已挂 316698。对面前木桩打伤害技能。看 SEARING_STACK；第 30 次出 SEARING_BREATH / 316704。",
+        startPrint = "已挂 316698。打伤害技能叠层。平砍和治疗不应叠。.lab clear 后 316703 应跟着掉。",
+        ids = { 318293, 316698, 316703, 316704 },
+        labels = {
+            [318293] = "物品驱动",
+            [316698] = "隐藏proc",
+            [316703] = "叠层",
+            [316704] = "灼热吐息",
+        },
+        chain = {
+            { id = 316698, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂 316698。" },
+            { id = 316703, role = "叠层", want = "labmsg", labType = "SEARING_STACK",
+              procStep = true,
+              hintFail = "伤害技能没有 SEARING_STACK。平砍或治疗叠了层 = 掩码过宽。" },
+            { id = 316704, role = "喷焰", want = "labmsg", labType = "SEARING_BREATH",
+              hintFail = "叠满 30 层没有 SEARING_BREATH。第 30 次伤害技能应立刻喷，不是第 31 次。" },
+        },
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
