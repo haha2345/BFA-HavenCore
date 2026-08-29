@@ -317,6 +317,9 @@ enum GrandDelusionsSpells
     SPELL_THING_FROM_BEYOND_AUTOATTACK = 319694, // OVERRIDE_AA -> 315197
     SPELL_GRAND_DELUSIONS_DAMAGE = 315197,       // 35% max HP; 35662 SpellEffect
     SPELL_THING_FROM_BEYOND_CLONE = 318393,      // CLONE_CASTER; 161895 has no model row
+    // 315197 TargetAuraSpell: the victim must carry this 8s (= chase duration)
+    // lock or CheckCast rejects the contact damage (35662 dump, 2026-08-29).
+    SPELL_THING_FROM_BEYOND_TARGET_LOCK = 319695,
     SPELL_THING_FROM_BEYOND_CLOAK = 313301       // cloak extra, not the 40-tier row
 };
 
@@ -1825,17 +1828,29 @@ void LogCorruptionSpellInfo(char const* tag, uint32 id)
     TC_LOG_INFO("scripts", "%s: id=%u procFlags=%u ppm=%.2f duration=%d scaleClass=%d attr0=0x%X hideLog=%u",
         tag, id, info->ProcFlags, info->ProcBasePPM, info->GetDuration(), info->Scaling.Class,
         info->Attributes, info->HasAttribute(SPELL_ATTR0_HIDE_IN_COMBAT_LOG) ? 1u : 0u);
+    // Cast-requirement fields: CheckCast failures that IGNORE_TARGET_CHECK does
+    // not forgive (aura-spell prerequisites, aura states, explicit target mask)
+    // all originate here.
+    TC_LOG_INFO("scripts",
+        "%s:  req casterAuraSpell=%u targetAuraSpell=%u exclCasterAura=%u exclTargetAura=%u"
+        " casterAuraState=%u targetAuraState=%u explicitMask=0x%X rangeMax=%.1f attr1=0x%X attr3=0x%X",
+        tag, info->CasterAuraSpell, info->TargetAuraSpell,
+        info->ExcludeCasterAuraSpell, info->ExcludeTargetAuraSpell,
+        info->CasterAuraState, info->TargetAuraState,
+        info->ExplicitTargetMask, info->GetMaxRange(),
+        info->AttributesEx, info->AttributesEx3);
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
     {
         SpellEffectInfo const* effect = info->GetEffect(SpellEffIndex(i));
         if (!effect)
             continue;
         TC_LOG_INFO("scripts",
-            "%s:  eff%u effect=%u aura=%u amount=%d rppl=%.4f coeff=%.4f bonus=%.4f scale=%.4f var=%.4f misc=%d miscB=%d trigger=%u",
+            "%s:  eff%u effect=%u aura=%u amount=%d rppl=%.4f coeff=%.4f bonus=%.4f scale=%.4f var=%.4f misc=%d miscB=%d trigger=%u targetA=%u targetB=%u",
             tag, i, uint32(effect->Effect), uint32(effect->ApplyAuraName), effect->BasePoints,
             effect->RealPointsPerLevel, effect->BonusCoefficient, effect->BonusCoefficientFromAP,
             effect->Scaling.Coefficient, effect->Scaling.Variance,
-            effect->MiscValue, effect->MiscValueB, effect->TriggerSpell);
+            effect->MiscValue, effect->MiscValueB, effect->TriggerSpell,
+            uint32(effect->TargetA.GetTarget()), uint32(effect->TargetB.GetTarget()));
     }
 }
 
@@ -1886,10 +1901,12 @@ DelusionChain const& ResolveDelusionChain()
     LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_GRAND_DELUSIONS_SUMMON);
     LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_GRAND_DELUSIONS_DAMAGE);
     LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_THING_FROM_BEYOND_AUTOATTACK);
-    // 318392 / 319695 are the remaining same-name rows on the Wowhead chain —
-    // dumped to identify the retail shadow-tint visual the clone still lacks.
+    // 318392 / 316559 are the remaining same-name rows on the Wowhead chain —
+    // dumped to identify the retail shadow-tint visual the clone still lacks
+    // (318392 SCRIPT_EFFECT carries 316559 in its base points).
     LogCorruptionSpellInfo("GrandDelusions.dump", 318392);
-    LogCorruptionSpellInfo("GrandDelusions.dump", 319695);
+    LogCorruptionSpellInfo("GrandDelusions.dump", 316559);
+    LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_THING_FROM_BEYOND_TARGET_LOCK);
 
     SpellInfo const* driver = sSpellMgr->GetSpellInfo(SPELL_GRAND_DELUSIONS);
     if (!driver)
@@ -1997,6 +2014,9 @@ struct npc_thing_from_beyond : public ScriptedAI
         // slowly to ever reach melee range before the 8s despawn.
         if (Player const* player = owner->ToPlayer())
             me->SetSpeedRate(MOVE_RUN, ThingFromBeyondSpeedPct(player) / 100.0f);
+        // Retail marks the chase target at summon; without this lock the
+        // contact damage 315197 fails CheckCast (TargetAuraSpell=319695).
+        owner->CastSpell(owner, SPELL_THING_FROM_BEYOND_TARGET_LOCK, InfiniteStarsCastFlags());
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MoveChase(owner);
     }
@@ -2057,6 +2077,7 @@ struct npc_thing_from_beyond : public ScriptedAI
 
         LabNotify(owner, "DELUSION_HIT", Trinity::StringFormat(
             "entry=%u damage=%u ok=%u", me->GetEntry(), chain.damageSpell, ok));
+        owner->RemoveAurasDueToSpell(SPELL_THING_FROM_BEYOND_TARGET_LOCK);
         TryCascadingDisaster(owner);
         me->DespawnOrUnsummon();
     }
@@ -3642,4 +3663,7 @@ void AddSC_corruption_spell_scripts()
     LogCorruptionSpellInfo("InevitableDoom.dump", SPELL_INEVITABLE_DOOM);
     LogCorruptionSpellInfo("InescapableConsequences.dump", SPELL_INESCAPABLE_CONSEQUENCES);
     LogCorruptionSpellInfo("InescapableConsequences.dump", SPELL_INESCAPABLE_CONSEQUENCES_DAMAGE);
+    // Resolve at startup so the GrandDelusions dump (315197 cast requirements)
+    // is available without waiting for the first in-game proc.
+    ResolveDelusionChain();
 }
