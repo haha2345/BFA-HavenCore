@@ -1353,10 +1353,14 @@ public:
             315184,
             315857,
             315179,
-            337612, 337816
+            337612, 337816,
+            318294, 316615, 318293, 316698, 316703, 316780,
+            318299, 316717, 316744, 317290, 316651, 317420
         };
         for (uint32 id : passives)
             player->RemoveAurasDueToSpell(id);
+        if (selected && selected != player)
+            selected->RemoveAurasDueToSpell(319241);
     }
 
     // New signature effect = one row. Aliases .labstars/.labtwilight/.labecho/.labtentacle call this.
@@ -1398,6 +1402,12 @@ public:
             { "cascade",       315857, "labcascade",       "cascading disaster", "Other corruption test auras removed." },
             { "doom",          315179, "labdoom",          "inevitable doom", "Other corruption test auras removed." },
             { "consequences",  337612, "labconsequences",  "inescapable consequences", "Other corruption test auras removed." },
+            { "devour",    316615, "labdevour",    "devour vitality",  "Other corruption test auras removed." },
+            { "searing",   316698, "labsearing",   "searing flames",   "Other corruption test auras removed." },
+            { "whisper",   316780, "labwhisper",   "whispered truths", "Other corruption test auras removed." },
+            { "flash",     316717, "labflash",     "flash of insight", "Other corruption test auras removed." },
+            { "lash",      317290, "lablash",      "lash of the void", "Other corruption test auras removed." },
+            { "obsidian",  316651, "labobsidian",  "obsidian skin",    "Other corruption test auras removed." },
         };
 
         if (!key || !*key)
@@ -1433,7 +1443,7 @@ public:
         LabTestDef const* def = FindLabTest(key);
         if (!def)
         {
-            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum vitality wound glimpse truth grasping eye delusion cascade doom consequences", key ? key : "");
+            handler->PSendSysMessage("lab test: unknown '%s'. keys: stars twilight echo tentacle ritual expedient masterful versatile severe siphoner strikethrough avoidant pulse mind momentum vitality wound glimpse truth grasping eye delusion cascade doom consequences devour searing whisper flash lash obsidian", key ? key : "");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1461,7 +1471,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping|eye|delusion|cascade|doom|consequences>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping|eye|delusion|cascade|doom|consequences|devour|searing|whisper|flash|lash|obsidian>");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1469,7 +1479,7 @@ public:
         char key[64] = {};
         if (sscanf(args, "%63s", key) != 1)
         {
-            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping|eye|delusion|cascade|doom|consequences>");
+            handler->SendSysMessage("Usage: .lab test <stars|twilight|echo|tentacle|ritual|expedient|masterful|versatile|severe|siphoner|strikethrough|avoidant|pulse|mind|momentum|vitality|wound|glimpse|truth|grasping|eye|delusion|cascade|doom|consequences|devour|searing|whisper|flash|lash|obsidian>");
             handler->SetSentErrorMessage(true);
             return false;
         }
