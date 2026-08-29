@@ -2268,11 +2268,12 @@ void TryGlimpseTrim(Player* player, Spell* spell)
 
 int32 DevourVitalityHealthPct(Unit const* owner)
 {
-    uint32 const ranks[] = { SPELL_DEVOUR_VITALITY_ITEM, SPELL_DEVOUR_VITALITY_PROC };
-    int32 pct = SumCorruptionRankDummy(owner, ranks, 2, EFFECT_0, true,
+    // 318294 is LINKED_2, not a Dummy rank; summing it with 316615 doubles the leech on real weapons.
+    uint32 const ranks[] = { SPELL_DEVOUR_VITALITY_PROC };
+    int32 pct = SumCorruptionRankDummy(owner, ranks, 1, EFFECT_0, true,
         DEVOUR_VITALITY_PCT_FALLBACK, "DevourVitality");
     if (pct < 1)
-        pct = SumCorruptionRankDummy(owner, ranks, 2, EFFECT_1, true,
+        pct = SumCorruptionRankDummy(owner, ranks, 1, EFFECT_1, true,
             DEVOUR_VITALITY_PCT_FALLBACK, "DevourVitality");
     return pct < 1 ? DEVOUR_VITALITY_PCT_FALLBACK : pct;
 }
