@@ -2289,6 +2289,42 @@ void CastDevourVitality(Unit* caster, Unit* target)
         "target=%s pct=%d ok=%u", target->GetName().c_str(),
         DevourVitalityHealthPct(caster), ok ? 1u : 0u));
 }
+
+int32 FlashOfInsightPctPerStack(Unit const* owner)
+{
+    uint32 const ranks[] = { SPELL_FLASH_OF_INSIGHT_ITEM };
+    int32 pct = SumCorruptionRankDummy(owner, ranks, 1, EFFECT_0, true, 1, "FlashOfInsight");
+    return pct < 1 ? 1 : pct;
+}
+
+uint32 FlashOfInsightMaxStacks()
+{
+    if (SpellInfo const* buff = sSpellMgr->GetSpellInfo(SPELL_FLASH_OF_INSIGHT_BUFF))
+        if (buff->StackAmount >= 1)
+            return buff->StackAmount;
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "FlashOfInsight: StackAmount missing, using %u",
+            FLASH_OF_INSIGHT_MAX_STACKS_FALLBACK);
+    }
+    return FLASH_OF_INSIGHT_MAX_STACKS_FALLBACK;
+}
+
+void RerollFlashOfInsight(Unit* owner)
+{
+    if (!owner || !owner->IsAlive())
+        return;
+    uint32 maxStacks = FlashOfInsightMaxStacks();
+    uint32 stacks = urand(1, maxStacks);
+    if (!owner->HasAura(SPELL_FLASH_OF_INSIGHT_BUFF))
+        owner->CastSpell(owner, SPELL_FLASH_OF_INSIGHT_BUFF, InfiniteStarsCastFlags());
+    if (Aura* aura = owner->GetAura(SPELL_FLASH_OF_INSIGHT_BUFF))
+        aura->SetStackAmount(int32(stacks));
+    LabNotify(owner, "FLASH_ROLL", Trinity::StringFormat(
+        "stacks=%u max=%u pct=%d", stacks, maxStacks, FlashOfInsightPctPerStack(owner)));
+}
 }
 
 // 324889/324890/324891 - wrapper has no aura. AfterCast applies the rank driver; family hook syncs 317257.
@@ -3773,6 +3809,60 @@ class spell_devour_vitality_leech : public SpellScript
     }
 };
 
+class spell_flash_of_insight_proc : public AuraScript
+{
+    PrepareAuraScript(spell_flash_of_insight_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_FLASH_OF_INSIGHT_BUFF, SPELL_FLASH_OF_INSIGHT_ITEM });
+    }
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        RerollFlashOfInsight(GetTarget());
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* owner = GetTarget())
+            owner->RemoveAurasDueToSpell(SPELL_FLASH_OF_INSIGHT_BUFF);
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        RerollFlashOfInsight(GetTarget());
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_flash_of_insight_proc::HandleApply,
+            EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_flash_of_insight_proc::HandleRemove,
+            EFFECT_0, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
+        OnProc += AuraProcFn(spell_flash_of_insight_proc::HandleProc);
+    }
+};
+
+class spell_flash_of_insight_buff : public AuraScript
+{
+    PrepareAuraScript(spell_flash_of_insight_buff);
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        amount = FlashOfInsightPctPerStack(GetUnitOwner());
+    }
+
+    void Register() override
+    {
+        // 35662 dump: 316744 EFFECT_0 is aura 137 (total-stat %), hotfix from 80.
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_flash_of_insight_buff::CalculateAmount,
+            EFFECT_0, SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -3817,6 +3907,8 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_inescapable_consequences);
     RegisterAuraScript(spell_devour_vitality_proc);
     RegisterSpellScript(spell_devour_vitality_leech);
+    RegisterAuraScript(spell_flash_of_insight_proc);
+    RegisterAuraScript(spell_flash_of_insight_buff);
     RegisterAreaTriggerAI(at_eye_of_corruption);
     RegisterCreatureAI(npc_thing_from_beyond);
     LogCorruptionSpellInfo("InevitableDoom.dump", SPELL_INEVITABLE_DOOM);

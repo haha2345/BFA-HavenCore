@@ -1089,6 +1089,30 @@ HL.PACKS = {
         },
     },
 
+    flash = {
+        key = "flash",
+        title = "灵光一闪（法器）",
+        order = 31,
+        serverCmd = ".lab test flash",
+        hint = "挂上就该有 316744。施法后层数重滚 1–8，不是 +1。不要和 Glimpse 减 CD 搞混。",
+        startText = "【测试开始】已挂 316717。看 316744 层数和面板智力。",
+        startPrint = "已挂 316717。身上应立刻有 316744。",
+        ids = { 318299, 316717, 316744, 315573 },
+        labels = {
+            [318299] = "物品驱动",
+            [316717] = "隐藏proc",
+            [316744] = "智力层",
+            [315573] = "随机腐蚀Glimpse（不应出现）",
+        },
+        chain = {
+            { id = 316717, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂 316717。" },
+            { id = 316744, role = "智力层", want = "labmsg", labType = "FLASH_ROLL",
+              procStep = true,
+              hintFail = "没有 FLASH_ROLL。挂上时就该立刻滚一层。" },
+        },
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
