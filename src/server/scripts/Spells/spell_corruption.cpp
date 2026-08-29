@@ -2400,6 +2400,29 @@ void CastWhisperedTruths(Player* player)
     LabNotify(player, "WHISPER_PROC", Trinity::StringFormat(
         "spell=%u trimmed=%d pool=%u", id, trim, uint32(down.size())));
 }
+
+// 35662 dump: 317290 EFFECT_0 Dummy coeff 40.058 is the damage scale.
+// EFFECT_1 Dummy BP=30 is slow semantics; EFFECT_2 Dummy BP=6 is duration seconds.
+int32 LashOfTheVoidDamage(Unit const* owner)
+{
+    SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_LASH_OF_THE_VOID);
+    SpellEffectInfo const* effect = info ? info->GetEffect(EFFECT_0) : nullptr;
+    if (!effect)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            TC_LOG_ERROR("scripts", "LashOfTheVoid: scaling Dummy missing");
+        }
+        return 1;
+    }
+    uint32 itemId = 0;
+    int32 itemLevel = -1;
+    CorruptionRankItemContext(owner, SPELL_LASH_OF_THE_VOID, itemId, itemLevel);
+    int32 value = effect->CalcValue(owner, nullptr, owner, nullptr, itemId, itemLevel);
+    return value < 1 ? 1 : value;
+}
 }
 
 // 324889/324890/324891 - wrapper has no aura. AfterCast applies the rank driver; family hook syncs 317257.
@@ -3957,6 +3980,57 @@ class spell_whispered_truths : public AuraScript
     }
 };
 
+// 35662 dump: 317290 ProcFlags=4 (melee auto only). Do not add CheckProc or the
+// aura is gated twice. Hotfix cleared the 317290 trigger; cone damage is 317291.
+class spell_lash_of_the_void : public AuraScript
+{
+    PrepareAuraScript(spell_lash_of_the_void);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_LASH_OF_THE_VOID_DAMAGE, SPELL_LASH_OF_THE_VOID_SLOW });
+    }
+
+    void HandleProc(ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+        Unit* caster = GetTarget();
+        Unit* target = eventInfo.GetActionTarget();
+        if (!caster || !target)
+            return;
+        int32 damage = LashOfTheVoidDamage(caster);
+        // 317291 TargetA=104 (caster-front cone). Casting onto the melee target drops the cone.
+        caster->CastCustomSpell(SPELL_LASH_OF_THE_VOID_DAMAGE, SPELLVALUE_BASE_POINT0, damage,
+            caster, InfiniteStarsCastFlags());
+        LabNotify(caster, "LASH_PROC", Trinity::StringFormat(
+            "target=%s damage=%d", target->GetName().c_str(), damage));
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_lash_of_the_void::HandleProc);
+    }
+};
+
+class spell_lash_of_the_void_damage : public SpellScript
+{
+    PrepareSpellScript(spell_lash_of_the_void_damage);
+
+    void HandleHit()
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        int32 damage = LashOfTheVoidDamage(caster);
+        SetHitDamage(damage);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_lash_of_the_void_damage::HandleHit);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -4004,6 +4078,8 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_flash_of_insight_proc);
     RegisterAuraScript(spell_flash_of_insight_buff);
     RegisterAuraScript(spell_whispered_truths);
+    RegisterAuraScript(spell_lash_of_the_void);
+    RegisterSpellScript(spell_lash_of_the_void_damage);
     RegisterAreaTriggerAI(at_eye_of_corruption);
     RegisterCreatureAI(npc_thing_from_beyond);
     LogCorruptionSpellInfo("InevitableDoom.dump", SPELL_INEVITABLE_DOOM);

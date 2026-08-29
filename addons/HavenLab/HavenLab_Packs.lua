@@ -1135,6 +1135,29 @@ HL.PACKS = {
         },
     },
 
+    lash = {
+        key = "lash",
+        title = "虚空之鞭",
+        order = 33,
+        serverCmd = ".lab test lash",
+        hint = "只用平砍。猛击不应出 LASH_PROC。身后木桩不应吃锥伤。锥内第二只桩应吃满额，不均摊。",
+        startText = "【测试开始】已挂 317290。对面前木桩平砍。看 LASH_PROC、317291 锥伤和 319241 减速。",
+        startPrint = "已挂 317290。平砍面前木桩。猛击不应触发。",
+        ids = { 317290, 317291, 319241 },
+        labels = {
+            [317290] = "隐藏proc",
+            [317291] = "锥形暗影伤害",
+            [319241] = "减速",
+        },
+        chain = {
+            { id = 317290, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂 317290。" },
+            { id = 317291, role = "锥伤", want = "labmsg", labType = "LASH_PROC",
+              procStep = true,
+              hintFail = "平砍没有 LASH_PROC。猛击触发了反而说明掩码过宽。" },
+        },
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
