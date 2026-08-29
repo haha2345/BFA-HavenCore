@@ -407,7 +407,9 @@ namespace
 
     StorageMap _stores;
     DB2Manager::HotfixContainer _hotfixData;
-    std::map<std::pair<uint32 /*tableHash*/, int32 /*recordId*/>, std::vector<uint8>> _hotfixBlob;
+    // Keyed per locale: hotfix_blob carries one serialized record per client
+    // locale, and each session must be served its own language's bytes.
+    std::map<std::pair<uint32 /*tableHash*/, int32 /*recordId*/>, std::array<std::vector<uint8>, TOTAL_LOCALES>> _hotfixBlob;
 
     AreaGroupMemberContainer _areaGroupMembers;
     ArtifactPowersContainer _artifactPowers;
@@ -1554,7 +1556,7 @@ void DB2Manager::LoadHotfixBlob()
     uint32 oldMSTime = getMSTime();
     _hotfixBlob.clear();
 
-    QueryResult result = HotfixDatabase.Query("SELECT TableHash, RecordId, `Blob` FROM hotfix_blob ORDER BY TableHash");
+    QueryResult result = HotfixDatabase.Query("SELECT TableHash, RecordId, locale, `Blob` FROM hotfix_blob ORDER BY TableHash");
 
     if (!result)
     {
@@ -1562,6 +1564,9 @@ void DB2Manager::LoadHotfixBlob()
         return;
     }
 
+    // Without the locale column every row of the same record overwrote one
+    // slot, so all clients received whichever locale sorted last (zhTW).
+    uint32 count = 0;
     do
     {
         Field* fields = result->Fetch();
@@ -1576,10 +1581,19 @@ void DB2Manager::LoadHotfixBlob()
         }
 
         int32 recordId = fields[1].GetInt32();
-        _hotfixBlob[std::make_pair(tableHash, recordId)] = fields[2].GetBinary();
+        std::string localeName = fields[2].GetString();
+        LocaleConstant locale = GetLocaleByName(localeName);
+        if (!IsValidLocale(locale))
+        {
+            TC_LOG_ERROR("server.loading", "`hotfix_blob` contains unknown locale %s for TableHash 0x%X and RecordId %d", localeName.c_str(), tableHash, recordId);
+            continue;
+        }
+
+        _hotfixBlob[std::make_pair(tableHash, recordId)][locale] = fields[3].GetBinary();
+        ++count;
     } while (result->NextRow());
 
-    TC_LOG_INFO("server.loading", ">> Loaded " SZFMTD " hotfix blob records in %u ms", _hotfixBlob.size(), GetMSTimeDiffToNow(oldMSTime));
+    TC_LOG_INFO("server.loading", ">> Loaded %u hotfix blob records in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 uint32 DB2Manager::GetHotfixCount() const
@@ -1592,9 +1606,20 @@ DB2Manager::HotfixContainer const& DB2Manager::GetHotfixData() const
     return _hotfixData;
 }
 
-std::vector<uint8> const* DB2Manager::GetHotfixBlobData(uint32 tableHash, int32 recordId)
+std::vector<uint8> const* DB2Manager::GetHotfixBlobData(uint32 tableHash, int32 recordId, LocaleConstant locale)
 {
-    return Trinity::Containers::MapGetValuePtr(_hotfixBlob, std::make_pair(tableHash, recordId));
+    auto const* entry = Trinity::Containers::MapGetValuePtr(_hotfixBlob, std::make_pair(tableHash, recordId));
+    if (!entry)
+        return nullptr;
+
+    if (IsValidLocale(locale) && !(*entry)[locale].empty())
+        return &(*entry)[locale];
+
+    // Community hotfixes may ship fewer locales than the client supports.
+    if (!(*entry)[DEFAULT_LOCALE].empty())
+        return &(*entry)[DEFAULT_LOCALE];
+
+    return nullptr;
 }
 
 uint32 DB2Manager::GetEmptyAnimStateID() const
