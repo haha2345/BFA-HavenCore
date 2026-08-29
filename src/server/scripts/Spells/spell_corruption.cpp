@@ -4016,7 +4016,7 @@ class spell_lash_of_the_void_damage : public SpellScript
 {
     PrepareSpellScript(spell_lash_of_the_void_damage);
 
-    void HandleHit()
+    void HandleHit(SpellEffIndex /*effIndex*/)
     {
         Unit* caster = GetCaster();
         if (!caster)
@@ -4027,7 +4027,9 @@ class spell_lash_of_the_void_damage : public SpellScript
 
     void Register() override
     {
-        OnHit += SpellHitFn(spell_lash_of_the_void_damage::HandleHit);
+        // 317291 EFFECT_1 triggers 319241 on the caster; OnHit would SetHitDamage on that target too.
+        OnEffectHitTarget += SpellEffectFn(spell_lash_of_the_void_damage::HandleHit,
+            EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
     }
 };
 
