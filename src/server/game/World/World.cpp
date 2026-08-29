@@ -542,6 +542,12 @@ void World::LoadConfigSettings(bool reload)
     rate_values[RATE_DROP_ITEM_REFERENCED] = sConfigMgr->GetFloatDefault("Rate.Drop.Item.Referenced", 1.0f);
     rate_values[RATE_DROP_ITEM_REFERENCED_AMOUNT] = sConfigMgr->GetFloatDefault("Rate.Drop.Item.ReferencedAmount", 1.0f);
     rate_values[RATE_DROP_MONEY]  = sConfigMgr->GetFloatDefault("Rate.Drop.Money", 1.0f);
+    rate_values[RATE_CORRUPTION_DROP] = sConfigMgr->GetFloatDefault("Rate.CorruptionDrop", 0.25f);
+    if (rate_values[RATE_CORRUPTION_DROP] < 0.0f)
+    {
+        TC_LOG_ERROR("server.loading", "Rate.CorruptionDrop (%f) must be >= 0. Using 0.0 instead.", rate_values[RATE_CORRUPTION_DROP]);
+        rate_values[RATE_CORRUPTION_DROP] = 0.0f;
+    }
     rate_values[RATE_XP_KILL]     = sConfigMgr->GetFloatDefault("Rate.XP.Kill", 1.0f);
     rate_values[RATE_XP_BG_KILL]  = sConfigMgr->GetFloatDefault("Rate.XP.BattlegroundKill", 1.0f);
     rate_values[RATE_XP_QUEST]    = sConfigMgr->GetFloatDefault("Rate.XP.Quest", 1.0f);

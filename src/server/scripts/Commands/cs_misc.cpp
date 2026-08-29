@@ -1699,7 +1699,7 @@ public:
         return true;
     }
 
-    static bool HandleLabGearCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleLabGearCommand(ChatHandler* handler, char const* args)
     {
         Player* player = handler->getSelectedPlayerOrSelf();
         if (!player)
@@ -1718,7 +1718,80 @@ public:
             std::vector<int32> bonuses;
         };
 
-        // Ny'alotha-level warrior plate (SimC T25 Arms). No corruption bonus lists.
+        auto storeLabItem = [&](uint32 id, std::vector<int32> const& bonuses, bool equip) -> bool
+        {
+            if (!sObjectMgr->GetItemTemplate(id))
+            {
+                handler->PSendSysMessage("labgear: invalid item %u", id);
+                return false;
+            }
+
+            ItemPosCountVec storeDest;
+            uint32 noSpace = 0;
+            if (player->CanStoreNewItem(NULL_BAG, NULL_SLOT, storeDest, id, 1, &noSpace) != EQUIP_ERR_OK || storeDest.empty())
+            {
+                handler->PSendSysMessage("labgear: no space for %u", id);
+                return false;
+            }
+
+            Item* item = player->StoreNewItem(storeDest, id, true, ItemRandomBonusListId(0), GuidSet(), ItemContext::NONE, bonuses);
+            if (!item)
+            {
+                handler->PSendSysMessage("labgear: cannot create %u", id);
+                return false;
+            }
+
+            if (item->GetCount() != 1)
+                item->SetCount(1);
+
+            if (equip)
+            {
+                uint16 equipDest = 0;
+                if (player->CanEquipItem(NULL_SLOT, equipDest, item, false) == EQUIP_ERR_OK)
+                {
+                    player->RemoveItem(item->GetBagSlot(), item->GetSlot(), true);
+                    player->EquipItem(equipDest, item, true);
+                }
+            }
+
+            player->SendNewItem(item, 1, true, false);
+            return true;
+        };
+
+        if (args)
+        {
+            while (*args && isspace(static_cast<unsigned char>(*args)))
+                ++args;
+        }
+        if (args && !strcmp(args, "weapons"))
+        {
+            static uint32 const weapons[] = {
+                172191, 172193, 172197, 172198, 172199, 172200,
+                172187, 172189, 174106, 172227, 174108, 172196
+            };
+            uint32 given = 0;
+            for (uint32 id : weapons)
+            {
+                std::vector<int32> bonuses;
+                bonuses.push_back(1517);
+                if (int32 fixed = int32(DB2Manager::GetNyAlothaFixedCorruptionBonus(id)))
+                    bonuses.push_back(fixed);
+                if (storeLabItem(id, bonuses, false))
+                    ++given;
+            }
+
+            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+            player->SaveInventoryAndGoldToDB(trans);
+            CharacterDatabase.CommitTransaction(trans);
+            handler->PSendSysMessage("labgear: stored %u Ny'alotha weapons.", given);
+            return true;
+        }
+
+        int32 const hourFixed = int32(DB2Manager::GetNyAlothaFixedCorruptionBonus(172187));
+        if (!hourFixed)
+            handler->PSendSysMessage("labgear: missing Ny'alotha corruption list for 172187");
+
+        // Ny'alotha-level warrior plate (SimC T25 Arms). Random corruption is not rolled here.
         KitItem const kit[] =
         {
             { 174167, { 1517, 4775 } }, // head
@@ -1735,7 +1808,7 @@ public:
             { 169158, { 1522 } },       // ring
             { 169311, { 1517 } },       // trinket
             { 174500, { 1517 } },       // trinket
-            { 172187, { 1517 } }        // 2H
+            { 172187, hourFixed ? std::vector<int32>{ 1517, hourFixed } : std::vector<int32>{ 1517 } }
         };
 
         uint32 removed = 0;
@@ -1775,40 +1848,8 @@ public:
         uint32 given = 0;
         for (KitItem const& entry : kit)
         {
-            if (!sObjectMgr->GetItemTemplate(entry.id))
-            {
-                handler->PSendSysMessage("labgear: invalid item %u", entry.id);
-                continue;
-            }
-
-            ItemPosCountVec storeDest;
-            uint32 noSpace = 0;
-            if (player->CanStoreNewItem(NULL_BAG, NULL_SLOT, storeDest, entry.id, 1, &noSpace) != EQUIP_ERR_OK || storeDest.empty())
-            {
-                handler->PSendSysMessage("labgear: no space for %u", entry.id);
-                continue;
-            }
-
-            // Same path as .additem so bonus lists persist (CreateItem+AddBonuses before Equip was dropping them).
-            Item* item = player->StoreNewItem(storeDest, entry.id, true, ItemRandomBonusListId(0), GuidSet(), ItemContext::NONE, entry.bonuses);
-            if (!item)
-            {
-                handler->PSendSysMessage("labgear: cannot create %u", entry.id);
-                continue;
-            }
-
-            if (item->GetCount() != 1)
-                item->SetCount(1);
-
-            uint16 equipDest = 0;
-            if (player->CanEquipItem(NULL_SLOT, equipDest, item, false) == EQUIP_ERR_OK)
-            {
-                player->RemoveItem(item->GetBagSlot(), item->GetSlot(), true);
-                player->EquipItem(equipDest, item, true);
-            }
-
-            player->SendNewItem(item, 1, true, false);
-            ++given;
+            if (storeLabItem(entry.id, entry.bonuses, true))
+                ++given;
         }
 
         player->AutoUnequipOffhandIfNeed();

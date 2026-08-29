@@ -2141,6 +2141,14 @@ Rate.Drop.Item.Referenced       = 1
 Rate.Drop.Money                 = 1
 
 #
+#    Rate.CorruptionDrop
+#        Chance that an eligible Season 4 item receives one corruption effect on loot.
+#        Not present in 8.3.7 DB2. Default is an approximation.
+#        Value is a probability in [0, 1] (0.25 = 25 percent). Set to 1.0 to always roll.
+#        Default: 0.25
+Rate.CorruptionDrop = 0.25
+
+#
 #    Rate.Drop.Item.ReferencedAmount
 #        Description: Multiplier for referenced loot amount.
 #        Default:     1

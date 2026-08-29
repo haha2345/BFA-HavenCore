@@ -86,6 +86,7 @@ DBC 表达不了、但属于 35662 最终行为的数字，允许硬编码，集
 2. **外壳 → 驱动**：外壳 DBC 无光环效果（A1 已证实），由 SpellScript 把隐藏驱动（318274 系）接上——这一步已在 A1 用 AfterCast 做了第 1 层，真装层改为随装备 Apply/Remove。
 3. **ilvl 缩放**：318274 系伤害是 `$s2/100 * $max($AP,$SP)` 里的百分比 + `average(item)` 装等基数。接的时候只改伤害数字来源（读 aura 285 / RandPropPoints 曲线），**不动 proc/落点/延迟**。
 4. **腐蚀值**：`ITEM_MOD_CORRUPTION` → `UpdateCorruption()` 已接。验收：穿三件 25 腐蚀装 = 总 75，眼睛/触须按阈值出。
+5. **实例加成来源**：尸体掉落在 `GetDefaultItemBonusTree` 之后调用 `AppendCorruptionLootBonuses`（写死武器补固定列表；可腐蚀件按 `Rate.CorruptionDrop` 从组 158 抽一条，被动再挂纯腐蚀列表）。GM `.additem` 仍可手写加成，已带腐蚀效果的实例不再抽。
 
 ## B 坏效果：对齐官方阈值行为
 

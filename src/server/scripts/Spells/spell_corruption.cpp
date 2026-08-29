@@ -142,6 +142,7 @@
 #include "AreaTrigger.h"
 #include "AreaTriggerAI.h"
 #include "Chat.h"
+#include "DB2Stores.h"
 #include "Log.h"
 #include "StringFormat.h"
 #include "Item.h"
@@ -4383,4 +4384,5 @@ void AddSC_corruption_spell_scripts()
     };
     for (uint32 id : nyalothaWeaponDump)
         LogCorruptionSpellInfo("NyalothaWeapons.dump", id);
+    sDB2Manager.LogCorruptionItemBonusDump();
 }
