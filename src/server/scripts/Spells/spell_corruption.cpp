@@ -373,10 +373,17 @@ enum GrandDelusionsSpells
     // Named by 318392's SCRIPT_EFFECT base points (35662 dump): CLONE_CASTER
     // (aura 247) plus aura 368 — the retail shadow-tint visual on the clone.
     SPELL_THING_FROM_BEYOND_TINT = 316559,
-    // 315197 TargetAuraSpell: the victim must carry this 8s (= chase duration)
-    // lock or CheckCast rejects the contact damage (35662 dump, 2026-08-29).
+    // Retail chase mark, 8s = chase duration, hidden, SpellVisual 93005: the
+    // dark tether drawn between the Thing (caster) and the player (holder).
+    // 315197's TargetAuraSpell also pointed here before the SpellMgr fix.
     SPELL_THING_FROM_BEYOND_TARGET_LOCK = 319695,
-    SPELL_THING_FROM_BEYOND_CLOAK = 313301       // cloak extra, not the 40-tier row
+    SPELL_THING_FROM_BEYOND_CLOAK = 313301,      // cloak extra, not the 40-tier row
+    // Moroes' Shadowform (Karazhan): pure client-side dark translucent shroud,
+    // no gameplay effects. Approximation for the retail void-shadow shading —
+    // the chain's own visuals (316559 aura 368, 315185, SpellVisual 93528) all
+    // render nothing on this client (verified in-game 2026-08-29); deviation
+    // registered in the corruption hotfix whitelist.
+    SPELL_SHADOWFORM_VISUAL = 29406
 };
 
 enum CascadingDisasterSpells
@@ -1905,12 +1912,14 @@ void LogCorruptionSpellInfo(char const* tag, uint32 id)
     // all originate here.
     TC_LOG_INFO("scripts",
         "%s:  req casterAuraSpell=%u targetAuraSpell=%u exclCasterAura=%u exclTargetAura=%u"
-        " casterAuraState=%u targetAuraState=%u explicitMask=0x%X rangeMax=%.1f attr1=0x%X attr3=0x%X",
+        " casterAuraState=%u targetAuraState=%u explicitMask=0x%X rangeMax=%.1f attr1=0x%X attr3=0x%X"
+        " xVisual=%u visual=%u",
         tag, info->CasterAuraSpell, info->TargetAuraSpell,
         info->ExcludeCasterAuraSpell, info->ExcludeTargetAuraSpell,
         info->CasterAuraState, info->TargetAuraState,
         info->ExplicitTargetMask, info->GetMaxRange(),
-        info->AttributesEx, info->AttributesEx3);
+        info->AttributesEx, info->AttributesEx3,
+        info->GetSpellXSpellVisualId(), info->GetSpellVisual());
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
     {
         SpellEffectInfo const* effect = info->GetEffect(SpellEffIndex(i));
@@ -2089,6 +2098,18 @@ struct npc_thing_from_beyond : public ScriptedAI
             owner->CastSpell(me, SPELL_THING_FROM_BEYOND_CLONE, DelusionHitCastFlags());
         if (!me->GetDisplayId())
             me->SetDisplayId(owner->GetDisplayId());
+        // Retail sniff (creature_template_model 2026_08_29_10) keeps native
+        // display 11686 (invisible) on the wire, but this client renders that
+        // as a fully invisible unit (verified in-game 2026-08-29) — it does not
+        // rebuild the reflection from UNIT_FLAG2_MIRROR_IMAGE alone, so the
+        // clone aura's display copy has to stand.
+        me->CastSpell(me, SPELL_SHADOWFORM_VISUAL, true);
+        // Retail chase tether: 319695 on the victim with the Thing as caster
+        // (SpellVisual 93005 links caster and holder, 8s = chase duration).
+        // AddAura: the hidden negative self-targeted cast is rejected by
+        // CheckCast (verified 2026-08-29), and the caster must be the Thing,
+        // not the owner, for the line to anchor on the right unit.
+        me->AddAura(SPELL_THING_FROM_BEYOND_TARGET_LOCK, owner);
         // Retail: chase speed rises with corruption. Rate 1.0 is the standard
         // 7 yd/s run speed (an unbuffed player's 100%). Never multiply by the
         // owner's current rate: the 40-tier tendril slow procs off the same
@@ -2156,6 +2177,9 @@ struct npc_thing_from_beyond : public ScriptedAI
 
         LabNotify(owner, "DELUSION_HIT", Trinity::StringFormat(
             "entry=%u damage=%u ok=%u", me->GetEntry(), chain.damageSpell, ok));
+        // Chase ended — drop the tether early instead of letting it run out
+        // its full 8s on the victim.
+        owner->RemoveAurasDueToSpell(SPELL_THING_FROM_BEYOND_TARGET_LOCK);
         TryCascadingDisaster(owner);
         me->DespawnOrUnsummon();
     }
@@ -2218,11 +2242,13 @@ void CastGrandDelusions(Unit* owner)
     // and must be the only clone aura on the body; 318393 (clone=1) is the
     // untinted fallback, only cast when 316559 failed to apply.
     LabNotify(player, "DELUSION_PROC", Trinity::StringFormat(
-        "trigger=%u entry=%u damage=%u speed=%.0f ok=%u clone=%u tint=%u",
+        "trigger=%u entry=%u damage=%u speed=%.0f ok=%u clone=%u tint=%u form=%u link=%u",
         chain.triggerSpell, chain.summonEntry, chain.damageSpell,
         ThingFromBeyondSpeedPct(player), ok ? 1u : 0u,
         thing && thing->HasAura(SPELL_THING_FROM_BEYOND_CLONE) ? 1u : 0u,
-        thing && thing->HasAura(SPELL_THING_FROM_BEYOND_TINT) ? 1u : 0u));
+        thing && thing->HasAura(SPELL_THING_FROM_BEYOND_TINT) ? 1u : 0u,
+        thing && thing->HasAura(SPELL_SHADOWFORM_VISUAL) ? 1u : 0u,
+        player->HasAura(SPELL_THING_FROM_BEYOND_TARGET_LOCK) ? 1u : 0u));
 }
 
 void ConsumeGlimpseStack(Player* player)
