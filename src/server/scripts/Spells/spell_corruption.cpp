@@ -164,6 +164,7 @@
 #include "Timer.h"
 #include "Unit.h"
 #include "WorldSession.h"
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <set>
@@ -2073,14 +2074,18 @@ struct npc_thing_from_beyond : public ScriptedAI
             me->SetFaction(creatureTemplate->faction);
         me->SetLevel(owner->getLevel());
         me->SetReactState(REACT_PASSIVE);
-        // 161895 has no creature_template_model. 318393 CLONE_CASTER copies the owner.
-        owner->CastSpell(me, SPELL_THING_FROM_BEYOND_CLONE, DelusionHitCastFlags());
-        // Retail 318392 fires both: 318393 (clone) and 316559 (clone + aura 368
-        // void-shadow tint, client-rendered). 316559 carries the unknown-type
-        // aura 368 and evaluates hostile, so a player cast onto the PC-immune
-        // body is filtered out (verified in-game: clone=1 tint=0). Retail's
-        // 318392 script effect applies it server-side, so AddAura matches.
+        // 161895 has no creature_template_model; a CLONE_CASTER aura provides
+        // the body. Retail 318392's script effect applies 316559 (clone + aura
+        // 368 void-shadow tint) — the client keys the dark tint to the clone
+        // aura's own spell, so 316559 must be the ONLY clone aura: with plain
+        // 318393 applied first the client rendered a full-color copy (verified
+        // in-game 2026-08-29, clone=1 tint=1 yet untinted). AddAura instead of
+        // a cast: 316559 evaluates hostile and a player cast onto the
+        // PC-immune body is filtered out.
         owner->AddAura(SPELL_THING_FROM_BEYOND_TINT, me);
+        // Fallback body if the tinted clone could not be applied at all.
+        if (!me->HasAura(SPELL_THING_FROM_BEYOND_TINT))
+            owner->CastSpell(me, SPELL_THING_FROM_BEYOND_CLONE, DelusionHitCastFlags());
         if (!me->GetDisplayId())
             me->SetDisplayId(owner->GetDisplayId());
         // Retail: chase speed rises with corruption. Rate 1.0 is the standard
@@ -2208,10 +2213,9 @@ void CastGrandDelusions(Unit* owner)
         }
     }
 
-    // clone/tint report whether the two visual auras actually landed on the
-    // summon: 318393 copies the owner's model, 316559 should add the retail
-    // void-shadow tint. tint=1 with no visible darkening means aura 368 needs
-    // client-side support beyond the aura slot itself.
+    // tint=1 clone=0 is the expected state: 316559 is the retail tinted clone
+    // and must be the only clone aura on the body; 318393 (clone=1) is the
+    // untinted fallback, only cast when 316559 failed to apply.
     LabNotify(player, "DELUSION_PROC", Trinity::StringFormat(
         "trigger=%u entry=%u damage=%u speed=%.0f ok=%u clone=%u tint=%u",
         chain.triggerSpell, chain.summonEntry, chain.damageSpell,
@@ -2479,6 +2483,73 @@ void TrySearingBreath(Unit* caster, Unit* facingTarget)
     buff->Remove();
     LabNotify(caster, "SEARING_BREATH", Trinity::StringFormat(
         "pct=%d ok=%u", SearingBreathHealthPct(caster), ok ? 1u : 0u));
+}
+
+// 316651 EFFECT_2 Dummy3 is armor% of the explosion. EFFECT_0 +5% armor is
+// live aura 101 — do not script it. Do not also walk 317420.
+int32 ObsidianDestructionArmorPct(Unit const* /*owner*/)
+{
+    if (SpellInfo const* driver = sSpellMgr->GetSpellInfo(SPELL_OBSIDIAN_SKIN))
+        if (SpellEffectInfo const* effect = driver->GetEffect(EFFECT_2))
+        {
+            int32 pct = effect->BasePoints;
+            if (pct >= 1)
+                return pct;
+        }
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "ObsidianSkin: Dummy3 missing, using %d",
+            OBSIDIAN_ARMOR_PCT_FALLBACK);
+    }
+    return OBSIDIAN_ARMOR_PCT_FALLBACK;
+}
+
+uint32 ObsidianMaxStacks()
+{
+    if (SpellInfo const* tick = sSpellMgr->GetSpellInfo(SPELL_OBSIDIAN_DESTRUCTION))
+        if (tick->StackAmount >= 1)
+            return tick->StackAmount;
+    return 30;
+}
+
+// Combat ticks only. Leaving combat must not Remove 317420 — stacks persist.
+void TickObsidianDestruction(Unit* owner)
+{
+    if (!owner || !owner->IsAlive() || !owner->IsInCombat())
+        return;
+
+    Aura* buff = owner->GetAura(SPELL_OBSIDIAN_DESTRUCTION);
+    if (!buff)
+    {
+        owner->CastSpell(owner, SPELL_OBSIDIAN_DESTRUCTION, InfiniteStarsCastFlags());
+        buff = owner->GetAura(SPELL_OBSIDIAN_DESTRUCTION);
+        if (buff)
+            buff->SetStackAmount(1);
+        LabNotify(owner, "OBSIDIAN_TICK", "stacks=1");
+        return;
+    }
+
+    uint32 maxStacks = ObsidianMaxStacks();
+    uint32 stacks = uint32(buff->GetStackAmount());
+    if (stacks < maxStacks)
+    {
+        buff->SetStackAmount(int32(stacks + 1));
+        LabNotify(owner, "OBSIDIAN_TICK", Trinity::StringFormat("stacks=%u", stacks + 1));
+        return;
+    }
+
+    // Already at cap (including pre-stacked out of combat): explode this tick, then back to 1.
+    int32 pct = ObsidianDestructionArmorPct(owner);
+    int64 damage = int64(owner->GetArmor()) * pct / 100;
+    if (damage < 1)
+        damage = 1;
+    owner->CastCustomSpell(SPELL_OBSIDIAN_DESTRUCTION_DAMAGE, SPELLVALUE_BASE_POINT0,
+        int32(damage), owner, InfiniteStarsCastFlags());
+    buff->SetStackAmount(1);
+    LabNotify(owner, "OBSIDIAN_BOOM", Trinity::StringFormat(
+        "armor=%u pct=%d damage=%d", owner->GetArmor(), pct, int32(damage)));
 }
 }
 
@@ -4148,6 +4219,65 @@ class spell_searing_breath : public SpellScript
     }
 };
 
+class spell_obsidian_destruction : public AuraScript
+{
+    PrepareAuraScript(spell_obsidian_destruction);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_OBSIDIAN_DESTRUCTION_DAMAGE, SPELL_OBSIDIAN_SKIN });
+    }
+
+    void HandlePeriodic(AuraEffect const* /*aurEff*/)
+    {
+        PreventDefaultAction();
+        TickObsidianDestruction(GetTarget());
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_obsidian_destruction::HandlePeriodic,
+            EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+    }
+};
+
+class spell_obsidian_destruction_damage : public SpellScript
+{
+    PrepareSpellScript(spell_obsidian_destruction_damage);
+
+    uint32 _targets = 1;
+
+    void CountTargets(std::list<WorldObject*>& targets)
+    {
+        _targets = targets.empty() ? 1u : uint32(targets.size());
+    }
+
+    void HandleHit()
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        int32 pct = ObsidianDestructionArmorPct(caster);
+        int64 base = int64(caster->GetArmor()) * pct / 100;
+        if (base < 1)
+            base = 1;
+        uint32 n = std::min(_targets, OBSIDIAN_SPLIT_CAP);
+        float totalMul = 1.0f + OBSIDIAN_SPLIT_PER_TARGET * float(n - 1);
+        int64 damage = int64(float(base) * totalMul / float(_targets));
+        if (damage < 1)
+            damage = 1;
+        SetHitDamage(int32(damage));
+    }
+
+    void Register() override
+    {
+        // 316661 TargetA=22 is DEST_CASTER; area list is TargetB=15.
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(
+            spell_obsidian_destruction_damage::CountTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnHit += SpellHitFn(spell_obsidian_destruction_damage::HandleHit);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -4199,6 +4329,8 @@ void AddSC_corruption_spell_scripts()
     RegisterSpellScript(spell_lash_of_the_void_damage);
     RegisterAuraScript(spell_searing_flames_proc);
     RegisterSpellScript(spell_searing_breath);
+    RegisterAuraScript(spell_obsidian_destruction);
+    RegisterSpellScript(spell_obsidian_destruction_damage);
     RegisterAreaTriggerAI(at_eye_of_corruption);
     RegisterCreatureAI(npc_thing_from_beyond);
     LogCorruptionSpellInfo("InevitableDoom.dump", SPELL_INEVITABLE_DOOM);
