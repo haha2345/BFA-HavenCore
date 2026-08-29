@@ -395,8 +395,9 @@ constexpr int32 INEVITABLE_DOOM_CORRUPTION_OFFSET = 50;
 constexpr int32 INEVITABLE_DOOM_PER_POINT_FALLBACK = 1;
 
 // Retail: "Its speed increases with further Corruption." No public numbers —
-// approved approximation (2026-08-29 hotfix whitelist): 85% of the owner's run
-// speed at the 40-corruption threshold, +0.5% per point, capped at 130%.
+// approved approximation (2026-08-29 hotfix whitelist): 85% of standard run
+// speed (rate 1.0 = 7 yd/s, an unbuffed player's 100%) at the 40-corruption
+// threshold, +0.5% per point, capped at 130%.
 // 65 + 0.5*corr is that same line without embedding the threshold constant.
 constexpr float THING_SPEED_BASE_PCT = 65.0f;
 constexpr float THING_SPEED_PER_CORRUPTION_PCT = 0.5f;
@@ -645,7 +646,9 @@ TriggerCastFlags TwilightDamageCastFlags()
 
 // 315197 is max-health % on the player. Guardian-as-caster fails CheckCast
 // (same faction / originalCaster=owner / LOS). CAST_DIRECTLY so despawn
-// does not cancel the spell event.
+// does not cancel the spell event. Also used for the 318393 clone cast onto
+// the Thing-from-Beyond body: 161895 is hostile + PC/NPC-immune, so the
+// positive cast needs IGNORE_TARGET_CHECK to land.
 TriggerCastFlags DelusionHitCastFlags()
 {
     return TriggerCastFlags(uint32(InfiniteStarsCastFlags()) |
@@ -1883,6 +1886,10 @@ DelusionChain const& ResolveDelusionChain()
     LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_GRAND_DELUSIONS_SUMMON);
     LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_GRAND_DELUSIONS_DAMAGE);
     LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_THING_FROM_BEYOND_AUTOATTACK);
+    // 318392 / 319695 are the remaining same-name rows on the Wowhead chain —
+    // dumped to identify the retail shadow-tint visual the clone still lacks.
+    LogCorruptionSpellInfo("GrandDelusions.dump", 318392);
+    LogCorruptionSpellInfo("GrandDelusions.dump", 319695);
 
     SpellInfo const* driver = sSpellMgr->GetSpellInfo(SPELL_GRAND_DELUSIONS);
     if (!driver)
@@ -1973,19 +1980,23 @@ struct npc_thing_from_beyond : public ScriptedAI
         _hit = false;
         _elapsed = 0;
         // SummonGuardian copies the owner's faction (green name). Restore the
-        // template so the clone is hostile like the retail Thing-from-Beyond.
+        // template faction (14 + PC/NPC-immune, 2026_08_29_03): red like retail,
+        // but nobody — owner AoE or mobs — can fight the personal delusion.
         if (CreatureTemplate const* creatureTemplate = me->GetCreatureTemplate())
             me->SetFaction(creatureTemplate->faction);
         me->SetLevel(owner->getLevel());
         me->SetReactState(REACT_PASSIVE);
         // 161895 has no creature_template_model. 318393 CLONE_CASTER copies the owner.
-        owner->CastSpell(me, SPELL_THING_FROM_BEYOND_CLONE, InfiniteStarsCastFlags());
+        owner->CastSpell(me, SPELL_THING_FROM_BEYOND_CLONE, DelusionHitCastFlags());
         if (!me->GetDisplayId())
             me->SetDisplayId(owner->GetDisplayId());
-        // Retail: chase speed rises with corruption. Snapshot the owner's run
-        // speed at summon so later sprints do not retro-scale the clone.
+        // Retail: chase speed rises with corruption. Rate 1.0 is the standard
+        // 7 yd/s run speed (an unbuffed player's 100%). Never multiply by the
+        // owner's current rate: the 40-tier tendril slow procs off the same
+        // damage event, and a 95%-slow snapshot leaves the clone crawling too
+        // slowly to ever reach melee range before the 8s despawn.
         if (Player const* player = owner->ToPlayer())
-            me->SetSpeedRate(MOVE_RUN, owner->GetSpeedRate(MOVE_RUN) * ThingFromBeyondSpeedPct(player) / 100.0f);
+            me->SetSpeedRate(MOVE_RUN, ThingFromBeyondSpeedPct(player) / 100.0f);
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MoveChase(owner);
     }
