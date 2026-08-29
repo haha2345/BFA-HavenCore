@@ -2009,9 +2009,11 @@ struct npc_thing_from_beyond : public ScriptedAI
         // 161895 has no creature_template_model. 318393 CLONE_CASTER copies the owner.
         owner->CastSpell(me, SPELL_THING_FROM_BEYOND_CLONE, DelusionHitCastFlags());
         // Retail 318392 fires both: 318393 (clone) and 316559 (clone + aura 368
-        // shadow tint). The tint aura is client-rendered; server treats 368 as
-        // a no-op.
-        owner->CastSpell(me, SPELL_THING_FROM_BEYOND_TINT, DelusionHitCastFlags());
+        // void-shadow tint, client-rendered). 316559 carries the unknown-type
+        // aura 368 and evaluates hostile, so a player cast onto the PC-immune
+        // body is filtered out (verified in-game: clone=1 tint=0). Retail's
+        // 318392 script effect applies it server-side, so AddAura matches.
+        owner->AddAura(SPELL_THING_FROM_BEYOND_TINT, me);
         if (!me->GetDisplayId())
             me->SetDisplayId(owner->GetDisplayId());
         // Retail: chase speed rises with corruption. Rate 1.0 is the standard
@@ -2076,23 +2078,11 @@ struct npc_thing_from_beyond : public ScriptedAI
 
         _hit = true;
         uint32 ok = 0;
-        int32 targetCheck = -1;
-        int32 explicitCheck = -1;
         if (chain.damageSpell)
-        {
-            // Pre-flight the two public checks so a failed cast reports the
-            // real SpellCastResult — Unit::CastSpell only returns a bool.
-            if (SpellInfo const* damageInfo = sSpellMgr->GetSpellInfo(chain.damageSpell))
-            {
-                targetCheck = int32(damageInfo->CheckTarget(owner, owner, false));
-                explicitCheck = int32(damageInfo->CheckExplicitTarget(owner, owner, nullptr));
-            }
             ok = owner->CastSpell(owner, chain.damageSpell, DelusionHitCastFlags()) ? 1u : 0u;
-        }
 
         LabNotify(owner, "DELUSION_HIT", Trinity::StringFormat(
-            "entry=%u damage=%u ok=%u tgt=%d exp=%d",
-            me->GetEntry(), chain.damageSpell, ok, targetCheck, explicitCheck));
+            "entry=%u damage=%u ok=%u", me->GetEntry(), chain.damageSpell, ok));
         TryCascadingDisaster(owner);
         me->DespawnOrUnsummon();
     }
