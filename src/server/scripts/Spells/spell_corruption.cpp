@@ -333,6 +333,7 @@ constexpr uint32 SEARING_FLAMES_MAX_STACKS_FALLBACK = 30;
 constexpr int32 WHISPERED_TRUTHS_TRIM_MS_FALLBACK = 2000;
 constexpr uint32 FLASH_OF_INSIGHT_MAX_STACKS_FALLBACK = 8;
 constexpr int32 OBSIDIAN_ARMOR_PCT_FALLBACK = 700;
+constexpr uint32 OBSIDIAN_MAX_STACKS_FALLBACK = 30;
 constexpr float OBSIDIAN_SPLIT_PER_TARGET = 0.15f;
 constexpr uint32 OBSIDIAN_SPLIT_CAP = 6;
 
@@ -2511,7 +2512,14 @@ uint32 ObsidianMaxStacks()
     if (SpellInfo const* tick = sSpellMgr->GetSpellInfo(SPELL_OBSIDIAN_DESTRUCTION))
         if (tick->StackAmount >= 1)
             return tick->StackAmount;
-    return 30;
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "ObsidianSkin: StackAmount missing, using %u",
+            OBSIDIAN_MAX_STACKS_FALLBACK);
+    }
+    return OBSIDIAN_MAX_STACKS_FALLBACK;
 }
 
 // Combat ticks only. Leaving combat must not Remove 317420 — stacks persist.
