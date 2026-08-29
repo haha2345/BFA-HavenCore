@@ -1184,6 +1184,38 @@ HL.PACKS = {
         },
     },
 
+    obsidian = {
+        key = "obsidian",
+        title = "黑曜石皮肤",
+        order = 35,
+        serverCmd = ".lab test obsidian",
+        hint = "挂 316651（LINKED 会挂上 317420）。进战斗看层涨；到 30 层出 OBSIDIAN_BOOM / 316661。脱战层应还在。20 码外不应吃。",
+        startText = "【测试开始】已挂 316651。进战斗看 OBSIDIAN_TICK；满 30 层出 OBSIDIAN_BOOM / 316661。脱战层应保留。",
+        startPrint = "已挂 316651。进战斗叠层。脱战不掉层。满层爆炸按当前护甲×Dummy3。",
+        ids = { 316651, 317420, 316661 },
+        labels = {
+            [316651] = "黑曜石皮肤(+5%护甲)",
+            [317420] = "毁灭叠层",
+            [316661] = "爆炸伤害",
+        },
+        chain = {
+            { id = 316651, role = "驱动", want = "aura-self",
+              hintFail = "没挂 316651。" },
+            { id = 317420, role = "叠层", want = "labmsg", labType = "OBSIDIAN_TICK",
+              procStep = true,
+              hintFail = "没有 OBSIDIAN_TICK。进战斗了吗？脱战不会加层，层应还在。" },
+            { id = 316661, role = "爆炸", want = "labmsg", labType = "OBSIDIAN_BOOM",
+              hintFail = "叠满 30 层没有 OBSIDIAN_BOOM。进战斗时已是 30 层应本跳就炸，不要再 +1。" },
+        },
+        extraVerdict = function()
+            return {
+                "进战斗才加层；脱战不摘 317420，层保留。不要和灼热吐息的 15%/6 分摊搞混。",
+                "满 30 层本跳爆炸后回 1 层。护甲百分比读 316651 Dummy3（700），+5% 护甲零脚本。",
+                "316661 是自身周围敌对（TargetB=15），20 码外不应吃。多人每额外目标 +15%、上限 6 分摊。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
