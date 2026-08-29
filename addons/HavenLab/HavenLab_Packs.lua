@@ -1066,6 +1066,29 @@ HL.PACKS = {
         end,
     },
 
+    devour = {
+        key = "devour",
+        title = "吞噬活力",
+        order = 30,
+        serverCmd = ".lab test devour",
+        hint = "只用平砍。技能打桩不应出 DEVOUR_PROC。",
+        startText = "【测试开始】已挂 316615。对木桩平砍。看 DEVOUR_PROC 和 316617。",
+        startPrint = "已挂 316615。平砍木桩。",
+        ids = { 318294, 316615, 316617 },
+        labels = {
+            [318294] = "物品驱动",
+            [316615] = "隐藏proc",
+            [316617] = "吸血伤害",
+        },
+        chain = {
+            { id = 316615, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂上 316615。" },
+            { id = 316617, role = "吸血", want = "labmsg", labType = "DEVOUR_PROC",
+              procStep = true,
+              hintFail = "平砍没有 DEVOUR_PROC。技能触发了反而说明掩码过宽。" },
+        },
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",

@@ -2265,6 +2265,29 @@ void TryGlimpseTrim(Player* player, Spell* spell)
     LabNotify(player, "CD_TRIM", Trinity::StringFormat(
         "spell=%u before=%u after=%u", info->Id, before, after));
 }
+
+int32 DevourVitalityHealthPct(Unit const* owner)
+{
+    uint32 const ranks[] = { SPELL_DEVOUR_VITALITY_ITEM, SPELL_DEVOUR_VITALITY_PROC };
+    int32 pct = SumCorruptionRankDummy(owner, ranks, 2, EFFECT_0, true,
+        DEVOUR_VITALITY_PCT_FALLBACK, "DevourVitality");
+    if (pct < 1)
+        pct = SumCorruptionRankDummy(owner, ranks, 2, EFFECT_1, true,
+            DEVOUR_VITALITY_PCT_FALLBACK, "DevourVitality");
+    return pct < 1 ? DEVOUR_VITALITY_PCT_FALLBACK : pct;
+}
+
+void CastDevourVitality(Unit* caster, Unit* target)
+{
+    if (!caster || !target || !caster->IsAlive() || !target->IsAlive() || target == caster)
+        return;
+    if (!caster->_IsValidAttackTarget(target, sSpellMgr->GetSpellInfo(SPELL_DEVOUR_VITALITY_LEECH)))
+        return;
+    bool ok = caster->CastSpell(target, SPELL_DEVOUR_VITALITY_LEECH, InfiniteStarsCastFlags());
+    LabNotify(caster, "DEVOUR_PROC", Trinity::StringFormat(
+        "target=%s pct=%d ok=%u", target->GetName().c_str(),
+        DevourVitalityHealthPct(caster), ok ? 1u : 0u));
+}
 }
 
 // 324889/324890/324891 - wrapper has no aura. AfterCast applies the rank driver; family hook syncs 317257.
@@ -3694,6 +3717,61 @@ private:
     bool _wasInCombat = false;
 };
 
+// 316615 ProcFlags is already melee-auto only (mask 4). CheckProc only
+// needs a live action target; re-testing the melee bit would double-filter.
+class spell_devour_vitality_proc : public AuraScript
+{
+    PrepareAuraScript(spell_devour_vitality_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_DEVOUR_VITALITY_LEECH, SPELL_DEVOUR_VITALITY_ITEM });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        return eventInfo.GetActionTarget() != nullptr;
+    }
+
+    void HandleProc(ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+        if (Unit* caster = GetTarget())
+            CastDevourVitality(caster, eventInfo.GetActionTarget());
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_devour_vitality_proc::CheckProc);
+        OnProc += AuraProcFn(spell_devour_vitality_proc::HandleProc);
+    }
+};
+
+// 316617 HEALTH_LEECH BasePoints is 0. EffectHealthLeech reads the
+// effect-local damage, so fill SetEffectValue from caster max HP * Dummy.
+class spell_devour_vitality_leech : public SpellScript
+{
+    PrepareSpellScript(spell_devour_vitality_leech);
+
+    void HandleLeech(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        int32 pct = DevourVitalityHealthPct(caster);
+        int64 value = int64(caster->GetMaxHealth()) * pct / 100;
+        if (value < 1)
+            value = 1;
+        SetEffectValue(int32(value));
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_devour_vitality_leech::HandleLeech,
+            EFFECT_0, SPELL_EFFECT_HEALTH_LEECH);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -3736,6 +3814,8 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_grand_delusions);
     RegisterAuraScript(spell_inevitable_doom);
     RegisterAuraScript(spell_inescapable_consequences);
+    RegisterAuraScript(spell_devour_vitality_proc);
+    RegisterSpellScript(spell_devour_vitality_leech);
     RegisterAreaTriggerAI(at_eye_of_corruption);
     RegisterCreatureAI(npc_thing_from_beyond);
     LogCorruptionSpellInfo("InevitableDoom.dump", SPELL_INEVITABLE_DOOM);
