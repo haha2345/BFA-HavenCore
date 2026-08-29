@@ -3677,4 +3677,14 @@ void AddSC_corruption_spell_scripts()
     // Resolve at startup so the GrandDelusions dump (315197 cast requirements)
     // is available without waiting for the first in-game proc.
     ResolveDelusionChain();
+    static uint32 const nyalothaWeaponDump[] = {
+        318294, 316615, 316617,
+        318293, 316698, 316703, 316704,
+        316780, 316782,
+        317290, 317291, 319241,
+        318299, 316717, 316744,
+        316651, 317420, 316661
+    };
+    for (uint32 id : nyalothaWeaponDump)
+        LogCorruptionSpellInfo("NyalothaWeapons.dump", id);
 }
