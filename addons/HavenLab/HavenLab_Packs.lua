@@ -1113,6 +1113,28 @@ HL.PACKS = {
         },
     },
 
+    whisper = {
+        key = "whisper",
+        title = "低语真相",
+        order = 32,
+        serverCmd = ".lab test whisper",
+        hint = "猎人自动射击。先开一个职业技能让转盘转起来。",
+        startText = "【测试开始】已挂 316780。自动射击，看 WHISPER_PROC。",
+        startPrint = "已挂 316780。用自动射击。非猎人不应减 CD。",
+        ids = { 316780, 316782 },
+        labels = {
+            [316780] = "隐藏proc",
+            [316782] = "战斗记录",
+        },
+        chain = {
+            { id = 316780, role = "隐藏proc", want = "aura-self", hidden = true,
+              hintFail = "没挂 316780。" },
+            { id = 316782, role = "减CD", want = "labmsg", labType = "WHISPER_PROC",
+              procStep = true,
+              hintFail = "自动射击没有 WHISPER_PROC。先让一个猎人技能在冷却中。" },
+        },
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",

@@ -2325,6 +2325,81 @@ void RerollFlashOfInsight(Unit* owner)
     LabNotify(owner, "FLASH_ROLL", Trinity::StringFormat(
         "stacks=%u max=%u pct=%d", stacks, maxStacks, FlashOfInsightPctPerStack(owner)));
 }
+
+// 35662 dump: 316780 EFFECT_0 Dummy BasePoints is 2000 milliseconds, not 2 seconds.
+int32 WhisperedTruthsTrimMs(Unit const* /*owner*/)
+{
+    if (SpellInfo const* proc = sSpellMgr->GetSpellInfo(SPELL_WHISPERED_TRUTHS_PROC))
+        if (SpellEffectInfo const* effect = proc->GetEffect(EFFECT_0))
+        {
+            int32 ms = effect->BasePoints;
+            if (ms >= 100)
+                return ms;
+            if (ms >= 1 && ms <= 10)
+                return ms * IN_MILLISECONDS;
+        }
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "WhisperedTruths: Dummy missing, using %d ms",
+            WHISPERED_TRUTHS_TRIM_MS_FALLBACK);
+    }
+    return WHISPERED_TRUTHS_TRIM_MS_FALLBACK;
+}
+
+// Same class-spell gate as TryGlimpseTrim, but over the spellbook rather than a live cast.
+bool IsWhisperedTruthsCandidate(Player const* player, SpellInfo const* info)
+{
+    if (!player || !info || info->IsPassive())
+        return false;
+    if (!info->SpellFamilyName)
+        return false;
+    if (!info->GetRecoveryTime() && !info->ChargeCategoryId)
+        return false;
+    if (IsGlimpseExcludedSpell(info->Id))
+        return false;
+    return true;
+}
+
+void CastWhisperedTruths(Player* player)
+{
+    if (!player)
+        return;
+
+    SpellHistory* history = player->GetSpellHistory();
+    if (!history)
+        return;
+
+    int32 trim = WhisperedTruthsTrimMs(player);
+    std::vector<uint32> down;
+    for (PlayerSpellMap::value_type const& kv : player->GetSpellMap())
+    {
+        if (!kv.second || kv.second->state == PLAYERSPELL_REMOVED)
+            continue;
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(kv.first);
+        if (!IsWhisperedTruthsCandidate(player, info))
+            continue;
+        if (!history->GetRemainingCooldown(info))
+            continue;
+        down.push_back(info->Id);
+    }
+    if (down.empty())
+    {
+        LabNotify(player, "WHISPER_PROC", "spell=0 trimmed=0 skipped=none_down");
+        return;
+    }
+
+    uint32 id = down[urand(0, uint32(down.size() - 1))];
+    history->ModifyCooldown(id, -trim);
+    if (SpellInfo const* trimmed = sSpellMgr->GetSpellInfo(id))
+        if (trimmed->ChargeCategoryId)
+            history->ReduceChargeCooldown(trimmed->ChargeCategoryId, uint32(trim));
+    if (sSpellMgr->GetSpellInfo(SPELL_WHISPERED_TRUTHS_LOG))
+        player->CastSpell(player, SPELL_WHISPERED_TRUTHS_LOG, InfiniteStarsCastFlags());
+    LabNotify(player, "WHISPER_PROC", Trinity::StringFormat(
+        "spell=%u trimmed=%d pool=%u", id, trim, uint32(down.size())));
+}
 }
 
 // 324889/324890/324891 - wrapper has no aura. AfterCast applies the rank driver; family hook syncs 317257.
@@ -3863,6 +3938,25 @@ class spell_flash_of_insight_buff : public AuraScript
     }
 };
 
+// 35662 dump: 316780 ProcFlags=64 (ranged auto only). Do not add CheckProc or the
+// aura is gated twice and lab AddAura on a non-hunter still must run if it procs.
+class spell_whispered_truths : public AuraScript
+{
+    PrepareAuraScript(spell_whispered_truths);
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        if (Player* player = GetTarget()->ToPlayer())
+            CastWhisperedTruths(player);
+    }
+
+    void Register() override
+    {
+        OnProc += AuraProcFn(spell_whispered_truths::HandleProc);
+    }
+};
+
 void AddSC_corruption_spell_scripts()
 {
     RegisterSpellScript(spell_corruption_infinite_stars);
@@ -3909,6 +4003,7 @@ void AddSC_corruption_spell_scripts()
     RegisterSpellScript(spell_devour_vitality_leech);
     RegisterAuraScript(spell_flash_of_insight_proc);
     RegisterAuraScript(spell_flash_of_insight_buff);
+    RegisterAuraScript(spell_whispered_truths);
     RegisterAreaTriggerAI(at_eye_of_corruption);
     RegisterCreatureAI(npc_thing_from_beyond);
     LogCorruptionSpellInfo("InevitableDoom.dump", SPELL_INEVITABLE_DOOM);
