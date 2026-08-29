@@ -125,6 +125,15 @@
  *                   tendril and eye *trigger* paths (CastGraspingTendrils /
  *                   CastEyeOfCorruption). Do not re-apply 315175/315169.
  *
+ * Inevitable Doom (CorruptionEffects, MinCorruption 80):
+ *   315179          EFFECT_0 damage taken % (87), EFFECT_1 healing taken % (118),
+ *                   EFFECT_2 absorb taken % (422) — all DBC BP 0, 8.3.0–8.3.7.
+ *                   EFFECT_3 Dummy 1 = per-point multiplier for the script.
+ *                   Amount = Dummy * (effectiveCorruption - 50), floored at 0.
+ *                   The -50 offset is the Wowhead 2019-10 measured table
+ *                   (hotfix whitelist, approved 2026-08-29); no live-era source
+ *                   contradicts it after the threshold moved 60 -> 80.
+ *
  * Inescapable Consequences (CorruptionEffects, MinCorruption 200):
  *   337612          PERIODIC_TRIGGER_SPELL every 1s, TriggerSpell field is 0.
  *   337816          DAMAGE_FROM_MAX_HEALTH_PCT 25. Cast while in combat only.
@@ -378,6 +387,12 @@ constexpr int32 INEFFABLE_TRUTH_RANK1_PCT_FALLBACK = 30;
 // Wowhead / 清单: slow = effective corruption + 10, cap 99 (2020-02 hotfix).
 constexpr int32 GRASPING_TENDRILS_BONUS_PCT = 10;
 constexpr int32 GRASPING_TENDRILS_CAP_PCT = 99;
+
+// 315179 DBC BP is 0 on all three live effects. X = Dummy(EFFECT_3) *
+// (effectiveCorruption - 50), floored at 0. The -50 offset is the Wowhead
+// 2019-10 measured table (hotfix whitelist, approved 2026-08-29).
+constexpr int32 INEVITABLE_DOOM_CORRUPTION_OFFSET = 50;
+constexpr int32 INEVITABLE_DOOM_PER_POINT_FALLBACK = 1;
 
 // Dummy 2 on 315169 is the pulse period. Duration 8s is Wowhead; prefer DBC duration.
 constexpr uint32 EYE_PULSE_MS_FALLBACK = 2000;
@@ -1443,6 +1458,30 @@ int32 GraspingTendrilsSlowPct(Player const* player)
     if (pct > GRASPING_TENDRILS_CAP_PCT)
         pct = GRASPING_TENDRILS_CAP_PCT;
     return pct;
+}
+
+int32 InevitableDoomPerPoint()
+{
+    if (SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_INEVITABLE_DOOM))
+        if (SpellEffectInfo const* effect = info->GetEffect(EFFECT_3))
+            if (effect->BasePoints >= 1)
+                return effect->BasePoints;
+
+    static bool logged = false;
+    if (!logged)
+    {
+        logged = true;
+        TC_LOG_ERROR("scripts", "InevitableDoom: 315179 EFFECT_3 Dummy missing, using %d",
+            INEVITABLE_DOOM_PER_POINT_FALLBACK);
+    }
+    return INEVITABLE_DOOM_PER_POINT_FALLBACK;
+}
+
+int32 InevitableDoomPct(Player const* player)
+{
+    int32 pct = InevitableDoomPerPoint()
+        * (int32(EffectiveCorruptionRating(player)) - INEVITABLE_DOOM_CORRUPTION_OFFSET);
+    return pct > 0 ? pct : 0;
 }
 
 int32 EyeOfCorruptionVulnPct()
@@ -3399,6 +3438,64 @@ class spell_grand_delusions : public AuraScript
     }
 };
 
+// 315179 - all three live effects have BP 0. Fill Dummy * (corr - 50), floor 0.
+// Damage taken is positive; healing and absorb taken are negative (reductions).
+// UpdateCorruption() re-casts on every rating change; ModStackAmount recalcs.
+class spell_inevitable_doom : public AuraScript
+{
+    PrepareAuraScript(spell_inevitable_doom);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_INEVITABLE_DOOM });
+    }
+
+    int32 DoomPct() const
+    {
+        Player const* player = GetUnitOwner() ? GetUnitOwner()->ToPlayer() : nullptr;
+        return player ? InevitableDoomPct(player) : 0;
+    }
+
+    void CalculateDamageTaken(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        amount = DoomPct();
+        if (amount != _lastNotified)
+        {
+            _lastNotified = amount;
+            if (Unit* owner = GetUnitOwner())
+                LabNotify(owner, "DOOM_PCT", Trinity::StringFormat(
+                    "pct=%d corr=%.0f", amount,
+                    owner->ToPlayer() ? EffectiveCorruptionRating(owner->ToPlayer()) : 0.0f));
+        }
+    }
+
+    void CalculateHealingTaken(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        amount = -DoomPct();
+    }
+
+    void CalculateAbsorbTaken(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        amount = -DoomPct();
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_inevitable_doom::CalculateDamageTaken,
+            EFFECT_0, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN);
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_inevitable_doom::CalculateHealingTaken,
+            EFFECT_1, SPELL_AURA_MOD_HEALING_PCT);
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_inevitable_doom::CalculateAbsorbTaken,
+            EFFECT_2, SPELL_AURA_MOD_ABSORB_EFFECTS_TAKEN_PCT);
+    }
+
+private:
+    int32 _lastNotified = -1;
+};
+
 // 337612 - TriggerSpell is 0. Combat ticks cast 337816 (DBC max-health %).
 class spell_inescapable_consequences : public AuraScript
 {
@@ -3503,6 +3600,7 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_eye_of_corruption);
     RegisterSpellScript(spell_eye_of_corruption_damage);
     RegisterAuraScript(spell_grand_delusions);
+    RegisterAuraScript(spell_inevitable_doom);
     RegisterAuraScript(spell_inescapable_consequences);
     RegisterAreaTriggerAI(at_eye_of_corruption);
     RegisterCreatureAI(npc_thing_from_beyond);
