@@ -394,6 +394,15 @@ constexpr int32 GRASPING_TENDRILS_CAP_PCT = 99;
 constexpr int32 INEVITABLE_DOOM_CORRUPTION_OFFSET = 50;
 constexpr int32 INEVITABLE_DOOM_PER_POINT_FALLBACK = 1;
 
+// Retail: "Its speed increases with further Corruption." No public numbers —
+// approved approximation (2026-08-29 hotfix whitelist): 85% of the owner's run
+// speed at the 40-corruption threshold, +0.5% per point, capped at 130%.
+// 65 + 0.5*corr is that same line without embedding the threshold constant.
+constexpr float THING_SPEED_BASE_PCT = 65.0f;
+constexpr float THING_SPEED_PER_CORRUPTION_PCT = 0.5f;
+constexpr float THING_SPEED_MIN_PCT = 85.0f;
+constexpr float THING_SPEED_CAP_PCT = 130.0f;
+
 // Dummy 2 on 315169 is the pulse period. Duration 8s is Wowhead; prefer DBC duration.
 constexpr uint32 EYE_PULSE_MS_FALLBACK = 2000;
 constexpr uint32 EYE_DURATION_MS_FALLBACK = 8000;
@@ -1484,6 +1493,16 @@ int32 InevitableDoomPct(Player const* player)
     return pct > 0 ? pct : 0;
 }
 
+float ThingFromBeyondSpeedPct(Player const* player)
+{
+    float pct = THING_SPEED_BASE_PCT + THING_SPEED_PER_CORRUPTION_PCT * EffectiveCorruptionRating(player);
+    if (pct < THING_SPEED_MIN_PCT)
+        pct = THING_SPEED_MIN_PCT;
+    if (pct > THING_SPEED_CAP_PCT)
+        pct = THING_SPEED_CAP_PCT;
+    return pct;
+}
+
 int32 EyeOfCorruptionVulnPct()
 {
     if (SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_EYE_OF_CORRUPTION_DAMAGE))
@@ -1963,6 +1982,10 @@ struct npc_thing_from_beyond : public ScriptedAI
         owner->CastSpell(me, SPELL_THING_FROM_BEYOND_CLONE, InfiniteStarsCastFlags());
         if (!me->GetDisplayId())
             me->SetDisplayId(owner->GetDisplayId());
+        // Retail: chase speed rises with corruption. Snapshot the owner's run
+        // speed at summon so later sprints do not retro-scale the clone.
+        if (Player const* player = owner->ToPlayer())
+            me->SetSpeedRate(MOVE_RUN, owner->GetSpeedRate(MOVE_RUN) * ThingFromBeyondSpeedPct(player) / 100.0f);
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MoveChase(owner);
     }
@@ -2082,8 +2105,9 @@ void CastGrandDelusions(Unit* owner)
     }
 
     LabNotify(player, "DELUSION_PROC", Trinity::StringFormat(
-        "trigger=%u entry=%u damage=%u ok=%u",
-        chain.triggerSpell, chain.summonEntry, chain.damageSpell, ok ? 1u : 0u));
+        "trigger=%u entry=%u damage=%u speed=%.0f ok=%u",
+        chain.triggerSpell, chain.summonEntry, chain.damageSpell,
+        ThingFromBeyondSpeedPct(player), ok ? 1u : 0u));
 }
 
 void ConsumeGlimpseStack(Player* player)
