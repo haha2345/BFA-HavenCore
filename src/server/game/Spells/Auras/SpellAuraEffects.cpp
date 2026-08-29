@@ -499,7 +499,7 @@ NonDefaultConstructible<pAuraEffectHandler> AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleModOverrideZonePVPType,                    //431 SPELL_AURA_MOD_OVERRIDE_ZONE_PVP_TYPE
     &AuraEffect::HandleNULL,                                      //432
     &AuraEffect::HandleNULL,                                      //433
-    &AuraEffect::HandleAuraLeech,                                 //434 SPELL_AURA_MOD_LEECH
+    &AuraEffect::HandleAuraLeech,                                 //434 identity unverified; keep so unknown 434 spells still refresh leech
     &AuraEffect::HandleNULL,                                      //435
     &AuraEffect::HandleNULL,                                      //436 SPELL_AURA_MOD_ENVIRONMENTAL_DAMAGE_TAKEN
     &AuraEffect::HandleAuraModMinimumSpeedRate,                   //437 SPELL_AURA_MOD_MINIMUM_SPEED_RATE
@@ -508,7 +508,7 @@ NonDefaultConstructible<pAuraEffectHandler> AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNULL,                                      //440 SPELL_AURA_MOD_MULTISTRIKE_DAMAGE
     &AuraEffect::HandleNULL,                                      //441 SPELL_AURA_MOD_MULTISTRIKE_CHANCE
     &AuraEffect::HandleNULL,                                      //442 SPELL_AURA_MOD_READINESS
-    &AuraEffect::HandleNULL,                                      //443 SPELL_AURA_MOD_LEECH
+    &AuraEffect::HandleAuraLeech,                                 //443 SPELL_AURA_MOD_LEECH
     &AuraEffect::HandleNULL,                                      //444
     &AuraEffect::HandleNULL,                                      //445
     &AuraEffect::HandleNULL,                                      //446

@@ -1029,6 +1029,22 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
         }
     }
 
+    if (damagetype != NODAMAGE && damage && victim != this)
+    {
+        float leechPct = m_unitData->Lifesteal;
+        if (leechPct > 0.0f)
+        {
+            uint32 dealt = health > damage ? damage : health;
+            uint32 heal = uint32(CalculatePct(float(dealt), leechPct));
+            if (heal)
+            {
+                HealInfo healInfo(this, this, heal, spellProto,
+                    spellProto ? spellProto->GetSchoolMask() : SPELL_SCHOOL_MASK_NORMAL);
+                DealHeal(healInfo);
+            }
+        }
+    }
+
     TC_LOG_DEBUG("entities.unit", "DealDamageEnd returned %d damage", damage);
 
     return damage;
