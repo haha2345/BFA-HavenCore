@@ -420,8 +420,8 @@ HL.PACKS = {
         serverCmd = ".lab test expedient",
         snapshotOnStart = true,
         snapshotSpell = 315544,
-        -- 清单：一段 Dummy +6% 急速来源。来源：腐蚀特效清单 / 方案 P2
-        expect = { stat = "haste", minDelta = 6 },
+        -- 清单：一段 Dummy ×1.06 急速来源。面板增量≈原急速×0.06，不是 +6 个百分点。
+        expect = { stat = "haste", minDelta = 1 },
         hint = "挂 315544。看急速来源 +6%。API：/dump GetHaste() 待验存在性。",
         startText = "【权宜之计】已挂 315544。对比开测快照，急速应涨约 6 个百分点（来源乘算，先看有明显增量）。",
         startPrint = "已挂 315544 并卸其他腐蚀测包。看急速。",
@@ -429,11 +429,18 @@ HL.PACKS = {
         labels = { [315544] = "一段驱动", [315545] = "二段", [315546] = "三段", [320257] = "hidden急速" },
         chain = {
             { id = 315544, role = "驱动", want = "aura-self", hidden = true,
-              hintFail = "没挂上 315544。看 .lab test expedient。" },
+              hintFail = "buff 栏看不到 315544 是正常的（隐藏）。服务器应有 labexpedient: 315544；本包看急速快照。" },
             { id = 315544, role = "急速+6%", want = "stat",
-              expect = { stat = "haste", minDelta = 6 },
-              hintFail = "急速没涨到约 +6。先 /dump GetHaste()；面板没变则 DBC 光环未生效（待验后再决定要不要脚本）。" },
+              expect = { stat = "haste", minDelta = 1 },
+              hintFail = "急速没涨到约 +6 个百分点。效果是来源×1.06，面板增量可能小于 6。把快照数字贴回来。" },
         },
+        extraVerdict = function()
+            return {
+                "2026-08-28 第 1 层通过（面板）：急速 1945 [+28.60%] → 2061 [+30.31%] = ×1.06。零脚本。",
+                "人物面板 29%→30% 是四舍五入。插件 minDelta=6 会误判失败（来源乘算只多约 1.7 个百分点）。真装 P5。",
+                "「对当前目标 85%」两张一样，与权宜之计无关。",
+            }
+        end,
     },
 
     masterful = {
@@ -451,11 +458,16 @@ HL.PACKS = {
         labels = { [315529] = "一段驱动", [315530] = "二段", [315531] = "三段", [320253] = "hidden精通" },
         chain = {
             { id = 315529, role = "驱动", want = "aura-self", hidden = true,
-              hintFail = "没挂上 315529。" },
+              hintFail = "buff 栏看不到 315529 是正常的。服务器应有 labmasterful: 315529；本包看精通快照。" },
             { id = 315529, role = "精通+6%", want = "stat",
               expect = { stat = "mastery", minDelta = 6 },
-              hintFail = "精通没涨到约 +6。/dump GetMasteryEffect()。" },
+              hintFail = "精通没涨到约 +6 个百分点。来源×1.06，增量可能小于 6。/dump GetMasteryEffect()。" },
         },
+        extraVerdict = function()
+            return {
+                "2026-08-28 第 1 层通过（玩家确认面板）。一段 Dummy ×1.06 精通来源。零脚本。真装 P5。",
+            }
+        end,
     },
 
     versatile = {
@@ -473,11 +485,16 @@ HL.PACKS = {
         labels = { [315549] = "一段驱动", [315552] = "二段", [315553] = "三段", [320259] = "hidden全能" },
         chain = {
             { id = 315549, role = "驱动", want = "aura-self", hidden = true,
-              hintFail = "没挂上 315549。" },
+              hintFail = "buff 栏看不到 315549 是正常的。服务器应有 labversatile: 315549；本包看全能快照。" },
             { id = 315549, role = "全能+6%", want = "stat",
               expect = { stat = "vers", minDelta = 6 },
-              hintFail = "全能没涨到约 +6。/dump GetVersatilityBonus(CR_VERSATILITY_DAMAGE_DONE)。" },
+              hintFail = "全能没涨到约 +6 个百分点。来源×1.06，增量可能小于 6。" },
         },
+        extraVerdict = function()
+            return {
+                "2026-08-28 第 1 层通过（玩家确认面板）。一段 Dummy ×1.06 全能来源。零脚本。真装 P5。",
+            }
+        end,
     },
 
     severe = {
@@ -495,11 +512,16 @@ HL.PACKS = {
         labels = { [315554] = "一段驱动", [315557] = "二段", [315558] = "三段", [320261] = "hidden暴击" },
         chain = {
             { id = 315554, role = "驱动", want = "aura-self", hidden = true,
-              hintFail = "没挂上 315554。" },
+              hintFail = "buff 栏看不到 315554 是正常的。服务器应有 labsevere: 315554；本包看暴击快照。" },
             { id = 315554, role = "暴击+6%", want = "stat",
               expect = { stat = "crit", minDelta = 6 },
-              hintFail = "暴击没涨到约 +6。/dump GetCritChance()。" },
+              hintFail = "暴击没涨到约 +6 个百分点。来源×1.06，增量可能小于 6。/dump GetCritChance()。" },
         },
+        extraVerdict = function()
+            return {
+                "2026-08-28 第 1 层通过（玩家确认面板）。一段 Dummy ×1.06 暴击来源。零脚本。真装 P5。",
+            }
+        end,
     },
 
     siphoner = {
@@ -517,11 +539,17 @@ HL.PACKS = {
         labels = { [315590] = "一段驱动", [315591] = "二段", [315592] = "三段" },
         chain = {
             { id = 315590, role = "驱动", want = "aura-self", hidden = true,
-              hintFail = "没挂上 315590。" },
+              hintFail = "buff 栏看不到 315590 是正常的。服务器应有 labsiphoner: 315590；本包看吸血快照。" },
             { id = 315590, role = "吸血+3%", want = "stat",
               expect = { stat = "lifesteal", minDelta = 3 },
-              hintFail = "吸血没涨到约 +3。/dump GetLifesteal()。" },
+              hintFail = "吸血没涨到约 +3。一段 Dummy 是 3%，不是 Icy Veins 的 2%。/dump GetLifesteal()。" },
         },
+        extraVerdict = function()
+            return {
+                "核心 443 已接到 UpdateLeechPercentage。/dump GetLifesteal() 一段应约为 3，不是 Icy Veins 的 2。",
+                "回血走 DealHeal，战斗记录没有治疗行是预期（2026-08-29 已接受）。看生命值，不要只靠 CLEU。不要写死 3/5/8。",
+            }
+        end,
     },
 
     strikethrough = {
@@ -538,14 +566,14 @@ HL.PACKS = {
         labels = { [315277] = "一段驱动", [315281] = "二段", [315282] = "三段", [320249] = "hidden暴击伤" },
         chain = {
             { id = 315277, role = "驱动", want = "aura-self", hidden = true,
-              hintFail = "没挂上 315277。" },
+              hintFail = "buff 栏看不到 315277 是正常的。服务器应有 labstrikethrough: 315277。" },
             { id = 320249, role = "hidden暴击伤", want = "aura-self", hidden = true,
-              hintFail = "有驱动但没有 320249。触发没挂上 hidden，或脚本没 CastSpell。" },
+              hintFail = "buff 栏看不到 320249 是正常的（隐藏）。以剑刃风暴暴击/非暴击是否约 2.04 为准。" },
         },
         extraVerdict = function(self)
             return {
-                "击穿不看面板暴击%。待进游戏验收：打桩暴击 CLEU 应比未挂时大约 +2%（一段 Dummy）。",
-                "治疗暴击走驱动 EFFECT_1 活 aura（+4/6/8）。320249 治疗 BP 保持 0，脚本不填，避免和驱动叠成双倍。",
+                "2026-08-28 第 1 层通过：剑刃风暴 4211 → 暴击 8590（÷4211=2.040）。无击穿时同技能 4211→8422（恰好 2.00）。8422×1.02=8590。",
+                "labstrikethrough: 315277 已挂。插件看不见隐藏 320249 不挡关账。治疗暴击 +4% 未测。真装 P5。",
             }
         end,
     },
@@ -558,22 +586,22 @@ HL.PACKS = {
         snapshotOnStart = true,
         snapshotSpell = 315607,
         expect = { stat = "avoidance", minDelta = 0.01 },
-        hint = "挂 315607。闪避 = 急速的 8%。核心 aura 198 是空壳，先进游戏看面板。",
+        hint = "挂 315607。闪避 = 急速的 8%（再经 CombatRatings 表换算，面板不是显示 8）。",
         startText = "【闪避者】已挂 315607。35662 Dummy 8/12/16，不是 Icy Veins 5/8/10。",
         startPrint = "已挂 315607。看闪避。/dump GetAvoidance()。",
         ids = { 315607, 315608, 315609 },
         labels = { [315607] = "一段驱动", [315608] = "二段", [315609] = "三段" },
         chain = {
             { id = 315607, role = "驱动", want = "aura-self", hidden = true,
-              hintFail = "没挂上 315607。" },
+              hintFail = "buff 栏看不到 315607 是正常的。服务器应有 labavoidant: 315607；本包看闪避快照。" },
             { id = 315607, role = "闪避随急速", want = "stat",
               expect = { stat = "avoidance", minDelta = 0.01 },
-              hintFail = "闪避没变。核心 SPELL_AURA_198 是旧武器技能空壳，面板不变则要脚本（待进游戏定案，先不写）。" },
+              hintFail = "闪避没变。不是 0×8%：转换源是急速。/dump GetAvoidance() 应非 0，不要指望显示 8。" },
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：/dump GetAvoidance()；闪避是否随急速的 8%。",
-                "核心未实现 aura 198 的「闪避=急速%」转换。面板不变再写 CalcAmount，禁止写死 8/12/16。",
+                "核心 198 已接到 UpdateRating：闪避 rating = 急速 rating × Amount%。不要写死 8/12/16。",
+                "/dump GetAvoidance() 是 CombatRatings 换算后的百分比。摘 315607 应回 0；改急速应跟着变。",
             }
         end,
     },
@@ -599,7 +627,7 @@ HL.PACKS = {
         },
         chain = {
             { id = 318220, role = "隐藏proc", want = "aura-self", hidden = true,
-              hintFail = "没挂上 318220。用 .lab test pulse / .labpulse。" },
+              hintFail = "buff 栏看不到 318220 是正常的（隐藏光环）。服务器应有 labpulse: 318220；本包看 PULSE_PROC。" },
             { id = 318220, role = "开脉搏", want = "labmsg", labType = "PULSE_PROC", procStep = true,
               hintFail = "没有 PULSE_PROC。平砍或猛击打一会儿（RPPM 5，含白字）。" },
             { id = 318227, role = "急速buff", want = "aura-self",
@@ -610,9 +638,9 @@ HL.PACKS = {
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：318227 约 4 秒掉；再 proc 刷新时长、不叠层。",
-                "白字能否 proc 信 DBC（含 White Melee）。面板急速% 随等级变，只验 rating。",
-                "第 1 层挂 hidden proc，不赌 LINKED 带 318220。真装 P5 再验驱动。",
+                "2026-08-28 第 1 层通过：PULSE_PROC rating=546；面板 hasteRating +557（过 minDelta 546）。",
+                "末次触发到掉约 4s；二次 proc 刷新不叠层。插件「持续」从首次上算，刷新会拉长。",
+                "第二次 proc 对齐普攻，白字可触发。真装驱动 P5 再验。",
             }
         end,
     },
@@ -638,7 +666,7 @@ HL.PACKS = {
         },
         chain = {
             { id = 318214, role = "隐藏proc", want = "aura-self", hidden = true,
-              hintFail = "没挂上 318214。用 .lab test mind / .labmind。" },
+              hintFail = "buff 栏看不到 318214 是正常的（隐藏光环）。服务器应有 labmind: 318214；本包看 MIND_PROC 与 318216。" },
             { id = 318214, role = "开心灵", want = "labmsg", labType = "MIND_PROC", procStep = true,
               hintFail = "没有 MIND_PROC。平砍或猛击打一会儿（RPPM 3，含白字）。" },
             { id = 318216, role = "精通buff", want = "aura-self",
@@ -649,9 +677,9 @@ HL.PACKS = {
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：318216 约 10 秒掉；再 proc 刷新时长、不叠层。",
-                "白字能否 proc 信 DBC（含 White Melee）。面板精通% 随等级变，只验 rating。",
-                "第 1 层挂 hidden proc，不赌 LINKED 带 318214。真装 P5 再验驱动。",
+                "2026-08-28 第 1 层通过：`MIND_PROC rating=392 ok=1`；快照精通 rating 694→1086（+392）。白字可 proc。",
+                "第二次 proc 约 3 秒后刷新：34.5s 挂上、47.4s 掉，墙钟 12.8s，从刷新起约 10s。无叠层。真装驱动 P5。",
+                "早先 rating 判失败是 HavenLab 掉光后不重拍基线，不是脚本没填精通。",
             }
         end,
     },
@@ -677,7 +705,7 @@ HL.PACKS = {
         },
         chain = {
             { id = 318218, role = "隐藏proc", want = "aura-self", hidden = true,
-              hintFail = "没挂上 318218。用 .lab test momentum / .labmomentum。" },
+              hintFail = "buff 栏看不到 318218 是正常的（隐藏光环）。服务器应有 labmomentum: 318218；本包看 MOMENTUM_PROC。" },
             { id = 318218, role = "开致命", want = "labmsg", labType = "MOMENTUM_PROC", procStep = true,
               hintFail = "没有 MOMENTUM_PROC。打出暴击（平击不应进，也不应吃掉 RPPM）。" },
             { id = 318219, role = "暴击buff", want = "aura-self",
@@ -688,8 +716,8 @@ HL.PACKS = {
         },
         extraVerdict = function(self)
             local lines = {
-                "待进游戏验收：318219 约 30 秒掉（信 35662，不信 SimC 15s）。满层后再 proc 是否整段刷新。",
-                "仅暴击进 RPPM（DoCheckProc）。平击不应消耗次数。叠到 5 不做成硬失败。",
+                "2026-08-28 第 1 层通过：仅暴击进；1→5 层 rating=31/62/93/124/155；满层后再 proc 仍 5。",
+                "快照 critRating +32 是第一层 Dummy。满层引擎乘层应为 +155。停手 30s 掉光未测。",
                 "CalcAmount 只填每层 Dummy，引擎再乘层。脚本不要自己 Dummy×层。",
             }
             if self and self.LabMessages then
@@ -738,9 +766,9 @@ HL.PACKS = {
         },
         chain = {
             { id = 318212, role = "隐藏proc", want = "aura-self", hidden = true,
-              hintFail = "没挂上 318212。用 .lab test vitality / .labvitality。" },
+              hintFail = "buff 栏看不到 318212 是正常的（隐藏光环）。服务器应有 labvitality: 318212；本包看 VITAL_PROC 与 318211。" },
             { id = 318212, role = "开涌动", want = "labmsg", labType = "VITAL_PROC", procStep = true,
-              hintFail = "没有 VITAL_PROC。木桩打不出；站会还手的怪或自己挨 DoT（RPPM 2，taken）。" },
+              hintFail = "没有 VITAL_PROC。木桩打不出；站会还手的怪或自己挨 DoT（RPPM 2，taken）。有 318211 但没有本条时，多半是 DBC 默认 TriggerSpell 挂上的，OnProc 没跑到。" },
             { id = 318211, role = "全能buff", want = "aura-self",
               hintFail = "有 VITAL_PROC 但自己没有 318211。脚本 CastSpell 没挂上（taken 目标应是自己）。" },
             { id = 318211, role = "全能rating+343", want = "stat",
@@ -749,9 +777,9 @@ HL.PACKS = {
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：318211 约 20 秒掉；再 proc 刷新、不叠层。",
-                "触发是受伤侧。热修掩码含 heal-taken，先不滤治疗。/dump GetCombatRating 对客户端全能下标。",
-                "驱动 Base 热修为 0，数字走 CalcValue Scaled。第 1 层挂 hidden proc。真装 P5。",
+                "2026-08-28 第 1 层通过：318211 约 20s；首次快照 versRating +350。掉光约 11.5s 后再挂，仍约 20s、不叠层。",
+                "没有 VITAL_PROC：buff 更像 DBC 默认 TriggerSpell 打上的。不挡玩法过线。",
+                "第二次报告全能 -9 是插件用「增益还在时」的旧快照当基线，不是 buff 没加。增益还在时刷新未测。真装 P5。",
             }
         end,
     },
@@ -761,9 +789,9 @@ HL.PACKS = {
         title = "龟裂创伤",
         order = 17,
         serverCmd = ".lab test wound",
-        hint = "挂 318179。用黄字打木桩（平砍不开）。\n318187 暗影渗血 7 秒，每跳 Dummy 13% max(AP,SP)，不要 ÷7。",
-        startText = "【龟裂创伤】已挂 318179。猛击等黄字打木桩。proc 写成 WOUND_PROC，跳伤写成 WOUND_TICK。",
-        startPrint = "已挂 318179。用黄字打。看 318187 暗影跳伤。平砍不开。",
+        hint = "挂 318179。用黄字打**活怪**（平砍不开）。\n团本训练假人是机械体，318187 流血会 IMMUNE。\n跳伤 Dummy 13% × max(AP,SP)，不要 ÷7。",
+        startText = "【龟裂创伤】已挂 318179。黄字打活怪，不要打团本桩。proc 写成 WOUND_PROC，跳伤写成 WOUND_TICK。",
+        startPrint = "已挂 318179。用黄字打活怪。团本桩会对 318187 免疫。平砍不开。",
         ids = { 318272, 318179, 318187 },
         labels = {
             [318272] = "一段驱动",
@@ -772,18 +800,18 @@ HL.PACKS = {
         },
         chain = {
             { id = 318179, role = "隐藏proc", want = "aura-self", hidden = true,
-              hintFail = "没挂上 318179。用 .lab test wound / .labwound。" },
+              hintFail = "buff 栏看不到 318179 是正常的（隐藏光环）。服务器应有 labwound: 318179；本包看 WOUND_PROC 与 318187。" },
             { id = 318179, role = "开渗血", want = "labmsg", labType = "WOUND_PROC", procStep = true,
-              hintFail = "没有 WOUND_PROC。用猛击等黄字打（RPPM 4，平砍不开）。" },
+              hintFail = "没有 WOUND_PROC。用猛击等黄字打活怪（RPPM 4，平砍不开）。CLEU 有 318187 IMMUNE 说明团本桩吃不下流血。" },
             { id = 318187, role = "渗血跳伤", want = "damage",
               expect = { school = 32 },
-              hintFail = "有 WOUND_PROC 但没有 318187 暗影跳伤。看 Cast 目标是不是当前敌人。" },
+              hintFail = "没有 318187 暗影跳伤。团本桩会 IMMUNE；换活怪。有施放无跳伤则是目标免疫，不是没 proc。" },
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：约 7 秒 / 约 7 跳；刷新是重置满时长（不是 SimC pandemic）。",
-                "跳伤 = Dummy 13% × max(AP,SP)，不要 ÷7，不要写死 Icy Veins 70%。驱动系数 2.37 是装等，P5。",
-                "DBC 可暴击。CLEU 是否真暴击、跳数 6 还是 7，进游戏再定。",
+                "2026-08-28 第 1 层通过：活怪上 318187 暗影跳伤。第一段/海盗段约 7s、7 跳；非暴击 1421/1564 = Dummy 13%×攻强，暴击刚好两倍。",
+                "平砍不开；团本桩 IMMUNE。上一份 WOUND_PROC 4 次；本份跳伤在、通知可能没进（不挡过线）。",
+                "早先同帧上/掉是怪在逃跑清光环，不是时长 0。刷新未单独测。真装系数 2.37 走 P5。",
             }
         end,
     },
@@ -804,18 +832,18 @@ HL.PACKS = {
         },
         chain = {
             { id = 315574, role = "隐藏proc", want = "aura-self", hidden = true,
-              hintFail = "没挂上 315574。用 .lab test glimpse / .labglimpse。" },
+              hintFail = "buff 栏看不到 315574 是正常的（隐藏光环）。服务器应有 labglimpse: 315574；本包看 315573 与 CD_TRIM。" },
             { id = 315573, role = "Glimpse", want = "aura-self", procStep = true,
               hintFail = "没有 315573。平砍或技能打一会儿（RPPM 2）。DBC Trigger 应自己挂上。" },
             { id = 315573, role = "CD-3s", want = "labmsg", labType = "CD_TRIM",
               expect = { trimMs = 3000 },
-              hintFail = "有 315573 但没有 CD_TRIM。放有 CD 的职业技能，不要放物品/腐蚀技能。" },
+              hintFail = "有 315573 但没有 CD_TRIM。能用 .lab 的号会出黄字，不用开 GM。也可看转盘是否 −3s。不要放物品/腐蚀技能。" },
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：315573 约 15 秒；用一次有 CD 技能后减层或消失。",
-                "trimMs=3000 溯源 Dummy 3。物品技能和腐蚀技能不应出 CD_TRIM。",
-                "6486 vs 6546 第 1 层不选定。真装 P5。不要和法器 Flash of Insight 混。",
+                "2026-08-28 第 1 层通过：315573 会挂、白字可 proc、可叠层。有 CD 技能减层并 −3s（玩家看转盘确认）；无 CD 技能不减层。",
+                "能用 .lab 的号会出 CD_TRIM 黄字，不用开 GM。自然 15 秒掉光未测。不要开冷却作弊。真装 P5。",
+                "不要和法器 Flash of Insight 混。6486 vs 6546 第 1 层不选定。",
             }
         end,
     },
@@ -837,19 +865,18 @@ HL.PACKS = {
         },
         chain = {
             { id = 316799, role = "隐藏proc", want = "aura-self", hidden = true,
-              hintFail = "没挂上 316799。用 .lab test truth / .labtruth。" },
+              hintFail = "buff 栏看不到 316799 是正常的（隐藏光环）。服务器应有 labtruth: 316799；本包看 316801 与 RECHARGE。" },
             { id = 316801, role = "加速buff", want = "aura-self", procStep = true,
               hintFail = "没有 316801。技能打一会儿（RPPM 1，无白字）。DBC Trigger 应自己挂上。" },
             { id = 316801, role = "RECHARGE", want = "labmsg", labType = "RECHARGE",
               expect = { pct = 30 },
-              hintFail = "有 316801 但没有 RECHARGE pct=30。核心 143/173 是 NYI，脚本应在 Apply 发消息。" },
+              hintFail = "有 316801 但没有 RECHARGE pct=30。能用 .lab 的号会出黄字，不用开 GM。也可看转盘是否按 100/(100+30) 变短。" },
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：316801 约 10 秒；窗口内新开的职业 CD 按 100/(100+30) 缩短。",
-                "pct=30 溯源 318303 Dummy。Lab 只挂 316799 时回退读 SpellInfo Dummy 30。",
-                "已有 buff 再 proc：默认刷新 10s（SimC TODO）。职业充能 Apply/Remove 对称缩放；不在技能书的物品充能不加速。",
-                "职业技能过滤先宽后窄。二段 Dummy 50 用 .aura 318484 再验。",
+                "2026-08-28 第 1 层通过：316801 约 10 秒自然掉；`RECHARGE pct=30 mult=76`（100/130）。Lab 只挂 316799 时回退 Dummy 30。",
+                "上一份：黄字可 proc。能用 .lab 的号会出 RECHARGE，不用开 GM。已有 buff 再 proc、二段 Dummy 50（.aura 318484）未测。真装 P5。",
+                "不要用剑刃风暴后的巨人打击间隔当证据（怒气管理会砍冷却）。",
             }
         end,
     },
@@ -859,7 +886,7 @@ HL.PACKS = {
         title = "蔓生触须",
         order = 20,
         serverCmd = ".lab test grasping",
-        hint = "挂 315175。木桩打不出。站会还手的怪或 .damage 挨打。\n315176 减速 5 秒，幅度=有效腐蚀+10，上限 99%。开「移速」看 SPEED。",
+        hint = "挂 315175。木桩打不出。站会还手的怪挨打（不要 .damage）。\n315176 减速 5 秒。能用 .lab 的号会出 TENDRIL_SLOW，不用开 GM。开「移速」看 SPEED。",
         startText = "【蔓生触须】已挂 315175。去挨打，不要打木桩。减速写成 TENDRIL_SLOW。",
         startPrint = "已挂 315175。木桩测不出。挨打看 315176 与 TENDRIL_SLOW。开移速监控看 SPEED。",
         ids = { 315175, 315176 },
@@ -871,14 +898,14 @@ HL.PACKS = {
             { id = 315175, role = "驱动", want = "aura-self",
               hintFail = "没挂上 315175。用 .lab test grasping / .labgrasping。真装要有效腐蚀≥1 才由 UpdateCorruption 挂上。" },
             { id = 315175, role = "开减速", want = "labmsg", labType = "TENDRIL_SLOW", procStep = true,
-              hintFail = "没有 TENDRIL_SLOW。木桩打不出；站会还手的怪或 .damage（RPPM 1，taken）。" },
+              hintFail = "没有 TENDRIL_SLOW。能用 .lab 的号会出黄字，不用开 GM。玩法看自己有没有 315176。不要 .damage。" },
             { id = 315176, role = "减速", want = "aura-self",
               hintFail = "有 TENDRIL_SLOW 但自己没有 315176。脚本 CastCustomSpell 没挂上。" },
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：315176 约 5 秒；幅度=有效腐蚀+10，上限 99（2020-02 热修）。",
-                "无腐蚀装时 corr≈0，pct 应为 10。开移速监控看 SPEED 100%→约 90%。",
+                "2026-08-28：活怪挨打后 315176 会挂约 5 秒。能用 .lab 的号会出 TENDRIL_SLOW，不用开 GM。",
+                "空地、无其他减速时看 SPEED 100%→约 90%（有效腐蚀+10）。铁潮现场移速会被污染。",
                 "热修后不是魔法，驱散魔法清不掉。不要在脚本里写腐蚀阈值比较。",
                 "GetCorruption /dump 待验。阈值矩阵应挂 315175（DB2 MinCorruption 1）。",
             }
@@ -890,7 +917,7 @@ HL.PACKS = {
         title = "腐蚀之眼",
         order = 21,
         serverCmd = ".lab test eye",
-        hint = "挂 315169。用技能打木桩（不是挨打）。\n出眼后走进去挨跳、走开停。315270 是宠物，不要测那个。",
+        hint = "挂 315169。用技能打木桩（不是挨打）。\n走进眼睛等 2 秒看 EYE_PULSE / 315161，不是找生物。315270 是宠物，不要测。",
         startText = "【腐蚀之眼】已挂 315169。用技能打木桩。出眼写成 EYE_PROC，靠近跳写成 EYE_PULSE。",
         startPrint = "已挂 315169。技能打木桩等 EYE_PROC。走进去看 EYE_PULSE inrange=1。",
         ids = { 315169 },
@@ -904,13 +931,12 @@ HL.PACKS = {
             { id = 315169, role = "出眼", want = "labmsg", labType = "EYE_PROC", procStep = true,
               hintFail = "没有 EYE_PROC。用技能打（RPPM 1，黄字）。trigger=0 说明 DBC TriggerSpell 空。" },
             { id = 315169, role = "靠近跳", want = "labmsg", labType = "EYE_PULSE",
-              hintFail = "有 EYE_PROC 但没有 EYE_PULSE。可能没召唤出生物，或 entry 待回填。走进眼睛再等 2s。" },
+              hintFail = "有 EYE_PROC 但没有 EYE_PULSE。走进眼睛等 2 秒看 315161，不是找生物。能用 .lab 的号会出黄字，不用开 GM。" },
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：约 8 秒；每 2 秒（Dummy 2）靠近才跳；走开 inrange=0。",
-                "不要用 315270 宠物。summonEntries / 伤害法术 ID 进游戏 CLEU 回填。",
-                "范围和伤害随腐蚀升：先信 DBC 半径，不要把 Wowhead 875*corr-1000 / corr/5 写成官方。",
+                "315154 是区域触发器（模板 22815）。走近才跳 315161，走开停。不要找召唤生物。",
+                "约 8 秒、每约 2 秒一跳。不要写 Wowhead 875×腐蚀−1000。驱动隐藏不挡。",
                 "阈值矩阵应挂 315169（DB2 MinCorruption 20）。脚本不写阈值比较。",
             }
         end,
@@ -921,9 +947,9 @@ HL.PACKS = {
         title = "宏伟妄想",
         order = 22,
         serverCmd = ".lab test delusion",
-        hint = "挂 315184。木桩打不出。站会还手的怪或 .damage 挨打。\n彼岸之物追 8 秒，碰到才结算。不要测披风 313301。",
-        startText = "【宏伟妄想】已挂 315184。去挨打，不要打木桩。出怪写成 DELUSION_PROC，碰到写成 DELUSION_HIT。",
-        startPrint = "已挂 315184。木桩测不出。挨打看 DELUSION_PROC，被追上碰看 DELUSION_HIT。",
+        hint = "挂 315184。木桩打不出。站会还手的活怪挨打（不要 .damage）。\n彼岸之物约 20 码外生成，追约 8 秒，碰到才结算。能用 .lab 的号会出黄字，不用开 GM。不要测披风 313301。",
+        startText = "【宏伟妄想】已挂 315184。去挨活怪，不要打木桩、不要 .damage。出怪写成 DELUSION_PROC，碰到写成 DELUSION_HIT。",
+        startPrint = "已挂 315184。活怪挨打。看粉红倒影 / DELUSION_PROC，被追上碰看 DELUSION_HIT。",
         ids = { 315184 },
         labels = {
             [315184] = "妄想驱动",
@@ -933,7 +959,7 @@ HL.PACKS = {
             { id = 315184, role = "驱动", want = "aura-self",
               hintFail = "没挂上 315184。用 .lab test delusion / .labdelusion。真装要有效腐蚀≥40 才由 UpdateCorruption 挂上。" },
             { id = 315184, role = "出彼岸之物", want = "labmsg", labType = "DELUSION_PROC", procStep = true,
-              hintFail = "没有 DELUSION_PROC。木桩打不出；站会还手的怪或 .damage（RPPM 1，taken）。trigger=0 说明 DBC TriggerSpell 空。" },
+              hintFail = "没有 DELUSION_PROC。须活怪还手，不要 .damage。能用 .lab 的号会出黄字，不用开 GM。没有通知但看得见倒影仍算第 1 层过。" },
             { id = 315184, role = "碰到结算", want = "labmsg", labType = "DELUSION_HIT",
               hintFail = "有 DELUSION_PROC 但没有 DELUSION_HIT。可能没召唤出生物、entry 待回填，或 8 秒内没被追上。" },
         },
@@ -989,9 +1015,9 @@ HL.PACKS = {
         title = "不可避免的厄运",
         order = 24,
         serverCmd = ".lab test doom",
-        hint = "挂 315179。仓库无 SpellEffect dump，先零脚本。\n看受伤变大、治疗/吸收变小；再加腐蚀看是否更狠。不要抄 PTR 早期每点表。",
-        startText = "【不可避免的厄运】已挂 315179。先看光环在。三条 taken 修正是否随有效腐蚀变，进游戏定案。",
-        startPrint = "已挂 315179。零脚本先验。挨打/治疗看幅度；BP=0 或静态再补 CalcAmount。",
+        hint = "挂 315179。脚本按 Dummy×(有效腐蚀−50) 填三条 taken，下限 0。\n挂上/腐蚀变化会出 DOOM_PCT 黄字。挨打看伤害放大、治疗看减少、上盾看变薄。",
+        startText = "【不可避免的厄运】已挂 315179。看 DOOM_PCT 黄字与三条 taken 幅度是否随有效腐蚀变。",
+        startPrint = "已挂 315179。脚本已填幅度：X = 有效腐蚀 − 50（Wowhead 2019-10 实测表，热修白名单）。看 DOOM_PCT。",
         ids = { 315179 },
         labels = {
             [315179] = "厄运驱动",
@@ -999,13 +1025,15 @@ HL.PACKS = {
         chain = {
             { id = 315179, role = "驱动", want = "aura-self",
               hintFail = "没挂上 315179。用 .lab test doom / .labdoom。真装要有效腐蚀≥80 才由 UpdateCorruption 挂上。" },
+            { id = 315179, role = "幅度已填", want = "labmsg", labType = "DOOM_PCT",
+              hintFail = "没有 DOOM_PCT。脚本 CalcAmount 没跑：查 spell_script_names 是否有 spell_inevitable_doom，或重挂一次光环。" },
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：三条 taken（受伤放大 / 治疗减少 / 吸收减少）是否已随有效腐蚀变。",
-                "已变 → 保持零脚本。BP=0 或静态 → 再写 CalcAmount，系数只读运行时 Dummy，禁止抄 PTR 表。",
-                "不要新 LabNotify TYPE（零脚本无服务端消息）。脚本不写阈值比较。",
-                "阈值矩阵应挂 315179（DB2 MinCorruption 80）。无 spell_script_names。",
+                "期望幅度：X = 有效腐蚀 − 50，下限 0。例：有效 80 → 30%，85 → 35%，测试挂 .aura（腐蚀 0）时 X=0 属正常。",
+                "受伤放大为 +X%，治疗减少 / 吸收减少为 −X%。三条同值，来源 Wowhead 2019-10 实测表（热修白名单 2026-08-29）。",
+                "腐蚀升降后 UpdateCorruption 重挂会重算幅度，DOOM_PCT 只在数值变化时再报一次。",
+                "阈值矩阵应挂 315179（DB2 MinCorruption 80）。spell_script_names：spell_inevitable_doom。",
             }
         end,
     },
@@ -1015,24 +1043,25 @@ HL.PACKS = {
         title = "末路恶果",
         order = 25,
         serverCmd = ".lab test consequences",
-        hint = "挂 337612。关 .cheat god。进战斗才跳（待验）。\n周期约 25% 最大生命。337816 是热修同名子技能，CLEU 再定要不要认。",
-        startText = "【末路恶果】已挂 337612。关无敌，进战斗看跳伤。先零脚本。",
-        startPrint = "已挂 337612。关 god。进战斗看约 25% 生命跳。脱战也跳再补脚本。",
+        hint = "挂 337612。关 .cheat god。337612 周期触发字段为 0，脚本改为战斗中每跳施放 337816（数据里的 25% 最大生命）。\n进战斗立刻跳、每秒一跳并出 CONSEQ_TICK；脱战应停。",
+        startText = "【末路恶果】已挂 337612。关无敌，进战斗看 337816 跳伤与 CONSEQ_TICK 黄字。",
+        startPrint = "已挂 337612。关 god。进战斗看每秒约 25% 生命跳（337816），脱战应停止。",
         ids = { 337612, 337816 },
         labels = {
             [337612] = "恶果驱动",
-            [337816] = "疑似周期子技能",
+            [337816] = "周期跳伤(25%最大生命)",
         },
         chain = {
             { id = 337612, role = "驱动", want = "aura-self",
               hintFail = "没挂上 337612。用 .lab test consequences / .labconsequences。真装要有效腐蚀≥200 才由 UpdateCorruption 挂上。" },
+            { id = 337612, role = "战斗跳伤", want = "labmsg", labType = "CONSEQ_TICK", procStep = true,
+              hintFail = "没有 CONSEQ_TICK。进战斗了吗？查 spell_script_names 是否有 spell_inescapable_consequences。" },
         },
         extraVerdict = function()
             return {
-                "待进游戏验收：进战斗立刻跳、每秒约 25% 最大生命（清单/Wowhead，不是 dump BP）。",
-                "周期伤已是 25% 生命 → 保持零脚本。脱战也跳 / 能免疫 / 吸收吃掉 → 再补最小脚本，旗信 DBC，不手写 25。",
-                "337816 仅当 CLEU 证明是跳伤 ID 才进脚本。不要新 LabNotify TYPE。",
-                "阈值矩阵应挂 337612（DB2 MinCorruption 200）。无 spell_script_names。",
+                "进战斗立刻跳一次，之后每秒一跳；CLEU 应有 337816，约 25% 最大生命（百分比读数据效果 165，脚本不手写 25）。",
+                "脱战应停止跳伤；.cheat god 会吞伤害，验收前必须关。",
+                "阈值矩阵应挂 337612（DB2 MinCorruption 200）。spell_script_names：spell_inescapable_consequences。",
             }
         end,
     },
