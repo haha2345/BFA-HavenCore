@@ -317,6 +317,9 @@ enum GrandDelusionsSpells
     SPELL_THING_FROM_BEYOND_AUTOATTACK = 319694, // OVERRIDE_AA -> 315197
     SPELL_GRAND_DELUSIONS_DAMAGE = 315197,       // 35% max HP; 35662 SpellEffect
     SPELL_THING_FROM_BEYOND_CLONE = 318393,      // CLONE_CASTER; 161895 has no model row
+    // Named by 318392's SCRIPT_EFFECT base points (35662 dump): CLONE_CASTER
+    // (aura 247) plus aura 368 — the retail shadow-tint visual on the clone.
+    SPELL_THING_FROM_BEYOND_TINT = 316559,
     // 315197 TargetAuraSpell: the victim must carry this 8s (= chase duration)
     // lock or CheckCast rejects the contact damage (35662 dump, 2026-08-29).
     SPELL_THING_FROM_BEYOND_TARGET_LOCK = 319695,
@@ -2005,6 +2008,10 @@ struct npc_thing_from_beyond : public ScriptedAI
         me->SetReactState(REACT_PASSIVE);
         // 161895 has no creature_template_model. 318393 CLONE_CASTER copies the owner.
         owner->CastSpell(me, SPELL_THING_FROM_BEYOND_CLONE, DelusionHitCastFlags());
+        // Retail 318392 fires both: 318393 (clone) and 316559 (clone + aura 368
+        // shadow tint). The tint aura is client-rendered; server treats 368 as
+        // a no-op.
+        owner->CastSpell(me, SPELL_THING_FROM_BEYOND_TINT, DelusionHitCastFlags());
         if (!me->GetDisplayId())
             me->SetDisplayId(owner->GetDisplayId());
         // Retail: chase speed rises with corruption. Rate 1.0 is the standard
