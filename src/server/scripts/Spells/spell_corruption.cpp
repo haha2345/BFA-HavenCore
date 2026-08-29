@@ -106,21 +106,28 @@
  * Eye of Corruption (CorruptionEffects, MinCorruption 20):
  *   315169          class-ability proc. EFFECT_0 TriggerSpell from DBC (do not guess).
  *                   EFFECT_1 Dummy 2 = pulse period seconds. 315270 is the companion pet — skip it.
- *   Summon/damage IDs and creature entry come from SpellInfo at runtime; leave
- *   pack summonEntries empty until in-game CLEU fills them.
+ *   315154          CREATE_AREATRIGGER (SpellMisc 18755 → template 22815). Visual only.
+ *   315161          pulse damage. Not on the 315154 trigger chain. DBC school
+ *                   damage BP is 0; fill from the Wowhead 2020 measured table.
+ *                   EFFECT_1 Dummy 15 = taken amp, CumulativeAura 99.
  *
  * Grand Delusions (CorruptionEffects, MinCorruption 40):
  *   315184          taken proc (RPPM 1). Do not compare corruption thresholds.
  *                   313301 is the cloak extra — never bind it here.
- *   Summon/damage IDs and creature entry come from SpellInfo at runtime; leave
- *   pack summonEntries empty until in-game lookup/CLEU fills them.
- *   Contact uses melee reach (unit body). No raycast. Visibility is all-visible
- *   until a core-supported "self + same-aura" filter exists.
+ *   315186          summons 161895. 319694 replaces autoattack with 315197.
+ *   315197          DAMAGE_FROM_MAX_HEALTH_PCT 35 — contact hit. Not 100% HP.
+ *   318393          CLONE_CASTER. 161895 has no creature_template_model.
+ *   Contact uses melee reach (unit body). One hit, then despawn + cascade.
+ *   Do not enable repeating autoattack until 319694 is proven on the NPC.
  *
  * Cascading Disaster (CorruptionEffects, MinCorruption 60):
  *   315857          aura presence only. On Thing-from-Beyond contact, fire the
  *                   tendril and eye *trigger* paths (CastGraspingTendrils /
  *                   CastEyeOfCorruption). Do not re-apply 315175/315169.
+ *
+ * Inescapable Consequences (CorruptionEffects, MinCorruption 200):
+ *   337612          PERIODIC_TRIGGER_SPELL every 1s, TriggerSpell field is 0.
+ *   337816          DAMAGE_FROM_MAX_HEALTH_PCT 25. Cast while in combat only.
  */
 
 #include "AreaTrigger.h"
@@ -133,6 +140,7 @@
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "RBAC.h"
 #include "Random.h"
 #include "ScriptedCreature.h"
 #include "ScriptMgr.h"
@@ -144,7 +152,9 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "Timer.h"
 #include "Unit.h"
+#include "WorldSession.h"
 #include <cmath>
 #include <memory>
 #include <set>
@@ -282,18 +292,39 @@ enum GraspingTendrilsSpells
 enum EyeOfCorruptionSpells
 {
     SPELL_EYE_OF_CORRUPTION = 315169,
-    SPELL_EYE_OF_CORRUPTION_PET = 315270 // companion pet, not the combat eye
+    SPELL_EYE_OF_CORRUPTION_AT = 315154,     // CREATE_AREATRIGGER, SpellMisc 18755
+    SPELL_EYE_OF_CORRUPTION_DAMAGE = 315161, // pulse; not on the 315154 trigger chain
+    SPELL_EYE_OF_CORRUPTION_PET = 315270     // companion pet, not the combat eye
 };
+
+// world spell_areatrigger: SpellMisc 18755 → areatrigger_template 22815 (build 34220).
+constexpr uint32 EYE_AT_TEMPLATE = 22815;
 
 enum GrandDelusionsSpells
 {
     SPELL_GRAND_DELUSIONS = 315184,
-    SPELL_THING_FROM_BEYOND_CLOAK = 313301 // cloak extra, not the 40-tier row
+    // Wowhead same-name summon, 8s, radius 20. Used only when 315184 TriggerSpell is empty.
+    SPELL_GRAND_DELUSIONS_SUMMON = 315186,
+    SPELL_THING_FROM_BEYOND_AUTOATTACK = 319694, // OVERRIDE_AA -> 315197
+    SPELL_GRAND_DELUSIONS_DAMAGE = 315197,       // 35% max HP; 35662 SpellEffect
+    SPELL_THING_FROM_BEYOND_CLONE = 318393,      // CLONE_CASTER; 161895 has no model row
+    SPELL_THING_FROM_BEYOND_CLOAK = 313301       // cloak extra, not the 40-tier row
 };
 
 enum CascadingDisasterSpells
 {
     SPELL_CASCADING_DISASTER = 315857
+};
+
+enum InevitableDoomSpells
+{
+    SPELL_INEVITABLE_DOOM = 315179
+};
+
+enum InescapableConsequencesSpells
+{
+    SPELL_INESCAPABLE_CONSEQUENCES = 337612,        // periodic trigger; TriggerSpell is 0
+    SPELL_INESCAPABLE_CONSEQUENCES_DAMAGE = 337816  // DAMAGE_FROM_MAX_HEALTH_PCT from SpellEffect
 };
 
 // Wowhead 25-30 yd; DBC 317155 has width 3, no length. TimeToTarget 4000 in spell_areatrigger.
@@ -352,6 +383,26 @@ constexpr int32 GRASPING_TENDRILS_CAP_PCT = 99;
 constexpr uint32 EYE_PULSE_MS_FALLBACK = 2000;
 constexpr uint32 EYE_DURATION_MS_FALLBACK = 8000;
 constexpr float EYE_RADIUS_FALLBACK = 10.0f; // not DBC — log once if radius missing
+
+// 315161 school-damage BP is 0 (8.3.0–8.3.7). Retail is a server script.
+// Wowhead 2020-02 measured table; 875*corr-1000 misses the table above 40.
+// Interpolate these points. Dummy 15 (taken amp) stays on DBC EFFECT_1.
+struct EyePulseSample
+{
+    int32 corruption;
+    int32 damage;
+};
+
+constexpr EyePulseSample EYE_PULSE_SAMPLES[] =
+{
+    { 20, 17157 },
+    { 30, 24899 },
+    { 40, 34776 },
+    { 50, 50940 },
+    { 60, 60811 },
+    { 70, 68601 },
+    { 80, 78431 }
+};
 
 void CorruptionRankItemContext(Unit const* owner, uint32 rankId, uint32& itemId, int32& itemLevel)
 {
@@ -568,10 +619,14 @@ TriggerCastFlags TwilightDamageCastFlags()
     return TriggerCastFlags(uint32(InfiniteStarsCastFlags()) | uint32(TRIGGERED_IGNORE_TARGET_CHECK));
 }
 
-// Same-faction owner must still take the contact hit (four-piece keeps owner faction).
+// 315197 is max-health % on the player. Guardian-as-caster fails CheckCast
+// (same faction / originalCaster=owner / LOS). CAST_DIRECTLY so despawn
+// does not cancel the spell event.
 TriggerCastFlags DelusionHitCastFlags()
 {
-    return TriggerCastFlags(uint32(InfiniteStarsCastFlags()) | uint32(TRIGGERED_IGNORE_TARGET_CHECK));
+    return TriggerCastFlags(uint32(InfiniteStarsCastFlags()) |
+        uint32(TRIGGERED_IGNORE_TARGET_CHECK) |
+        uint32(TRIGGERED_CAST_DIRECTLY));
 }
 
 void LabNotify(Unit* caster, char const* type, std::string const& kv)
@@ -580,7 +635,12 @@ void LabNotify(Unit* caster, char const* type, std::string const& kv)
         return;
 
     Player* player = caster->ToPlayer();
-    if (!player || !player->IsGameMaster() || !player->GetSession())
+    if (!player || !player->GetSession())
+        return;
+
+    // IsGameMaster() is .gm on. Creatures skip GM-flagged players, so combat
+    // tests run with GM off. Same RBAC as .lab test; ordinary players stay quiet.
+    if (!player->GetSession()->HasPermission(rbac::RBAC_PERM_COMMAND_AURA))
         return;
 
     if (kv.empty())
@@ -635,8 +695,6 @@ void CastInfiniteStar(Unit* caster, Unit* target)
     if (missile)
         ok = caster->CastSpell(target->GetPosition(), SPELL_INFINITE_STARS_MISSILE, InfiniteStarsCastFlags());
 
-    TC_LOG_INFO("scripts", "InfiniteStars visual=%u speed=%.3f delay=%.3f missileCast=%u dest=%s",
-        visual, missile ? missile->Speed : -1.f, delay, uint32(ok), target->GetName().c_str());
     LabNotify(caster, "STAR_VISUAL", Trinity::StringFormat(
         "spell=%u visual=%u delay=%.2f missile=%u target=%s",
         SPELL_INFINITE_STARS_MISSILE, visual, delay, ok ? 1u : 0u, target->GetName().c_str()));
@@ -1236,10 +1294,16 @@ bool IsGlimpseExcludedSpell(uint32 id)
         case SPELL_GRASPING_TENDRILS_PROC:
         case SPELL_GRASPING_TENDRILS_SLOW:
         case SPELL_EYE_OF_CORRUPTION:
+        case SPELL_EYE_OF_CORRUPTION_AT:
+        case SPELL_EYE_OF_CORRUPTION_DAMAGE:
         case SPELL_EYE_OF_CORRUPTION_PET:
         case SPELL_GRAND_DELUSIONS:
+        case SPELL_GRAND_DELUSIONS_SUMMON:
         case SPELL_THING_FROM_BEYOND_CLOAK:
         case SPELL_CASCADING_DISASTER:
+        case SPELL_INEVITABLE_DOOM:
+        case SPELL_INESCAPABLE_CONSEQUENCES:
+        case SPELL_INESCAPABLE_CONSEQUENCES_DAMAGE:
             return true;
         default:
             return false;
@@ -1381,6 +1445,67 @@ int32 GraspingTendrilsSlowPct(Player const* player)
     return pct;
 }
 
+int32 EyeOfCorruptionVulnPct()
+{
+    if (SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_EYE_OF_CORRUPTION_DAMAGE))
+        if (SpellEffectInfo const* effect = info->GetEffect(EFFECT_1))
+            return effect->BasePoints;
+    return 0;
+}
+
+int32 EyeOfCorruptionPulseDamage(Player const* player)
+{
+    float corr = EffectiveCorruptionRating(player);
+    uint32 const count = uint32(sizeof(EYE_PULSE_SAMPLES) / sizeof(EYE_PULSE_SAMPLES[0]));
+    if (count < 2)
+        return 1;
+
+    auto lerp = [](EyePulseSample const& a, EyePulseSample const& b, float x) -> int32
+    {
+        float span = float(b.corruption - a.corruption);
+        float t = span != 0.0f ? (x - float(a.corruption)) / span : 0.0f;
+        int32 damage = int32(float(a.damage) + t * float(b.damage - a.damage));
+        return damage < 1 ? 1 : damage;
+    };
+
+    if (corr <= float(EYE_PULSE_SAMPLES[0].corruption))
+        return lerp(EYE_PULSE_SAMPLES[0], EYE_PULSE_SAMPLES[1], corr);
+    if (corr >= float(EYE_PULSE_SAMPLES[count - 1].corruption))
+        return lerp(EYE_PULSE_SAMPLES[count - 2], EYE_PULSE_SAMPLES[count - 1], corr);
+
+    for (uint32 i = 0; i + 1 < count; ++i)
+        if (corr <= float(EYE_PULSE_SAMPLES[i + 1].corruption))
+            return lerp(EYE_PULSE_SAMPLES[i], EYE_PULSE_SAMPLES[i + 1], corr);
+
+    return 1;
+}
+
+bool SpellDealsDirectCorruptionHit(SpellInfo const* info)
+{
+    if (!info)
+        return false;
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        SpellEffectInfo const* effect = info->GetEffect(SpellEffIndex(i));
+        if (!effect)
+            continue;
+        if (effect->Effect == SPELL_EFFECT_SCHOOL_DAMAGE ||
+            effect->Effect == SPELL_EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT)
+            return true;
+    }
+    return false;
+}
+
+// Wowhead 315175 / 315184: "Taking damage has a chance". 35662 ProcFlags also
+// set taken-heal / taken-buff bits, which fire out of combat with no HP loss.
+bool IsCorruptionTakenDamageProc(ProcEventInfo const& eventInfo)
+{
+    DamageInfo const* damage = eventInfo.GetDamageInfo();
+    if (!damage)
+        return false;
+    return damage->GetDamage() > 0 || damage->GetAbsorb() > 0;
+}
+
 void CastGraspingTendrils(Unit* owner)
 {
     Player* player = owner ? owner->ToPlayer() : nullptr;
@@ -1398,6 +1523,7 @@ struct EyeChain
     uint32 triggerSpell = 0;
     uint32 summonEntry = 0;
     uint32 damageSpell = 0;
+    uint32 areaTriggerMisc = 0;
     float radius = 0.0f;
     uint32 pulseMs = EYE_PULSE_MS_FALLBACK;
     uint32 durationMs = EYE_DURATION_MS_FALLBACK;
@@ -1417,6 +1543,9 @@ void InspectSpellForEye(SpellInfo const* info, EyeChain& chain, uint8 depth = 0)
         if (effect->Effect == SPELL_EFFECT_SUMMON && effect->MiscValue > 0)
             chain.summonEntry = uint32(effect->MiscValue);
 
+        if (effect->Effect == SPELL_EFFECT_CREATE_AREATRIGGER && effect->MiscValue > 0)
+            chain.areaTriggerMisc = uint32(effect->MiscValue);
+
         if (effect->Effect == SPELL_EFFECT_SCHOOL_DAMAGE)
             chain.damageSpell = info->Id;
         if (effect->Effect == SPELL_EFFECT_APPLY_AURA && effect->ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE)
@@ -1432,6 +1561,8 @@ void InspectSpellForEye(SpellInfo const* info, EyeChain& chain, uint8 depth = 0)
     }
 }
 
+void LogCorruptionSpellInfo(char const* tag, uint32 id);
+
 EyeChain const& ResolveEyeChain()
 {
     static EyeChain chain;
@@ -1439,6 +1570,10 @@ EyeChain const& ResolveEyeChain()
     if (loaded)
         return chain;
     loaded = true;
+
+    LogCorruptionSpellInfo("EyeOfCorruption.dump", SPELL_EYE_OF_CORRUPTION);
+    LogCorruptionSpellInfo("EyeOfCorruption.dump", SPELL_EYE_OF_CORRUPTION_AT);
+    LogCorruptionSpellInfo("EyeOfCorruption.dump", SPELL_EYE_OF_CORRUPTION_DAMAGE);
 
     SpellInfo const* driver = sSpellMgr->GetSpellInfo(SPELL_EYE_OF_CORRUPTION);
     if (!driver)
@@ -1471,6 +1606,10 @@ EyeChain const& ResolveEyeChain()
         }
     }
 
+    // 315161 is the pulse; it is not linked from 315154's TriggerSpell chain.
+    if (!chain.damageSpell)
+        chain.damageSpell = SPELL_EYE_OF_CORRUPTION_DAMAGE;
+
     if (chain.radius <= 0.0f)
     {
         static bool logged = false;
@@ -1485,79 +1624,80 @@ EyeChain const& ResolveEyeChain()
     return chain;
 }
 
-struct npc_eye_of_corruption : public Scripted_NoMovementAI
+// areatrigger_template 22815 (SpellMisc 18755). Cylinder search already includes the caster.
+// Pulse while the owner is inside; lifetime follows 315154 (8s). Do not require 315169
+// — UpdateCorruption() strips the driver at 0 effective corruption and would kill the pulse.
+struct at_eye_of_corruption : AreaTriggerAI
 {
-    explicit npc_eye_of_corruption(Creature* creature) : Scripted_NoMovementAI(creature) { }
+    at_eye_of_corruption(AreaTrigger* areatrigger) : AreaTriggerAI(areatrigger) { }
 
-    void BindOwner(Unit* owner)
+    void OnCreate() override
     {
-        if (!owner)
-        {
-            me->DespawnOrUnsummon();
-            return;
-        }
-
-        _ownerGuid = owner->GetGUID();
-        me->SetFaction(owner->getFaction());
-        me->SetLevel(owner->getLevel());
-        me->SetReactState(REACT_PASSIVE);
-        me->AddUnitState(UNIT_STATE_ROOT);
-        _timer = 0;
-        _elapsed = 0;
+        EyeChain const& chain = ResolveEyeChain();
+        at->SetPeriodicProcTimer(chain.pulseMs ? chain.pulseMs : EYE_PULSE_MS_FALLBACK);
     }
 
-    void IsSummonedBy(Unit* summoner) override
+    void OnPeriodicProc() override
     {
-        BindOwner(summoner);
-    }
-
-    void UpdateAI(uint32 diff) override
-    {
-        Unit* owner = ObjectAccessor::GetUnit(*me, _ownerGuid);
-        if (!owner)
-            owner = me->GetOwner();
-
-        if (!owner || !owner->IsAlive() || !owner->HasAura(SPELL_EYE_OF_CORRUPTION))
-        {
-            me->DespawnOrUnsummon();
+        Unit* caster = at->GetCaster();
+        if (!caster || !caster->IsAlive())
             return;
-        }
 
         EyeChain const& chain = ResolveEyeChain();
-        _elapsed += diff;
-        if (_elapsed >= chain.durationMs)
+        uint32 damageSpell = chain.damageSpell ? chain.damageSpell : SPELL_EYE_OF_CORRUPTION_DAMAGE;
+
+        bool inRange = false;
+        for (ObjectGuid const& guid : at->GetInsideUnits())
         {
-            me->DespawnOrUnsummon();
-            return;
+            if (guid == caster->GetGUID())
+            {
+                inRange = true;
+                break;
+            }
         }
 
-        _timer += diff;
-        if (_timer < chain.pulseMs)
-            return;
-        _timer = 0;
+        int32 table = 0;
+        int32 stacks = 0;
+        if (Player* player = caster->ToPlayer())
+        {
+            table = EyeOfCorruptionPulseDamage(player);
+            if (Aura const* aura = caster->GetAura(damageSpell))
+                stacks = int32(aura->GetStackAmount());
+        }
 
-        bool inRange = owner->GetDistance(me) <= chain.radius;
         uint32 ok = 0;
-        if (inRange && chain.damageSpell)
-            ok = me->CastSpell(owner, chain.damageSpell, InfiniteStarsCastFlags(), nullptr, nullptr, owner->GetGUID()) ? 1u : 0u;
+        if (inRange)
+            ok = caster->CastSpell(caster, damageSpell, DelusionHitCastFlags()) ? 1u : 0u;
 
-        LabNotify(owner, "EYE_PULSE", Trinity::StringFormat(
-            "inrange=%u damage=%u ok=%u", inRange ? 1u : 0u, chain.damageSpell, ok));
+        LabNotify(caster, "EYE_PULSE", Trinity::StringFormat(
+            "inrange=%u damage=%u table=%d stacks=%d ok=%u",
+            inRange ? 1u : 0u, damageSpell, table, stacks, ok));
     }
-
-private:
-    ObjectGuid _ownerGuid;
-    uint32 _timer = 0;
-    uint32 _elapsed = 0;
 };
 
-void BindEyeAI(Creature* eye, Unit* owner)
+Creature* FindOwnedCorruptionSummon(Unit* owner, uint32 entry, float range)
 {
-    if (!eye || !owner)
-        return;
-    eye->AIM_Initialize(new npc_eye_of_corruption(eye));
-    if (npc_eye_of_corruption* ai = dynamic_cast<npc_eye_of_corruption*>(eye->AI()))
-        ai->BindOwner(owner);
+    if (!owner || !entry)
+        return nullptr;
+
+    for (Unit* unit : owner->m_Controlled)
+    {
+        if (!unit || unit->GetEntry() != entry)
+            continue;
+        if (Creature* creature = unit->ToCreature())
+            return creature;
+    }
+
+    for (Creature* found : owner->FindNearestCreatures(entry, range))
+    {
+        if (!found)
+            continue;
+        if (found->GetOwnerGUID() == owner->GetGUID()
+            || (found->ToTempSummon() && found->ToTempSummon()->GetSummonerGUID() == owner->GetGUID()))
+            return found;
+    }
+
+    return nullptr;
 }
 
 void CastEyeOfCorruption(Unit* owner)
@@ -1575,24 +1715,18 @@ void CastEyeOfCorruption(Unit* owner)
             logged = true;
             TC_LOG_ERROR("scripts", "EyeOfCorruption: 315169 TriggerSpell missing");
         }
-        LabNotify(player, "EYE_PROC", "trigger=0 entry=0 damage=0");
+        LabNotify(player, "EYE_PROC", "trigger=0 misc=0 at=0 damage=0");
         return;
     }
 
+    // Keep the default CREATE_AREATRIGGER. Do not PreventHitDefaultEffect, and do not
+    // hand-create a second eye if GetAreaTriggers is briefly empty after a successful cast.
     bool ok = player->CastSpell(player, chain.triggerSpell, InfiniteStarsCastFlags());
-    Creature* eye = nullptr;
-    if (chain.summonEntry)
-        if (Creature* found = player->FindNearestCreature(chain.summonEntry, 20.0f))
-            if (found->GetOwnerGUID() == player->GetGUID()
-                || (found->ToTempSummon() && found->ToTempSummon()->GetSummonerGUID() == player->GetGUID()))
-                eye = found;
-
-    if (eye)
-        BindEyeAI(eye, player);
 
     LabNotify(player, "EYE_PROC", Trinity::StringFormat(
-        "trigger=%u entry=%u damage=%u radius=%.1f ok=%u",
-        chain.triggerSpell, chain.summonEntry, chain.damageSpell, chain.radius, ok ? 1u : 0u));
+        "trigger=%u misc=%u at=%u damage=%u radius=%.1f ok=%u",
+        chain.triggerSpell, chain.areaTriggerMisc, EYE_AT_TEMPLATE,
+        chain.damageSpell, chain.radius, ok ? 1u : 0u));
 }
 
 void TryCascadingDisaster(Unit* owner)
@@ -1606,6 +1740,9 @@ void TryCascadingDisaster(Unit* owner)
 }
 
 constexpr uint32 DELUSION_DURATION_MS_FALLBACK = 8000;
+// First UpdateAI can already be in melee (315186 radius includes 0). Wait so the
+// clone is visible before the 35% hit despawns the NPC.
+constexpr uint32 DELUSION_CONTACT_GRACE_MS = 1000;
 
 struct DelusionChain
 {
@@ -1614,6 +1751,32 @@ struct DelusionChain
     uint32 damageSpell = 0;
     uint32 durationMs = DELUSION_DURATION_MS_FALLBACK;
 };
+
+void LogCorruptionSpellInfo(char const* tag, uint32 id)
+{
+    SpellInfo const* info = sSpellMgr->GetSpellInfo(id);
+    if (!info)
+    {
+        TC_LOG_ERROR("scripts", "%s: spell %u missing", tag, id);
+        return;
+    }
+
+    TC_LOG_INFO("scripts", "%s: id=%u procFlags=%u ppm=%.2f duration=%d scaleClass=%d attr0=0x%X hideLog=%u",
+        tag, id, info->ProcFlags, info->ProcBasePPM, info->GetDuration(), info->Scaling.Class,
+        info->Attributes, info->HasAttribute(SPELL_ATTR0_HIDE_IN_COMBAT_LOG) ? 1u : 0u);
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        SpellEffectInfo const* effect = info->GetEffect(SpellEffIndex(i));
+        if (!effect)
+            continue;
+        TC_LOG_INFO("scripts",
+            "%s:  eff%u effect=%u aura=%u amount=%d rppl=%.4f coeff=%.4f bonus=%.4f scale=%.4f var=%.4f misc=%d miscB=%d trigger=%u",
+            tag, i, uint32(effect->Effect), uint32(effect->ApplyAuraName), effect->BasePoints,
+            effect->RealPointsPerLevel, effect->BonusCoefficient, effect->BonusCoefficientFromAP,
+            effect->Scaling.Coefficient, effect->Scaling.Variance,
+            effect->MiscValue, effect->MiscValueB, effect->TriggerSpell);
+    }
+}
 
 void InspectDelusionSpell(SpellInfo const* info, DelusionChain& chain, uint8 depth = 0)
 {
@@ -1627,11 +1790,25 @@ void InspectDelusionSpell(SpellInfo const* info, DelusionChain& chain, uint8 dep
             continue;
         if (effect->Effect == SPELL_EFFECT_SUMMON && effect->MiscValue > 0)
             chain.summonEntry = uint32(effect->MiscValue);
-        if (effect->Effect == SPELL_EFFECT_SCHOOL_DAMAGE)
+        if (effect->Effect == SPELL_EFFECT_SCHOOL_DAMAGE ||
+            effect->Effect == SPELL_EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT)
             chain.damageSpell = info->Id;
         if (effect->TriggerSpell && effect->TriggerSpell != SPELL_THING_FROM_BEYOND_CLOAK)
             InspectDelusionSpell(sSpellMgr->GetSpellInfo(effect->TriggerSpell), chain, depth + 1);
     }
+}
+
+bool SpellHasSummonEffect(SpellInfo const* info)
+{
+    if (!info)
+        return false;
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        SpellEffectInfo const* effect = info->GetEffect(SpellEffIndex(i));
+        if (effect && effect->Effect == SPELL_EFFECT_SUMMON && effect->MiscValue > 0)
+            return true;
+    }
+    return false;
 }
 
 DelusionChain const& ResolveDelusionChain()
@@ -1642,21 +1819,32 @@ DelusionChain const& ResolveDelusionChain()
         return chain;
     loaded = true;
 
+    LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_GRASPING_TENDRILS_PROC);
+    LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_GRAND_DELUSIONS);
+    LogCorruptionSpellInfo("GrandDelusions.dump", 315185);
+    LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_GRAND_DELUSIONS_SUMMON);
+    LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_GRAND_DELUSIONS_DAMAGE);
+    LogCorruptionSpellInfo("GrandDelusions.dump", SPELL_THING_FROM_BEYOND_AUTOATTACK);
+
     SpellInfo const* driver = sSpellMgr->GetSpellInfo(SPELL_GRAND_DELUSIONS);
     if (!driver)
     {
-        static bool logged = false;
-        if (!logged)
-        {
-            logged = true;
-            TC_LOG_ERROR("scripts", "GrandDelusions: 315184 missing");
-        }
+        TC_LOG_ERROR("scripts", "GrandDelusions: 315184 missing");
         return chain;
     }
 
-    if (SpellEffectInfo const* triggerEff = driver->GetEffect(EFFECT_0))
-        if (triggerEff->TriggerSpell && triggerEff->TriggerSpell != SPELL_THING_FROM_BEYOND_CLOAK)
-            chain.triggerSpell = triggerEff->TriggerSpell;
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        SpellEffectInfo const* effect = driver->GetEffect(SpellEffIndex(i));
+        if (!effect || !effect->TriggerSpell || effect->TriggerSpell == SPELL_THING_FROM_BEYOND_CLOAK)
+            continue;
+        chain.triggerSpell = effect->TriggerSpell;
+        break;
+    }
+
+    // Wowhead 315186 is the 8s Thing-from-Beyond summon. Only when DBC TriggerSpell is empty.
+    if (!chain.triggerSpell && SpellHasSummonEffect(sSpellMgr->GetSpellInfo(SPELL_GRAND_DELUSIONS_SUMMON)))
+        chain.triggerSpell = SPELL_GRAND_DELUSIONS_SUMMON;
 
     if (chain.triggerSpell)
     {
@@ -1666,37 +1854,47 @@ DelusionChain const& ResolveDelusionChain()
             if (duration > 0)
                 chain.durationMs = uint32(duration);
             else
-            {
-                static bool logged = false;
-                if (!logged)
-                {
-                    logged = true;
-                    TC_LOG_ERROR("scripts", "GrandDelusions: trigger %u duration missing, using %u ms",
-                        chain.triggerSpell, DELUSION_DURATION_MS_FALLBACK);
-                }
-            }
+                TC_LOG_ERROR("scripts", "GrandDelusions: trigger %u duration missing, using %u ms",
+                    chain.triggerSpell, DELUSION_DURATION_MS_FALLBACK);
             InspectDelusionSpell(trigger, chain);
         }
     }
 
-    if (!chain.summonEntry)
-    {
-        static bool logged = false;
-        if (!logged)
-        {
-            logged = true;
-            TC_LOG_ERROR("scripts", "GrandDelusions: summon MiscValue missing");
-        }
-    }
     if (!chain.damageSpell)
     {
-        static bool logged = false;
-        if (!logged)
+        for (uint32 id = 315185; id <= 315190; ++id)
         {
-            logged = true;
-            TC_LOG_ERROR("scripts", "GrandDelusions: school damage spell missing");
+            SpellInfo const* nearby = sSpellMgr->GetSpellInfo(id);
+            if (!nearby)
+                continue;
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+            {
+                SpellEffectInfo const* effect = nearby->GetEffect(SpellEffIndex(i));
+                if (effect && (effect->Effect == SPELL_EFFECT_SCHOOL_DAMAGE ||
+                    effect->Effect == SPELL_EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT))
+                    chain.damageSpell = id;
+            }
         }
     }
+
+    if (!chain.damageSpell)
+    {
+        if (SpellInfo const* overrideInfo = sSpellMgr->GetSpellInfo(SPELL_THING_FROM_BEYOND_AUTOATTACK))
+            if (SpellEffectInfo const* overrideEffect = overrideInfo->GetEffect(EFFECT_1))
+                if (overrideEffect->TriggerSpell &&
+                    SpellDealsDirectCorruptionHit(sSpellMgr->GetSpellInfo(overrideEffect->TriggerSpell)))
+                    chain.damageSpell = overrideEffect->TriggerSpell;
+    }
+
+    if (!chain.damageSpell && SpellDealsDirectCorruptionHit(sSpellMgr->GetSpellInfo(SPELL_GRAND_DELUSIONS_DAMAGE)))
+        chain.damageSpell = SPELL_GRAND_DELUSIONS_DAMAGE;
+
+    if (!chain.triggerSpell)
+        TC_LOG_ERROR("scripts", "GrandDelusions: 315184 TriggerSpell missing");
+    if (!chain.summonEntry)
+        TC_LOG_ERROR("scripts", "GrandDelusions: summon MiscValue missing");
+    if (!chain.damageSpell)
+        TC_LOG_ERROR("scripts", "GrandDelusions: school damage spell missing");
 
     return chain;
 }
@@ -1716,9 +1914,16 @@ struct npc_thing_from_beyond : public ScriptedAI
         _ownerGuid = owner->GetGUID();
         _hit = false;
         _elapsed = 0;
-        me->SetFaction(owner->getFaction());
+        // SummonGuardian copies the owner's faction (green name). Restore the
+        // template so the clone is hostile like the retail Thing-from-Beyond.
+        if (CreatureTemplate const* creatureTemplate = me->GetCreatureTemplate())
+            me->SetFaction(creatureTemplate->faction);
         me->SetLevel(owner->getLevel());
         me->SetReactState(REACT_PASSIVE);
+        // 161895 has no creature_template_model. 318393 CLONE_CASTER copies the owner.
+        owner->CastSpell(me, SPELL_THING_FROM_BEYOND_CLONE, InfiniteStarsCastFlags());
+        if (!me->GetDisplayId())
+            me->SetDisplayId(owner->GetDisplayId());
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MoveChase(owner);
     }
@@ -1730,18 +1935,29 @@ struct npc_thing_from_beyond : public ScriptedAI
 
     void UpdateAI(uint32 diff) override
     {
+        _elapsed += diff;
+
         Unit* owner = ObjectAccessor::GetUnit(*me, _ownerGuid);
         if (!owner)
             owner = me->GetOwner();
+        if (!owner)
+            if (TempSummon* summon = me->ToTempSummon())
+                owner = summon->GetSummoner();
 
-        if (!owner || !owner->IsAlive() || !owner->HasAura(SPELL_GRAND_DELUSIONS))
+        if (!owner)
+        {
+            if (_elapsed >= 2000)
+                me->DespawnOrUnsummon();
+            return;
+        }
+
+        if (!owner->IsAlive() || !owner->HasAura(SPELL_GRAND_DELUSIONS))
         {
             me->DespawnOrUnsummon();
             return;
         }
 
         DelusionChain const& chain = ResolveDelusionChain();
-        _elapsed += diff;
         if (_elapsed >= chain.durationMs)
         {
             me->DespawnOrUnsummon();
@@ -1754,6 +1970,9 @@ struct npc_thing_from_beyond : public ScriptedAI
         if (!me->isMoving())
             me->GetMotionMaster()->MoveChase(owner);
 
+        if (_elapsed < DELUSION_CONTACT_GRACE_MS)
+            return;
+
         // Contact = unit body / melee reach. No raycast, no auto-swing.
         if (!me->IsWithinMeleeRange(owner))
             return;
@@ -1761,7 +1980,7 @@ struct npc_thing_from_beyond : public ScriptedAI
         _hit = true;
         uint32 ok = 0;
         if (chain.damageSpell)
-            ok = me->CastSpell(owner, chain.damageSpell, DelusionHitCastFlags(), nullptr, nullptr, owner->GetGUID()) ? 1u : 0u;
+            ok = owner->CastSpell(owner, chain.damageSpell, DelusionHitCastFlags()) ? 1u : 0u;
 
         LabNotify(owner, "DELUSION_HIT", Trinity::StringFormat(
             "entry=%u damage=%u ok=%u", me->GetEntry(), chain.damageSpell, ok));
@@ -1779,6 +1998,11 @@ void BindDelusionAI(Creature* thing, Unit* owner)
 {
     if (!thing || !owner)
         return;
+    if (npc_thing_from_beyond* ai = dynamic_cast<npc_thing_from_beyond*>(thing->AI()))
+    {
+        ai->BindOwner(owner);
+        return;
+    }
     thing->AIM_Initialize(new npc_thing_from_beyond(thing));
     if (npc_thing_from_beyond* ai = dynamic_cast<npc_thing_from_beyond*>(thing->AI()))
         ai->BindOwner(owner);
@@ -1804,22 +2028,7 @@ void CastGrandDelusions(Unit* owner)
     }
 
     bool ok = player->CastSpell(player, chain.triggerSpell, InfiniteStarsCastFlags());
-    Creature* thing = nullptr;
-    if (chain.summonEntry)
-    {
-        for (Creature* found : player->FindNearestCreatures(chain.summonEntry, 30.0f))
-        {
-            if (!found)
-                continue;
-            if (found->GetOwnerGUID() == player->GetGUID()
-                || (found->ToTempSummon() && found->ToTempSummon()->GetSummonerGUID() == player->GetGUID()))
-            {
-                thing = found;
-                break;
-            }
-        }
-    }
-
+    Creature* thing = FindOwnedCorruptionSummon(player, chain.summonEntry, 30.0f);
     if (thing)
         BindDelusionAI(thing, player);
     else
@@ -2054,7 +2263,6 @@ class spell_twilight_devastation_proc : public AuraScript
         if (!caster)
             return;
 
-        TC_LOG_INFO("scripts", "TwilightDevastation proc caster=%s", caster->GetName().c_str());
         CastTwilightDevastation(caster);
     }
 
@@ -2494,7 +2702,7 @@ class spell_void_ritual_proc : public AuraScript
     }
 };
 
-// 316823 - The End Is Coming. MOD_RATING amount = rank Dummy * stacks.
+// 316823 - The End Is Coming. Fill per-stack Dummy; engine multiplies by stacks.
 class spell_void_ritual_end_is_coming : public AuraScript
 {
     PrepareAuraScript(spell_void_ritual_end_is_coming);
@@ -2516,10 +2724,7 @@ class spell_void_ritual_end_is_coming : public AuraScript
             return;
         }
 
-        uint32 stacks = GetAura() ? GetAura()->GetStackAmount() : 1;
-        if (stacks < 1)
-            stacks = 1;
-        amount = VoidRitualRatingPerStack(owner) * int32(stacks);
+        amount = VoidRitualRatingPerStack(owner);
     }
 
     void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -2550,9 +2755,6 @@ class spell_void_ritual_end_is_coming : public AuraScript
 
         uint32 stacks = aura->GetStackAmount();
         int32 rating = VoidRitualRatingPerStack(owner) * int32(stacks);
-        if (AuraEffect* ratingEff = aura->GetEffect(EFFECT_0))
-            ratingEff->ChangeAmount(rating);
-
         if (stacks != before)
             NotifyVoidRitualTick(owner, stacks, rating);
     }
@@ -3031,6 +3233,18 @@ public:
 
         ApplyIneffableTruthRate(chargeRecoveryTime, IneffableTruthPct(player));
     }
+
+    // Logout saves SpellHistory before auras drop. Strip 316801 first so HandleRemove
+    // restores CDs, then the save writes the unscaled remaining times.
+    void OnSave(Player* player) override
+    {
+        if (!player || !player->HasAura(SPELL_INEFFABLE_TRUTH_BUFF))
+            return;
+        WorldSession* session = player->GetSession();
+        if (!session || !session->PlayerLogout())
+            return;
+        player->RemoveAurasDueToSpell(SPELL_INEFFABLE_TRUTH_BUFF);
+    }
 };
 
 // 315175 - CorruptionEffects Grasping Tendrils. Taken proc; do not compare thresholds.
@@ -3043,6 +3257,11 @@ class spell_grasping_tendrils_proc : public AuraScript
         return ValidateSpellInfo({ SPELL_GRASPING_TENDRILS_SLOW });
     }
 
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        return IsCorruptionTakenDamageProc(eventInfo);
+    }
+
     void HandleProc(ProcEventInfo& /*eventInfo*/)
     {
         PreventDefaultAction();
@@ -3052,6 +3271,7 @@ class spell_grasping_tendrils_proc : public AuraScript
 
     void Register() override
     {
+        DoCheckProc += AuraCheckProcFn(spell_grasping_tendrils_proc::CheckProc);
         OnProc += AuraProcFn(spell_grasping_tendrils_proc::HandleProc);
     }
 };
@@ -3091,7 +3311,7 @@ class spell_eye_of_corruption : public AuraScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_EYE_OF_CORRUPTION });
+        return ValidateSpellInfo({ SPELL_EYE_OF_CORRUPTION, SPELL_EYE_OF_CORRUPTION_DAMAGE });
     }
 
     void HandleProc(ProcEventInfo& /*eventInfo*/)
@@ -3107,6 +3327,49 @@ class spell_eye_of_corruption : public AuraScript
     }
 };
 
+// 315161 - DBC school damage BP is 0. Fill the Wowhead 2020 measured table.
+// EFFECT_1 Dummy 15 stacks (CumulativeAura 99); same-hit stack is not yet vuln.
+class spell_eye_of_corruption_damage : public SpellScript
+{
+    PrepareSpellScript(spell_eye_of_corruption_damage);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_EYE_OF_CORRUPTION_DAMAGE });
+    }
+
+    void HandleHit()
+    {
+        Unit* target = GetHitUnit();
+        if (!target)
+            return;
+
+        Player* player = target->ToPlayer();
+        if (!player)
+            return;
+
+        if (GetHitDamage() > 0)
+            return;
+
+        int32 damage = EyeOfCorruptionPulseDamage(player);
+        int32 stacks = 0;
+        if (Aura const* aura = target->GetAura(SPELL_EYE_OF_CORRUPTION_DAMAGE))
+            stacks = int32(aura->GetStackAmount());
+        if (stacks > 0)
+            --stacks;
+        AddPct(damage, EyeOfCorruptionVulnPct() * stacks);
+        if (damage < 1)
+            damage = 1;
+
+        SetHitDamage(damage);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_eye_of_corruption_damage::HandleHit);
+    }
+};
+
 // 315184 - CorruptionEffects Grand Delusions. Taken proc. Do not use cloak 313301.
 class spell_grand_delusions : public AuraScript
 {
@@ -3114,7 +3377,12 @@ class spell_grand_delusions : public AuraScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_GRAND_DELUSIONS });
+        return ValidateSpellInfo({ SPELL_GRAND_DELUSIONS, SPELL_GRAND_DELUSIONS_SUMMON });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        return IsCorruptionTakenDamageProc(eventInfo);
     }
 
     void HandleProc(ProcEventInfo& /*eventInfo*/)
@@ -3126,8 +3394,73 @@ class spell_grand_delusions : public AuraScript
 
     void Register() override
     {
+        DoCheckProc += AuraCheckProcFn(spell_grand_delusions::CheckProc);
         OnProc += AuraProcFn(spell_grand_delusions::HandleProc);
     }
+};
+
+// 337612 - TriggerSpell is 0. Combat ticks cast 337816 (DBC max-health %).
+class spell_inescapable_consequences : public AuraScript
+{
+    PrepareAuraScript(spell_inescapable_consequences);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_INESCAPABLE_CONSEQUENCES,
+            SPELL_INESCAPABLE_CONSEQUENCES_DAMAGE });
+    }
+
+    uint32 TickPeriod() const
+    {
+        if (AuraEffect const* effect = GetEffect(EFFECT_0))
+            if (effect->GetPeriod() > 0)
+                return uint32(effect->GetPeriod());
+        return GetSpellInfo()->GetEffect(EFFECT_0)
+            ? uint32(GetSpellInfo()->GetEffect(EFFECT_0)->ApplyAuraPeriod)
+            : 1000;
+    }
+
+    void TryTick()
+    {
+        Unit* owner = GetTarget();
+        if (!owner || !owner->IsAlive() || !owner->IsInCombat())
+            return;
+
+        uint32 now = getMSTime();
+        if (_lastTick && getMSTimeDiff(_lastTick, now) < TickPeriod())
+            return;
+        _lastTick = now;
+
+        owner->CastSpell(owner, SPELL_INESCAPABLE_CONSEQUENCES_DAMAGE, InfiniteStarsCastFlags());
+        LabNotify(owner, "CONSEQ_TICK", Trinity::StringFormat("damage=%u",
+            uint32(SPELL_INESCAPABLE_CONSEQUENCES_DAMAGE)));
+    }
+
+    void HandleUpdate(uint32 /*diff*/)
+    {
+        Unit* owner = GetTarget();
+        bool combat = owner && owner->IsInCombat();
+        if (combat && !_wasInCombat)
+            TryTick();
+        _wasInCombat = combat;
+    }
+
+    void HandlePeriodic(AuraEffect const* /*aurEff*/)
+    {
+        PreventDefaultAction();
+        TryTick();
+    }
+
+    void Register() override
+    {
+        OnAuraUpdate += AuraUpdateFn(spell_inescapable_consequences::HandleUpdate);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_inescapable_consequences::HandlePeriodic,
+            EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+    }
+
+private:
+    uint32 _lastTick = 0;
+    bool _wasInCombat = false;
 };
 
 void AddSC_corruption_spell_scripts()
@@ -3168,5 +3501,12 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_grasping_tendrils_proc);
     RegisterAuraScript(spell_grasping_tendrils_slow);
     RegisterAuraScript(spell_eye_of_corruption);
+    RegisterSpellScript(spell_eye_of_corruption_damage);
     RegisterAuraScript(spell_grand_delusions);
+    RegisterAuraScript(spell_inescapable_consequences);
+    RegisterAreaTriggerAI(at_eye_of_corruption);
+    RegisterCreatureAI(npc_thing_from_beyond);
+    LogCorruptionSpellInfo("InevitableDoom.dump", SPELL_INEVITABLE_DOOM);
+    LogCorruptionSpellInfo("InescapableConsequences.dump", SPELL_INESCAPABLE_CONSEQUENCES);
+    LogCorruptionSpellInfo("InescapableConsequences.dump", SPELL_INESCAPABLE_CONSEQUENCES_DAMAGE);
 }
