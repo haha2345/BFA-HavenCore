@@ -47,6 +47,7 @@
 #include "Player.h"
 #include "RestMgr.h"
 #include "ScriptMgr.h"
+#include "SharedDefines.h"
 #include "Spell.h"
 #include "SpellPackets.h"
 #include "WhoListStorage.h"
@@ -1139,8 +1140,17 @@ void WorldSession::HandleMountSetFavorite(WorldPackets::Misc::MountSetFavorite& 
 
 void WorldSession::HandleCloseInteraction(WorldPackets::Misc::CloseInteraction& closeInteraction)
 {
-    if (_player->PlayerTalkClass->GetInteractionData().SourceGuid == closeInteraction.SourceGuid)
-        _player->PlayerTalkClass->GetInteractionData().Reset();
+    InteractionData& data = _player->PlayerTalkClass->GetInteractionData();
+    if (data.SourceGuid != closeInteraction.SourceGuid)
+        return;
+
+    // GossipComplete is followed by CMSG_CLOSE_INTERACTION with the same NPC GUID.
+    // Titanic Purification stays open after gossip; Reset() would drop the token
+    // and CMSG_PERFORM_ITEM_INTERACTION would fail with no client error.
+    if (data.UiItemInteractionId == UI_ITEM_INTERACTION_TITANIC_PURIFICATION)
+        return;
+
+    data.Reset();
 }
 
 void WorldSession::HandleAdventureJournalOpenQuest(WorldPackets::Misc::AdventureJournalOpenQuest& packet)

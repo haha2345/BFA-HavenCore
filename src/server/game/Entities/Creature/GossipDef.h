@@ -269,7 +269,7 @@ class InteractionData
         ObjectGuid SourceGuid;
         uint32 TrainerId;
         uint32 PlayerChoiceId;
-        uint32 UiItemInteractionId; // set only by SendUiItemInteractionNpc; CMSG_CLOSE_INTERACTION clears it via Reset()
+        uint32 UiItemInteractionId; // set by SendUiItemInteractionNpc; HandleCloseInteraction keeps it while Titanic Purification is open
 };
 
 class TC_GAME_API PlayerMenu

@@ -27,9 +27,11 @@ WorldPacket const* WorldPackets::ItemInteraction::UiItemInteractionNpc::Write()
 
 void WorldPackets::ItemInteraction::PerformItemInteraction::Read()
 {
-    _worldPacket >> Item;
-    // 8.3 Lua PerformItemInteraction() has no args; NPC guid is medium confidence (same shape as repair). Consume leftovers so the session does not error on unprocessed bytes.
-    if (_worldPacket.size() > _worldPacket.rpos())
+    // 8.3 Lua PerformItemInteraction() has no args; pending item lives on the client until this opcode.
+    // No 8.3.7 sniff: read up to two GUIDs. HandlePerformItemInteraction resolves item vs NPC by type.
+    if (_worldPacket.size() - _worldPacket.rpos() >= 16)
+        _worldPacket >> Item;
+    if (_worldPacket.size() - _worldPacket.rpos() >= 16)
         _worldPacket >> Npc;
     _worldPacket.rfinish();
 }

@@ -1415,25 +1415,64 @@ void WorldSession::SendUiItemInteractionNpc(ObjectGuid const& npcGuid, int32 int
 
 void WorldSession::HandlePerformItemInteraction(WorldPackets::ItemInteraction::PerformItemInteraction& packet)
 {
+    InteractionData const& data = _player->PlayerTalkClass->GetInteractionData();
+    auto fail = [this, &packet, &data](GameError error, char const* reason)
+    {
+        TC_LOG_DEBUG("network", "HandlePerformItemInteraction: %s (item %s npc %s token %u source %s)",
+            reason, packet.Item.ToString().c_str(), packet.Npc.ToString().c_str(),
+            data.UiItemInteractionId, data.SourceGuid.ToString().c_str());
+        _player->SendDirectMessage(WorldPackets::Misc::DisplayGameError(error).Write());
+    };
+
     if (sWorld->getIntConfig(CONFIG_MOTHER_REQUIRE_CURIOUS_CORRUPTION)
         && _player->GetQuestStatus(QUEST_CURIOUS_CORRUPTION) != QUEST_STATUS_REWARDED)
+    {
+        fail(GameError::ERR_CANT_USE_ITEM, "curious-corruption quest not rewarded");
         return;
+    }
 
-    InteractionData const& data = _player->PlayerTalkClass->GetInteractionData();
     if (data.UiItemInteractionId != UI_ITEM_INTERACTION_TITANIC_PURIFICATION)
+    {
+        fail(GameError::ERR_CANT_USE_ITEM, "titanic-purification token missing");
         return;
+    }
 
-    ObjectGuid npcGuid = packet.Npc.IsEmpty() ? data.SourceGuid : packet.Npc;
+    // Packet field order is not sniffed. Prefer an inventory item GUID; NPC comes from the token if absent.
+    ObjectGuid itemGuid = packet.Item;
+    ObjectGuid npcGuid = packet.Npc;
+    if (!itemGuid.IsEmpty() && !itemGuid.IsItem() && npcGuid.IsItem())
+        std::swap(itemGuid, npcGuid);
+    else if (itemGuid.IsEmpty() && npcGuid.IsItem())
+    {
+        itemGuid = npcGuid;
+        npcGuid.Clear();
+    }
+
+    if (npcGuid.IsEmpty())
+        npcGuid = data.SourceGuid;
     if (npcGuid.IsEmpty() || npcGuid != data.SourceGuid)
+    {
+        fail(GameError::ERR_TOO_FAR_TO_INTERACT, "npc guid mismatch");
         return;
+    }
 
     Creature* npc = _player->GetNPCIfCanInteractWith(npcGuid, UNIT_NPC_FLAG_GOSSIP, UNIT_NPC_FLAG_2_NONE);
     if (!npc || npc->GetEntry() != NPC_MOTHER_CHAMBER_OF_HEART)
+    {
+        fail(GameError::ERR_TOO_FAR_TO_INTERACT, "mother npc not interactable");
         return;
+    }
 
-    Item* item = _player->GetItemByGuid(packet.Item);
+    Item* item = _player->GetItemByGuid(itemGuid);
+    if (!item)
+        item = _player->GetItemByGuid(packet.Item);
+    if (!item)
+        item = _player->GetItemByGuid(packet.Npc);
     if (!item || item->GetOwnerGUID() != _player->GetGUID())
+    {
+        fail(GameError::ERR_ITEM_NOT_FOUND, "item guid not in inventory");
         return;
+    }
 
     bool hasCorruption = false;
     for (int32 listId : *item->m_itemData->BonusListIDs)
@@ -1445,15 +1484,21 @@ void WorldSession::HandlePerformItemInteraction(WorldPackets::ItemInteraction::P
         }
     }
     if (!hasCorruption)
+    {
+        fail(GameError::ERR_CANT_USE_ITEM, "item has no corruption bonus list");
         return;
+    }
 
     UiItemInteractionEntry const* row = sUiItemInteractionStore.LookupEntry(UI_ITEM_INTERACTION_TITANIC_PURIFICATION);
     if (!row)
+    {
+        fail(GameError::ERR_CANT_USE_ITEM, "UiItemInteraction row 3 missing");
         return;
+    }
 
     if (_player->GetCurrency(uint32(row->CurrencyTypeID)) < uint32(row->Cost))
     {
-        _player->SendDirectMessage(WorldPackets::Misc::DisplayGameError(GameError::ERR_ITEM_INTERACTION_NOT_ENOUGH_CURRENCY).Write());
+        fail(GameError::ERR_ITEM_INTERACTION_NOT_ENOUGH_CURRENCY, "not enough corrupted mementos");
         return;
     }
 
