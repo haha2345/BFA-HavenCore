@@ -40,11 +40,11 @@ public:
         player->PrepareQuestMenu(creature->GetGUID());
 
         // Mode=1 contaminant rows live in mGameEventVendors, not npc_vendor. Core PrepareGossipMenu hides vendor on an empty static list.
-        AddGossipItemFor(player, GOSSIP_ICON_VENDOR, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
+        AddGossipItemFor(player, GOSSIP_ICON_VENDOR, "我想看看你的货物。", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
 
         QuestStatus curiousStatus = player->GetQuestStatus(QUEST_CURIOUS_CORRUPTION);
         if (curiousStatus == QUEST_STATUS_INCOMPLETE || curiousStatus == QUEST_STATUS_COMPLETE)
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "I need to speak with you about this corruption.", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_MOTHER_CURIOUS_CORRUPTION);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我需要和你谈谈这些腐蚀。", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_MOTHER_CURIOUS_CORRUPTION);
 
         bool allowPurify = true;
         if (sWorld->getIntConfig(CONFIG_MOTHER_REQUIRE_CURIOUS_CORRUPTION)
@@ -52,7 +52,7 @@ public:
             allowPurify = false;
 
         if (allowPurify)
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "I want to purify a corrupted item.", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_MOTHER_PURIFY);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我有一个腐蚀物品需要净化。", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_MOTHER_PURIFY);
 
         SendGossipMenuFor(player, player->GetGossipTextId(creature), creature->GetGUID());
         return true;
@@ -83,6 +83,7 @@ public:
                 return true;
 
             // SendCloseGossip Reset()s InteractionData; record the purify token after gossip is closed.
+            // Client then sends CMSG_CLOSE_INTERACTION with this NPC; HandleCloseInteraction keeps the token.
             CloseGossipMenuFor(player);
             player->GetSession()->SendUiItemInteractionNpc(creature->GetGUID(), UI_ITEM_INTERACTION_TITANIC_PURIFICATION);
             return true;

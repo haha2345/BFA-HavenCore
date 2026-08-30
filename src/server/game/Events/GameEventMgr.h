@@ -122,7 +122,8 @@ class TC_GAME_API GameEventMgr
         bool IsSpellAreaEventActive(uint32 areaId, uint32 spellId);
         // Event-table vendor rows (not the live npc_vendor cache). Do not AddVendorItem inactive events at load.
         std::vector<VendorItem> const* GetGameEventVendorItems(uint16 eventId, uint32 creatureEntry) const;
-        // Mother.ContaminantMode=1 and NPC_MOTHER_CHAMBER_OF_HEART only: copy live rows then append rotations, deduped by item id.
+        // Mother.ContaminantMode=1 and NPC_MOTHER_CHAMBER_OF_HEART only:
+        // keep static non-contaminant rows, then append all 52 contaminants sorted by family then rank.
         bool TryBuildMotherQAVendorItems(uint32 creatureEntry, VendorItemData const* liveItems, VendorItemData& out) const;
     private:
         void SendWorldStateUpdate(Player* player, uint16 event_id);

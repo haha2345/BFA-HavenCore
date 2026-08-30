@@ -31,6 +31,8 @@
 #include "PoolMgr.h"
 #include "World.h"
 #include "WorldStatePackets.h"
+#include "MotherContaminantData.h"
+#include <algorithm>
 #include <unordered_set>
 
 GameEventMgr* GameEventMgr::instance()
@@ -1263,10 +1265,16 @@ bool GameEventMgr::TryBuildMotherQAVendorItems(uint32 creatureEntry, VendorItemD
             VendorItem const* vItem = liveItems->GetItem(i);
             if (!vItem)
                 continue;
+            // Event windows still AddVendorItem while Mode=1. Keep those out of the frozen prefix
+            // so the 52 contaminants sort as one family-then-rank block.
+            if (GetMotherContaminantSortKey(vItem->item) < 1000)
+                continue;
             out.AddItem(*vItem);
             seen.insert(vItem->item);
         }
     }
+
+    std::size_t const liveCount = out.m_items.size();
 
     for (uint16 eventId = GAME_EVENT_MOTHER_CONTAMINANT_FIRST; eventId <= GAME_EVENT_MOTHER_CONTAMINANT_LAST; ++eventId)
     {
@@ -1280,6 +1288,13 @@ bool GameEventMgr::TryBuildMotherQAVendorItems(uint32 creatureEntry, VendorItemD
             out.AddItem(vItem);
         }
     }
+
+    if (out.m_items.size() > liveCount)
+        std::sort(out.m_items.begin() + liveCount, out.m_items.end(),
+            [](VendorItem const& a, VendorItem const& b)
+            {
+                return GetMotherContaminantSortKey(a.item) < GetMotherContaminantSortKey(b.item);
+            });
 
     return true;
 }

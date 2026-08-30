@@ -23,6 +23,8 @@
 #include "ItemTemplate.h"
 #include "IteratorPair.h"
 #include "Log.h"
+#include "MotherContaminantData.h"
+#include "Common.h"
 #include "ObjectDefines.h"
 #include "Regex.h"
 #include "Random.h"
@@ -917,6 +919,21 @@ uint32 DB2Manager::LoadStores(std::string const& dataPath, LocaleConstant defaul
     }
     else
         TC_LOG_ERROR("server.loading", "UiItemInteraction.db2 is missing id %u (Titanic Purification)", UI_ITEM_INTERACTION_TITANIC_PURIFICATION);
+
+    uint32 patchedContaminants = 0;
+    for (MotherContaminantDisplay const& row : MotherContaminantShelf)
+    {
+        ItemSparseEntry* sparse = const_cast<ItemSparseEntry*>(sItemSparseStore.LookupEntry(row.ItemId));
+        if (!sparse || !sparse->Display)
+        {
+            TC_LOG_ERROR("server.loading", "Mother contaminant item %u missing ItemSparse; vendor name override skipped", row.ItemId);
+            continue;
+        }
+        for (uint8 loc = 0; loc < TOTAL_LOCALES; ++loc)
+            sparse->Display->Str[loc] = row.NameZhCN;
+        ++patchedContaminants;
+    }
+    TC_LOG_INFO("server.loading", "Overrode %u Mother contaminant ItemSparse names", patchedContaminants);
 
     for (AreaGroupMemberEntry const* areaGroupMember : sAreaGroupMemberStore)
         _areaGroupMembers[areaGroupMember->AreaGroupID].push_back(areaGroupMember->AreaID);
