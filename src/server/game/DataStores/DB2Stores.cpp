@@ -318,6 +318,7 @@ DB2Storage<TransmogSetGroupEntry>               sTransmogSetGroupStore("Transmog
 DB2Storage<TransmogSetItemEntry>                sTransmogSetItemStore("TransmogSetItem.db2", TransmogSetItemLoadInfo::Instance());
 DB2Storage<TransportAnimationEntry>             sTransportAnimationStore("TransportAnimation.db2", TransportAnimationLoadInfo::Instance());
 DB2Storage<TransportRotationEntry>              sTransportRotationStore("TransportRotation.db2", TransportRotationLoadInfo::Instance());
+DB2Storage<UiItemInteractionEntry>              sUiItemInteractionStore("UiItemInteraction.db2", UiItemInteractionLoadInfo::Instance());
 DB2Storage<UiMapEntry>                          sUiMapStore("UiMap.db2", UiMapLoadInfo::Instance());
 DB2Storage<UiMapAssignmentEntry>                sUiMapAssignmentStore("UiMapAssignment.db2", UiMapAssignmentLoadInfo::Instance());
 DB2Storage<UiMapLinkEntry>                      sUiMapLinkStore("UiMapLink.db2", UiMapLinkLoadInfo::Instance());
@@ -892,6 +893,7 @@ uint32 DB2Manager::LoadStores(std::string const& dataPath, LocaleConstant defaul
     LOAD_DB2(sTransmogSetItemStore);
     LOAD_DB2(sTransportAnimationStore);
     LOAD_DB2(sTransportRotationStore);
+    LOAD_DB2(sUiItemInteractionStore);
     LOAD_DB2(sUiMapStore);
     LOAD_DB2(sUiMapAssignmentStore);
     LOAD_DB2(sUiMapLinkStore);
@@ -905,6 +907,16 @@ uint32 DB2Manager::LoadStores(std::string const& dataPath, LocaleConstant defaul
     LOAD_DB2(sWorldStateExpressionStore);
 
 #undef LOAD_DB2
+
+    if (UiItemInteractionEntry const* purify = sUiItemInteractionStore.LookupEntry(UI_ITEM_INTERACTION_TITANIC_PURIFICATION))
+    {
+        // Retail 8.3.7 row 3 is Cost=5 / CurrencyTypeID=1719. Handler reads the row, never substitutes these values.
+        if (purify->Cost != 5 || purify->CurrencyTypeID != int32(CURRENCY_CORRUPTED_MEMENTOS))
+            TC_LOG_ERROR("server.loading", "UiItemInteraction.db2 id %u Cost=%d CurrencyTypeID=%d (expected Cost=5 CurrencyTypeID=%u)",
+                UI_ITEM_INTERACTION_TITANIC_PURIFICATION, purify->Cost, purify->CurrencyTypeID, uint32(CURRENCY_CORRUPTED_MEMENTOS));
+    }
+    else
+        TC_LOG_ERROR("server.loading", "UiItemInteraction.db2 is missing id %u (Titanic Purification)", UI_ITEM_INTERACTION_TITANIC_PURIFICATION);
 
     for (AreaGroupMemberEntry const* areaGroupMember : sAreaGroupMemberStore)
         _areaGroupMembers[areaGroupMember->AreaGroupID].push_back(areaGroupMember->AreaID);
@@ -2433,12 +2445,6 @@ constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_SIPHONER_POINTS_17 = 6612;
 constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_SIPHONER_POINTS_28 = 6613;
 constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_SIPHONER_POINTS_45 = 6614;
 
-bool IsNyAlothaUniqueWeaponBonus(uint32 listId)
-{
-    return listId >= ITEM_BONUS_LIST_NYALOTHA_DEVOUR_VITALITY
-        && listId <= ITEM_BONUS_LIST_NYALOTHA_OBSIDIAN_SKIN;
-}
-
 bool IsExcludedCorruptionCatalogList(uint32 listId)
 {
     if (listId == ITEM_BONUS_LIST_CORRUPTION_EMPTY)
@@ -2500,19 +2506,8 @@ bool ItemAlreadyHasCorruptionEffect(std::vector<int32> const& bonusListIDs)
     {
         if (listId <= 0)
             continue;
-
-        DB2Manager::ItemBonusList const* bonuses = sDB2Manager.GetItemBonusList(uint32(listId));
-        if (!bonuses)
-            continue;
-
-        for (ItemBonusEntry const* bonus : *bonuses)
-        {
-            if (bonus->Type == ITEM_BONUS_STAT && bonus->Value[0] == ITEM_MOD_CORRUPTION)
-                return true;
-            // 8.3.7 corruption good effects are type-23 ItemEffect rows; ilvl/quality trees do not use type 23.
-            if (bonus->Type == ITEM_BONUS_ITEM_EFFECT_ID && sItemEffectStore.LookupEntry(uint32(bonus->Value[0])))
-                return true;
-        }
+        if (sDB2Manager.BonusListIsCorruption(uint32(listId)))
+            return true;
     }
 
     return false;
@@ -2537,6 +2532,46 @@ uint32 DB2Manager::GetNyAlothaFixedCorruptionBonus(uint32 itemId)
         case 172196: return ITEM_BONUS_LIST_CORRUPTION_RITUAL_2;
         default:     return 0;
     }
+}
+
+bool DB2Manager::BonusListIsCorruption(uint32 listId) const
+{
+    if (!listId)
+        return false;
+
+    ItemBonusList const* bonuses = GetItemBonusList(listId);
+    if (!bonuses)
+        return false;
+
+    for (ItemBonusEntry const* bonus : *bonuses)
+    {
+        if (bonus->Type == ITEM_BONUS_STAT && bonus->Value[0] == ITEM_MOD_CORRUPTION)
+            return true;
+        // 8.3.7 corruption good effects are type-23 ItemEffect rows; ilvl/quality trees do not use type 23.
+        if (bonus->Type == ITEM_BONUS_ITEM_EFFECT_ID && sItemEffectStore.LookupEntry(uint32(bonus->Value[0])))
+            return true;
+    }
+
+    return false;
+}
+
+bool DB2Manager::IsNyAlothaUniqueWeaponBonus(uint32 listId) const
+{
+    return listId >= ITEM_BONUS_LIST_NYALOTHA_DEVOUR_VITALITY
+        && listId <= ITEM_BONUS_LIST_NYALOTHA_OBSIDIAN_SKIN;
+}
+
+void DB2Manager::CollectBonusListIdsFromTree(uint32 bonusTreeId, std::vector<int32>& out) const
+{
+    VisitItemBonusTree(bonusTreeId, true, [&out](ItemBonusTreeNodeEntry const* node)
+    {
+        if (!node->ChildItemBonusListID)
+            return;
+        // Tree 2821's only child list is the empty placeholder; effect 223 must not write it onto gear.
+        if (uint32(node->ChildItemBonusListID) == ITEM_BONUS_LIST_CORRUPTION_EMPTY)
+            return;
+        out.push_back(int32(node->ChildItemBonusListID));
+    });
 }
 
 void DB2Manager::AppendCorruptionLootBonuses(uint32 itemId, ItemContext /*context*/, std::vector<int32>& bonusListIDs) const
@@ -2594,6 +2629,136 @@ void DB2Manager::AppendCorruptionLootBonuses(uint32 itemId, ItemContext /*contex
     bonusListIDs.push_back(picked);
     if (int32 corList = GetPassiveCorruptionCompanionList(uint32(picked)))
         bonusListIDs.push_back(corList);
+}
+
+void DB2Manager::LogMotherContaminantDump() const
+{
+    // 细节-F8 section 3: 177955 plus 177965–178015 (do not fill the gap). Logged so
+    // effect 223 can read trees from the spell instead of hardcoding this table.
+    static uint32 const kMotherContaminants[] = {
+        177955,
+        177965, 177966, 177967, 177968, 177969, 177970, 177971, 177972, 177973, 177974,
+        177975, 177976, 177977, 177978, 177979, 177980, 177981, 177982, 177983, 177984,
+        177985, 177986, 177987, 177988, 177989, 177990, 177991, 177992, 177993, 177994,
+        177995, 177996, 177997, 177998, 177999, 178000, 178001, 178002, 178003, 178004,
+        178005, 178006, 178007, 178008, 178009, 178010, 178011, 178012, 178013, 178014,
+        178015
+    };
+
+    constexpr uint32 SPELL_GUSHING_WOUND_RANK = 318272;
+    constexpr uint32 SPELL_TWISTED_APPENDAGE_RANK_1 = 318481;
+    constexpr uint32 SPELL_INFINITE_STARS_RANK_3 = 318488;
+    constexpr uint32 SPELL_LASH_OF_THE_VOID = 317290;
+    static uint32 const kScalingDumpSpells[] = {
+        SPELL_GUSHING_WOUND_RANK,
+        SPELL_TWISTED_APPENDAGE_RANK_1,
+        SPELL_INFINITE_STARS_RANK_3,
+        SPELL_LASH_OF_THE_VOID
+    };
+
+    std::unordered_map<uint32, std::vector<int32>> spellsByItem;
+    for (ItemEffectEntry const* itemEffect : sItemEffectStore)
+        if (itemEffect->ParentItemID && itemEffect->SpellID)
+            spellsByItem[itemEffect->ParentItemID].push_back(itemEffect->SpellID);
+
+    std::unordered_map<uint32, SpellEffectEntry const*> changeBonusesBySpell;
+    std::unordered_map<uint32, float> coeff0BySpell;
+    for (SpellEffectEntry const* effect : sSpellEffectStore)
+    {
+        if (effect->DifficultyID)
+            continue;
+        if (effect->Effect == SPELL_EFFECT_CHANGE_ITEM_BONUSES)
+            changeBonusesBySpell.emplace(effect->SpellID, effect);
+        if (effect->EffectIndex == 0)
+            coeff0BySpell.emplace(effect->SpellID, effect->Coefficient);
+    }
+
+    std::unordered_map<uint32, int32> scalingClassBySpell;
+    for (SpellScalingEntry const* scaling : sSpellScalingStore)
+        scalingClassBySpell.emplace(uint32(scaling->SpellID), scaling->Class);
+
+    std::unordered_map<uint32, uint32> attr354BySpell;
+    for (SpellMiscEntry const* misc : sSpellMiscStore)
+    {
+        if (misc->DifficultyID)
+            continue;
+        attr354BySpell.emplace(misc->SpellID,
+            (misc->Attributes[11] & SPELL_ATTR11_SCALES_WITH_ITEM_LEVEL) ? 1u : 0u);
+    }
+
+    for (uint32 itemId : kMotherContaminants)
+    {
+        if (!sItemSparseStore.LookupEntry(itemId))
+            TC_LOG_INFO("server.loading", "MotherContaminant.dump: item=%u sparse=missing", itemId);
+
+        int32 spellId = 0;
+        int32 tree0 = 0;
+        int32 tree1 = 0;
+        auto spellItr = spellsByItem.find(itemId);
+        if (spellItr != spellsByItem.end())
+        {
+            for (int32 candidate : spellItr->second)
+            {
+                auto changeItr = changeBonusesBySpell.find(uint32(candidate));
+                if (changeItr != changeBonusesBySpell.end())
+                {
+                    spellId = candidate;
+                    tree0 = changeItr->second->EffectMiscValue[0];
+                    tree1 = changeItr->second->EffectMiscValue[1];
+                    break;
+                }
+                if (!spellId)
+                    spellId = candidate;
+            }
+        }
+
+        std::vector<int32> lists;
+        if (tree1 > 0)
+            CollectBonusListIdsFromTree(uint32(tree1), lists);
+
+        std::ostringstream listText;
+        if (lists.empty())
+            listText << "none";
+        else
+        {
+            for (std::size_t i = 0; i < lists.size(); ++i)
+            {
+                if (i)
+                    listText << ',';
+                listText << lists[i];
+            }
+        }
+
+        TC_LOG_INFO("server.loading",
+            "MotherContaminant.dump: item=%u spell=%u tree0=%d tree1=%d lists=%s",
+            itemId, uint32(spellId), tree0, tree1, listText.str().c_str());
+    }
+
+    for (uint32 spellId : kScalingDumpSpells)
+    {
+        int32 scalingClass = 0;
+        uint32 scalingRow = 0;
+        auto classItr = scalingClassBySpell.find(spellId);
+        if (classItr != scalingClassBySpell.end())
+        {
+            scalingClass = classItr->second;
+            scalingRow = 1;
+        }
+
+        float coeff0 = 0.0f;
+        auto coeffItr = coeff0BySpell.find(spellId);
+        if (coeffItr != coeff0BySpell.end())
+            coeff0 = coeffItr->second;
+
+        uint32 attr354 = 0;
+        auto attrItr = attr354BySpell.find(spellId);
+        if (attrItr != attr354BySpell.end())
+            attr354 = attrItr->second;
+
+        TC_LOG_INFO("server.loading",
+            "MotherContaminant.dump: SpellScaling spell=%u class=%d coeff0=%f attr354=%u scalingRow=%u",
+            spellId, scalingClass, coeff0, attr354, scalingRow);
+    }
 }
 
 void LoadAzeriteEmpoweredItemUnlockMappings(std::unordered_map<int32, std::vector<AzeriteUnlockMappingEntry const*>> const& azeriteUnlockMappingsBySet, uint32 itemId)

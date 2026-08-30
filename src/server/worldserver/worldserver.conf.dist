@@ -1921,6 +1921,35 @@ GM.WhisperingTo = 1
 GM.FreezeAuraDuration = 0
 
 #
+#    HavenLab.ChatNotify
+#        Description: 腐蚀验收黄字 [HavenLab] TYPE k=v 是否打进客户端系统聊天（不是世界服控制台转储）。
+#                     仅 GM 账号（安全等级大于 0：主持人 / 游戏管理员 / 管理员）可能看见；普通玩家永远看不见。
+#                     取值互斥：
+#                     0 - 全部账号都不可看（关闭）
+#                     1 - GM 账号、未开 .gm on（普通模式；打桩验收用这个，因为开 GM 后怪不打人）
+#                     2 - GM 账号、已开 .gm on
+#        Default:     0
+
+HavenLab.ChatNotify = 0
+
+#
+#    Mother.ContaminantMode
+#        Description: Chamber of Heart MOTHER (152194) preserved-contaminant shelf.
+#                     0 - Retail twice-weekly rotation (game_event 201-208, 3.5-day windows).
+#                     1 - QA: list and sell all 52 contaminants even when those events are inactive.
+#                     Values above 1 are treated as 0.
+#        Default:     0
+#
+#    Mother.RequireCuriousCorruption
+#        Description: Reserved for titanic purification gossip (loaded here, used by a later task).
+#                     1 - require the Curious Corruption quest gate.
+#                     0 - skip that gate for QA.
+#        Default:     1
+
+Mother.ContaminantMode = 0
+Mother.RequireCuriousCorruption = 1
+
+#
 #    GM.InGMList.Level
 #        Description: Maximum GM level shown in GM list (if enabled) in non-GM state (.gm off).
 #        Default:     3 - (Anyone)

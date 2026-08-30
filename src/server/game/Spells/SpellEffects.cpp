@@ -309,7 +309,7 @@ NonDefaultConstructible<pEffect> SpellEffects[TOTAL_SPELL_EFFECTS] =
     &Spell::EffectAddGarrisonFollower,                      //220 SPELL_EFFECT_ADD_GARRISON_FOLLOWER
     &Spell::EffectNULL,                                     //221 SPELL_EFFECT_221
     &Spell::EffectCreateHeirloomItem,                       //222 SPELL_EFFECT_CREATE_HEIRLOOM_ITEM
-    &Spell::EffectNULL,                                     //223 SPELL_EFFECT_CHANGE_ITEM_BONUSES
+    &Spell::EffectChangeItemBonuses,                        //223 SPELL_EFFECT_CHANGE_ITEM_BONUSES
     &Spell::EffectActivateGarrisonBuilding,                 //224 SPELL_EFFECT_ACTIVATE_GARRISON_BUILDING
     &Spell::EffectGrantBattlePetLevel,                      //225 SPELL_EFFECT_GRANT_BATTLEPET_LEVEL
     &Spell::EffectPlayerMoveWaypoints,                      //226 SPELL_EFFECT_226
@@ -6069,6 +6069,79 @@ void Spell::EffectCreateHeirloomItem(SpellEffIndex effIndex)
 
     DoCreateItem(effIndex, m_misc.Raw.Data[0], ItemContext::NONE, bonusList);
     ExecuteLogEffectCreateItem(effIndex, m_misc.Raw.Data[0]);
+}
+
+SpellCastResult Spell::CheckChangeItemBonusesTarget(Item const* item, SpellEffectInfo const* effect) const
+{
+    if (!item)
+        return SPELL_FAILED_ITEM_NOT_FOUND;
+
+    if (!m_caster || item->GetOwnerGUID() != m_caster->GetGUID())
+        return SPELL_FAILED_NOT_TRADEABLE;
+
+    ItemTemplate const* proto = item->GetTemplate();
+    if (!proto)
+        return SPELL_FAILED_BAD_TARGETS;
+
+    uint32 const itemId = proto->GetId();
+    // 2020-05-20 hotfix excludes azerite engineering goggles and alchemist-stone trinkets;
+    // AzeriteEmpoweredItem / Heart of Azeroth / INVTYPE_TRINKET already cover those.
+    if (sDB2Manager.GetAzeriteEmpoweredItem(itemId) || sDB2Manager.IsAzeriteItem(itemId))
+        return SPELL_FAILED_BAD_TARGETS;
+    if (proto->GetInventoryType() == INVTYPE_TRINKET)
+        return SPELL_FAILED_BAD_TARGETS;
+    if (itemId == ITEM_ASHJRAKAMAS)
+        return SPELL_FAILED_BAD_TARGETS;
+
+    for (int32 listId : *item->m_itemData->BonusListIDs)
+        if (listId > 0 && sDB2Manager.BonusListIsCorruption(uint32(listId)))
+            return SPELL_FAILED_BAD_TARGETS;
+
+    if (!effect)
+        return SPELL_FAILED_BAD_TARGETS;
+
+    // MiscValue is tree 2821 (empty list 6516). CollectBonusListIdsFromTree already skips 6516; walk MiscValueB only.
+    if (effect->MiscValueB <= 0)
+        return SPELL_FAILED_BAD_TARGETS;
+
+    std::vector<int32> add;
+    sDB2Manager.CollectBonusListIdsFromTree(uint32(effect->MiscValueB), add);
+    if (add.empty())
+        return SPELL_FAILED_BAD_TARGETS;
+
+    for (int32 listId : add)
+        if (listId > 0 && sDB2Manager.IsNyAlothaUniqueWeaponBonus(uint32(listId)))
+            return SPELL_FAILED_BAD_TARGETS;
+
+    return SPELL_CAST_OK;
+}
+
+void Spell::EffectChangeItemBonuses(SpellEffIndex /*effIndex*/)
+{
+    if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT)
+        return;
+
+    Player* player = m_caster ? m_caster->ToPlayer() : nullptr;
+    Item* item = m_targets.GetItemTarget();
+    if (!player || CheckChangeItemBonusesTarget(item, effectInfo) != SPELL_CAST_OK)
+        return;
+
+    std::vector<int32> add;
+    if (effectInfo && effectInfo->MiscValueB > 0)
+        sDB2Manager.CollectBonusListIdsFromTree(uint32(effectInfo->MiscValueB), add);
+
+    bool const equipped = item->IsEquipped();
+    if (equipped)
+        player->_ApplyItemMods(item, item->GetSlot(), false);
+
+    for (int32 listId : add)
+        if (listId > 0)
+            item->AddBonuses(uint32(listId));
+
+    item->SetState(ITEM_CHANGED, player);
+
+    if (equipped)
+        player->_ApplyItemMods(item, item->GetSlot(), true);
 }
 
 void Spell::EffectActivateGarrisonBuilding(SpellEffIndex /*effIndex*/)

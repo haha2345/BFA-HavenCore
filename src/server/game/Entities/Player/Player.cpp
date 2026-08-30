@@ -24453,7 +24453,10 @@ bool Player::BuyItemFromVendorSlot(ObjectGuid vendorguid, uint32 vendorslot, uin
         return false;
     }
 
+    VendorItemData motherQAItems;
     VendorItemData const* vItems = creature->GetVendorItems();
+    if (sGameEventMgr->TryBuildMotherQAVendorItems(creature->GetEntry(), vItems, motherQAItems))
+        vItems = &motherQAItems;
     if (!vItems || vItems->Empty())
     {
         SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, item, 0);

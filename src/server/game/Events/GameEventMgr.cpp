@@ -31,6 +31,7 @@
 #include "PoolMgr.h"
 #include "World.h"
 #include "WorldStatePackets.h"
+#include <unordered_set>
 
 GameEventMgr* GameEventMgr::instance()
 {
@@ -1231,6 +1232,56 @@ void GameEventMgr::UpdateEventNPCVendor(uint16 event_id, bool activate)
                 sObjectMgr->RemoveVendorItem(itr->first, vItem.item, vItem.Type, false);
         }
     }
+}
+
+std::vector<VendorItem> const* GameEventMgr::GetGameEventVendorItems(uint16 eventId, uint32 creatureEntry) const
+{
+    if (eventId >= mGameEventVendors.size())
+        return nullptr;
+
+    NPCVendorMap const& vendors = mGameEventVendors[eventId];
+    auto itr = vendors.find(creatureEntry);
+    if (itr == vendors.end())
+        return nullptr;
+
+    return &itr->second;
+}
+
+bool GameEventMgr::TryBuildMotherQAVendorItems(uint32 creatureEntry, VendorItemData const* liveItems, VendorItemData& out) const
+{
+    if (sWorld->getIntConfig(CONFIG_MOTHER_CONTAMINANT_MODE) != 1)
+        return false;
+    if (creatureEntry != NPC_MOTHER_CHAMBER_OF_HEART)
+        return false;
+
+    out.Clear();
+    std::unordered_set<uint32> seen;
+    if (liveItems)
+    {
+        for (uint32 i = 0; i < liveItems->GetItemCount(); ++i)
+        {
+            VendorItem const* vItem = liveItems->GetItem(i);
+            if (!vItem)
+                continue;
+            out.AddItem(*vItem);
+            seen.insert(vItem->item);
+        }
+    }
+
+    for (uint16 eventId = GAME_EVENT_MOTHER_CONTAMINANT_FIRST; eventId <= GAME_EVENT_MOTHER_CONTAMINANT_LAST; ++eventId)
+    {
+        std::vector<VendorItem> const* extra = GetGameEventVendorItems(eventId, creatureEntry);
+        if (!extra)
+            continue;
+        for (VendorItem const& vItem : *extra)
+        {
+            if (!seen.insert(vItem.item).second)
+                continue;
+            out.AddItem(vItem);
+        }
+    }
+
+    return true;
 }
 
 void GameEventMgr::GameEventSpawn(int16 event_id)

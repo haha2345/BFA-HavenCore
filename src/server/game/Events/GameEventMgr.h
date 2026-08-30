@@ -20,6 +20,7 @@
 
 #include "Common.h"
 #include "SharedDefines.h"
+#include "CreatureData.h"
 #include "Define.h"
 #include "ObjectGuid.h"
 #include <list>
@@ -88,6 +89,7 @@ class Creature;
 class Player;
 class Quest;
 struct VendorItem;
+struct VendorItemData;
 
 class TC_GAME_API GameEventMgr
 {
@@ -118,6 +120,10 @@ class TC_GAME_API GameEventMgr
         uint64 GetNPCFlag(Creature* cr);
         uint32 GetNpcTextId(uint32 guid);
         bool IsSpellAreaEventActive(uint32 areaId, uint32 spellId);
+        // Event-table vendor rows (not the live npc_vendor cache). Do not AddVendorItem inactive events at load.
+        std::vector<VendorItem> const* GetGameEventVendorItems(uint16 eventId, uint32 creatureEntry) const;
+        // Mother.ContaminantMode=1 and NPC_MOTHER_CHAMBER_OF_HEART only: copy live rows then append rotations, deduped by item id.
+        bool TryBuildMotherQAVendorItems(uint32 creatureEntry, VendorItemData const* liveItems, VendorItemData& out) const;
     private:
         void SendWorldStateUpdate(Player* player, uint16 event_id);
         void AddActiveEvent(uint16 event_id) { m_ActiveEvents.insert(event_id); }

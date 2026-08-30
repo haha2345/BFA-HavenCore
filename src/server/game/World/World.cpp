@@ -1008,6 +1008,18 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_GM_WHISPERING_TO]      = sConfigMgr->GetIntDefault("GM.WhisperingTo", 2);
     m_int_configs[CONFIG_GM_FREEZE_DURATION]    = sConfigMgr->GetIntDefault("GM.FreezeAuraDuration", 0);
 
+    m_int_configs[CONFIG_HAVENLAB_CHAT_NOTIFY] = uint32(sConfigMgr->GetIntDefault("HavenLab.ChatNotify", int32(HAVENLAB_CHAT_NOTIFY_OFF)));
+    if (int32(m_int_configs[CONFIG_HAVENLAB_CHAT_NOTIFY]) < 0 || m_int_configs[CONFIG_HAVENLAB_CHAT_NOTIFY] > HAVENLAB_CHAT_NOTIFY_STAFF_GM_ON)
+    {
+        TC_LOG_ERROR("server.loading", "HavenLab.ChatNotify (%i) must be 0, 1 or 2. Using 0 (off).", int32(m_int_configs[CONFIG_HAVENLAB_CHAT_NOTIFY]));
+        m_int_configs[CONFIG_HAVENLAB_CHAT_NOTIFY] = HAVENLAB_CHAT_NOTIFY_OFF;
+    }
+
+    m_int_configs[CONFIG_MOTHER_CONTAMINANT_MODE] = sConfigMgr->GetIntDefault("Mother.ContaminantMode", 0);
+    if (m_int_configs[CONFIG_MOTHER_CONTAMINANT_MODE] > 1)
+        m_int_configs[CONFIG_MOTHER_CONTAMINANT_MODE] = 0;
+    m_int_configs[CONFIG_MOTHER_REQUIRE_CURIOUS_CORRUPTION] = sConfigMgr->GetIntDefault("Mother.RequireCuriousCorruption", 1);
+
     m_int_configs[CONFIG_GM_LEVEL_IN_GM_LIST] = sConfigMgr->GetIntDefault("GM.InGMList.Level", SEC_ADMINISTRATOR);
     m_int_configs[CONFIG_GM_LEVEL_IN_WHO_LIST] = sConfigMgr->GetIntDefault("GM.InWhoList.Level", SEC_ADMINISTRATOR);
     m_int_configs[CONFIG_START_GM_LEVEL]        = sConfigMgr->GetIntDefault("GM.StartLevel", 1);

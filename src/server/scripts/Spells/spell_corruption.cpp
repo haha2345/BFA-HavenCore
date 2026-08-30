@@ -19,15 +19,15 @@
  * 8.3 corruption on-equip effects (ItemEffect), not CorruptionEffects.db2 negatives.
  *
  * Infinite Stars (35662):
- *   324889/90/91  腐蚀 - 无尽之星 1/2/3  (item wrapper)
- *   317257        hidden proc aura -> 317260
+ *   324889/90/91  contaminant-use spells (effect 223, Task 4)
+ *   317257        hidden proc aura -> 317260; aura 285 LINKED_2 applies this only
  *   317260        dummy selector (50 yd)
  *   317262        missile visual (in-game: .cast 317262 triggered)
  *   317265        stack aura on target; school damage BP is 0 so we fill it
- *   318274/487/488 rank 1/2/3 hidden drivers (dummy % of max(AP, SP))
+ *   318274/487/488 combat ranks 1/2/3
  *
- * Damage uses 318274/487/488 effect 2 dummy (83/208/312). Item-level
- * average(item) from aura 285 is not wired yet.
+ * Damage is each worn rank's EFFECT_0 CalcValue with that item's level,
+ * summed. Aura 285 is not a damage formula.
  *
  * Twilight Devastation (35662):
  *   318276/477/478  rank 1/2/3 (Aura 285 LINKED_2 -> 317147, dummy 60/120/180)
@@ -81,9 +81,9 @@
  *   318211          vers rating buff, 20s, no stacks, DBC BP=0 so we fill Scaled
  *
  * Gushing Wound (35662):
- *   318272          rank 1 (Aura 285 LINKED -> 318179). Coefficient is ilvl, P5
+ *   318272          rank 1 (Aura 285 LINKED -> 318179). Coefficient is EFFECT_0 CalcValue
  *   318179          hidden proc, RPPM 4 haste, yellow melee/ranged + hostile spells
- *   318187          target shadow bleed, 7s / 1s, BP=0; tick = Dummy13% of max(AP,SP)
+ *   318187          target shadow bleed, 7s / 1s, BP=0; tick amount from 318272 EFFECT_0
  *
  * Glimpse of Clarity (35662):
  *   318239          item wrapper (Aura 285 LINKED -> 315574)
@@ -150,7 +150,6 @@
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
-#include "RBAC.h"
 #include "Random.h"
 #include "ScriptedCreature.h"
 #include "ScriptMgr.h"
@@ -164,6 +163,7 @@
 #include "SpellScript.h"
 #include "Timer.h"
 #include "Unit.h"
+#include "World.h"
 #include "WorldSession.h"
 #include <algorithm>
 #include <cmath>
@@ -417,8 +417,6 @@ constexpr int32 ECHOING_VOID_RANK1_BP_FALLBACK = 40; // tooltip $s1/100 = 0.4% m
 constexpr uint32 ECHOING_VOID_PERIOD_FALLBACK_MS = 1000;
 constexpr int32 ECHOING_VOID_DURATION_SLACK_MS = 400;
 
-constexpr int32 TWISTED_APPENDAGE_RANK1_PCT_FALLBACK = 21; // tooltip $s2/100 * max(AP, SP)
-
 // DBC has ally count (2) but no radius. 8 yd is party-range "nearby".
 constexpr float VOID_RITUAL_ALLY_RANGE_YD = 8.0f;
 // SimC: solo RPPM *= 5/6. Not a DBC field — calibrate if in-game disagrees.
@@ -441,9 +439,6 @@ constexpr int32 DEADLY_MOMENTUM_RANK1_RATING_FALLBACK = 31;
 
 // Driver Base was hotfixed to 0. Rank-1 dump Scaled is 343. Do not use Icy Veins 312.
 constexpr int32 SURGING_VITALITY_RANK1_RATING_FALLBACK = 343;
-
-// 318187 EFFECT_1 Dummy is 13 after hotfix (was 10). Per-tick %, not divided by 7 ticks.
-constexpr int32 GUSHING_WOUND_TICK_PCT_FALLBACK = 13;
 
 // 315573 / 315574 Dummy is 3 seconds. Do not hardcode 3000 as the only value.
 constexpr int32 GLIMPSE_TRIM_MS_FALLBACK = 3000;
@@ -641,7 +636,6 @@ namespace
 // 35662 Spell dump fallbacks if GetEffect is missing.
 constexpr int32 INFINITE_STARS_VULN_PCT_FALLBACK = 25;
 constexpr float INFINITE_STARS_RANGE_FALLBACK    = 50.0f;
-constexpr int32 INFINITE_STARS_RANK1_PCT_FALLBACK = 83;
 
 uint32 InfiniteStarsRankSpell(Unit const* caster)
 {
@@ -679,15 +673,12 @@ float InfiniteStarsSelectRange()
     return INFINITE_STARS_RANGE_FALLBACK;
 }
 
+// 2020-01-23 hotfix: rank EFFECT_0 scales with the worn item's ilvl (Class -9).
+// EFFECT_1 Dummy percents are the pre-hotfix tooltip; do not multiply by AP/SP.
 int32 InfiniteStarsBaseDamage(Unit const* caster)
 {
-    float ap = std::max(caster->GetTotalAttackPowerValue(BASE_ATTACK), caster->GetTotalAttackPowerValue(RANGED_ATTACK));
-    float sp = float(caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE));
     uint32 const ranks[] = { SPELL_INFINITE_STARS_RANK_1, SPELL_INFINITE_STARS_RANK_2, SPELL_INFINITE_STARS_RANK_3 };
-    int32 pct = SumCorruptionRankDummy(caster, ranks, 3, EFFECT_1, true,
-        INFINITE_STARS_RANK1_PCT_FALLBACK, "InfiniteStars");
-
-    int32 damage = int32(std::max(ap, sp) * (float(pct) / 100.0f));
+    int32 damage = SumCorruptionRankDummy(caster, ranks, 3, EFFECT_0, true, 1, "InfiniteStars");
     return damage < 1 ? 1 : damage;
 }
 
@@ -732,9 +723,16 @@ void LabNotify(Unit* caster, char const* type, std::string const& kv)
     if (!player || !player->GetSession())
         return;
 
-    // IsGameMaster() is .gm on. Creatures skip GM-flagged players, so combat
-    // tests run with GM off. Same RBAC as .lab test; ordinary players stay quiet.
-    if (!player->GetSession()->HasPermission(rbac::RBAC_PERM_COMMAND_AURA))
+    // HavenLab.ChatNotify: player accounts never see lab chat. Mode 1 is the
+    // combat-test setting because IsGameMaster() (.gm on) makes creatures skip
+    // the player. Mode 2 is .gm on only. Unknown and 0 are off.
+    uint32 const notifyMode = sWorld->getIntConfig(CONFIG_HAVENLAB_CHAT_NOTIFY);
+    if (player->GetSession()->GetSecurity() <= SEC_PLAYER)
+        return;
+    bool const gmOn = player->IsGameMaster();
+    bool const allow = (notifyMode == HAVENLAB_CHAT_NOTIFY_STAFF_NORMAL && !gmOn)
+                    || (notifyMode == HAVENLAB_CHAT_NOTIFY_STAFF_GM_ON && gmOn);
+    if (!allow)
         return;
 
     if (kv.empty())
@@ -999,15 +997,11 @@ uint32 TwistedAppendageRankSpell(Unit const* owner)
     return SPELL_TWISTED_APPENDAGE_RANK_1;
 }
 
+// Same hotfix path as Infinite Stars: EFFECT_0 CalcValue per worn rank, not Dummy% * AP/SP.
 int32 TwistedAppendageTickDamage(Unit const* owner)
 {
-    float ap = std::max(owner->GetTotalAttackPowerValue(BASE_ATTACK), owner->GetTotalAttackPowerValue(RANGED_ATTACK));
-    float sp = float(owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW));
     uint32 const ranks[] = { SPELL_TWISTED_APPENDAGE_RANK_1, SPELL_TWISTED_APPENDAGE_RANK_2, SPELL_TWISTED_APPENDAGE_RANK_3 };
-    int32 pct = SumCorruptionRankDummy(owner, ranks, 3, EFFECT_1, true,
-        TWISTED_APPENDAGE_RANK1_PCT_FALLBACK, "TwistedAppendage");
-
-    int32 damage = int32(std::max(ap, sp) * (float(pct) / 100.0f));
+    int32 damage = SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, true, 1, "TwistedAppendage");
     return damage < 1 ? 1 : damage;
 }
 
@@ -1286,29 +1280,26 @@ void CastSurgingVitality(Unit* caster)
         "rating=%d ok=%u", rating, ok ? 1u : 0u));
 }
 
-int32 GushingWoundTickPct()
-{
-    if (SpellInfo const* dot = sSpellMgr->GetSpellInfo(SPELL_GUSHING_WOUND_DOT))
-        if (SpellEffectInfo const* effect = dot->GetEffect(EFFECT_1))
-            if (effect->BasePoints >= 1)
-                return effect->BasePoints;
-
-    static bool logged = false;
-    if (!logged)
-    {
-        logged = true;
-        TC_LOG_ERROR("scripts", "GushingWound: 318187 EFFECT_1 missing, using %d%%",
-            GUSHING_WOUND_TICK_PCT_FALLBACK);
-    }
-    return GUSHING_WOUND_TICK_PCT_FALLBACK;
-}
-
+// 318187 Dummy% * max(AP,SP) is the pre-hotfix tooltip. Tick amount is 318272 EFFECT_0.
 int32 GushingWoundTickDamage(Unit const* owner)
 {
-    float ap = std::max(owner->GetTotalAttackPowerValue(BASE_ATTACK), owner->GetTotalAttackPowerValue(RANGED_ATTACK));
-    float sp = float(owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW));
-    int32 damage = int32(std::max(ap, sp) * (float(GushingWoundTickPct()) / 100.0f));
-    return damage < 1 ? 1 : damage;
+    SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_GUSHING_WOUND_RANK);
+    SpellEffectInfo const* effect = info ? info->GetEffect(EFFECT_0) : nullptr;
+    if (!effect)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            TC_LOG_ERROR("scripts", "GushingWound: 318272 EFFECT_0 missing");
+        }
+        return 1;
+    }
+    uint32 itemId = 0;
+    int32 itemLevel = -1;
+    CorruptionRankItemContext(owner, SPELL_GUSHING_WOUND_RANK, itemId, itemLevel);
+    int32 value = effect->CalcValue(owner, nullptr, owner, nullptr, itemId, itemLevel);
+    return value < 1 ? 1 : value;
 }
 
 Unit* ResolveGushingWoundTarget(Unit* caster, ProcEventInfo& eventInfo)
@@ -3575,7 +3566,7 @@ class spell_gushing_wound_proc : public AuraScript
     }
 };
 
-// 318187 - target bleed. DBC BP=0; fill Dummy% of max(AP,SP). Do not divide by tick count.
+// 318187 - target bleed. DBC BP=0; fill 318272 EFFECT_0 CalcValue. Do not divide by tick count.
 class spell_gushing_wound_dot : public AuraScript
 {
     PrepareAuraScript(spell_gushing_wound_dot);
@@ -4385,4 +4376,5 @@ void AddSC_corruption_spell_scripts()
     for (uint32 id : nyalothaWeaponDump)
         LogCorruptionSpellInfo("NyalothaWeapons.dump", id);
     sDB2Manager.LogCorruptionItemBonusDump();
+    sDB2Manager.LogMotherContaminantDump();
 }
