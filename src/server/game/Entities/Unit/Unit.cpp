@@ -846,16 +846,24 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
         }
     }
 
-    // Rage from Damage made (only from direct weapon damage)
+    // Rage from auto-attack weapon damage. Use unhasted weapon speed so haste
+    // only changes swing frequency. Apply spec auras (Arms x4, War Machine)
+    // inside RewardRage; Seasoned Soldier is Arms crit-only.
     if (cleanDamage && (cleanDamage->attackType == BASE_ATTACK || cleanDamage->attackType == OFF_ATTACK) && damagetype == DIRECT_DAMAGE && this != victim && GetPowerType() == POWER_RAGE)
     {
-        uint32 rage = uint32(GetBaseAttackTime(cleanDamage->attackType) / 1000.f * 1.75f);
+        float rage = GetBaseAttackTime(cleanDamage->attackType) / 1000.f * 1.75f;
         if (cleanDamage->attackType == OFF_ATTACK)
-            rage /= 2;
+            rage *= 0.5f;
 
-        // Hackfix, find how to move to script ?
-        if (Aura* aura = GetAura(279423)/*Seasoned Soldier*/)
-            AddPct(rage, aura->GetEffect(EFFECT_0)->GetAmount());
+        if (Player* player = ToPlayer())
+        {
+            if (player->GetSpecializationId() == TALENT_SPEC_WARRIOR_ARMS
+                && cleanDamage->hitOutCome == MELEE_HIT_CRIT)
+            {
+                if (AuraEffect const* seasoned = GetAuraEffect(279423, EFFECT_0))
+                    AddPct(rage, seasoned->GetAmount());
+            }
+        }
 
         RewardRage(rage);
     }
@@ -1071,6 +1079,20 @@ bool Unit::CastSpell(SpellCastTargets const& targets, SpellInfo const* spellInfo
     if (value)
         for (CustomSpellValues::const_iterator itr = value->begin(); itr != value->end(); ++itr)
             spell->SetSpellValue(itr->first, itr->second);
+
+    if (triggerFlags != TRIGGERED_NONE)
+    {
+        if (Spell* parent = GetCurrentSpell(CURRENT_GENERIC_SPELL))
+        {
+            if (parent != spell)
+                spell->CopyCastContextFrom(parent);
+        }
+        else if (Spell* channeled = GetCurrentSpell(CURRENT_CHANNELED_SPELL))
+        {
+            if (channeled != spell)
+                spell->CopyCastContextFrom(channeled);
+        }
+    }
 
     spell->m_CastItem = castItem;
     return spell->prepare(&targets, triggeredByAura);
@@ -14019,7 +14041,7 @@ void Unit::SendRemoveFromThreatListOpcode(HostileReference* pHostileReference)
 }
 
 // baseRage means damage taken when attacker = false
-void Unit::RewardRage(uint32 baseRage)
+void Unit::RewardRage(float baseRage)
 {
     float addRage = baseRage;
 
@@ -14028,7 +14050,7 @@ void Unit::RewardRage(uint32 baseRage)
 
     addRage *= sWorld->getRate(RATE_POWER_RAGE_INCOME);
 
-    ModifyPower(POWER_RAGE, uint32(addRage * 10));
+    ModifyPower(POWER_RAGE, int32(std::lround(addRage * 10.f)));
 }
 
 void Unit::StopAttackFaction(uint32 faction_id)

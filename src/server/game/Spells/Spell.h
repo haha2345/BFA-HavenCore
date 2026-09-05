@@ -357,6 +357,31 @@ class TC_GAME_API Spell
     public:
         BfaCore::AnyData Variables;
 
+        // Allowlisted keys copied from a parent cast onto triggered children.
+        // PowerSpent.Rage is NOT copied: triggered spells skip TakePower, and
+        // Anger Management must not treat inherited payment as a second spend.
+        static constexpr char const* VAR_POWER_SPENT_RAGE    = "PowerSpent.Rage";
+        static constexpr char const* VAR_COST_TACTICIAN_RAGE = "Cost.TacticianRage";
+        static constexpr char const* VAR_COST_RAGE_AMOUNT    = "Cost.RageAmount";
+        static constexpr char const* VAR_COST_OPTIONAL_RAGE  = "Cost.OptionalRage";
+        static constexpr char const* VAR_DAMAGE_COST_RATIO   = "Damage.CostRatio";
+        static constexpr char const* VAR_CAST_ONCE_MASK      = "Cast.OnceMask";
+
+        enum CastOnceFlags : uint32
+        {
+            CAST_ONCE_TACTICIAN        = 0x01,
+            CAST_ONCE_EXECUTE_REFUND   = 0x02,
+            CAST_ONCE_DEEP_WOUNDS      = 0x04,
+            CAST_ONCE_SWEEPING_COPY    = 0x08,
+            CAST_ONCE_FERVOR_SLAM      = 0x10,
+            CAST_ONCE_ANGER_MANAGEMENT = 0x20,
+            CAST_ONCE_COLLATERAL       = 0x40
+        };
+
+        void CopyCastContextFrom(Spell const* parent);
+        bool TrySetOnceFlag(uint32 flag);
+        bool HasOnceFlag(uint32 flag) const;
+
         void EffectNULL(SpellEffIndex effIndex);
         void EffectUnused(SpellEffIndex effIndex);
         void EffectDistract(SpellEffIndex effIndex);

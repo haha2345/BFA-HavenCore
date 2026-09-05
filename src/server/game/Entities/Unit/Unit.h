@@ -2060,7 +2060,7 @@ class TC_GAME_API Unit : public WorldObject
         bool IsFalling() const;
         virtual bool CanSwim() const;
 
-        void RewardRage(uint32 baseRage);
+        void RewardRage(float baseRage);
 
         virtual float GetFollowAngle() const { return static_cast<float>(M_PI/2); }
 

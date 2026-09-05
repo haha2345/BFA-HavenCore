@@ -15,7 +15,7 @@
       "profiles/Tier25/T25_Warrior_Arms.simc"
     ],
     "focus": "压制重置、怒气消耗、斩杀缩放、重伤",
-    "status": "待逐项行为核对"
+    "status": "源码已改，待游戏验收"
   },
   {
     "class_name": "战士",

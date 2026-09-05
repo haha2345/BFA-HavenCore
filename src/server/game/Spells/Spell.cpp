@@ -4798,6 +4798,35 @@ void Spell::TakePower()
             }
         }
 
+        if (powerType == POWER_RAGE)
+        {
+            Variables.Set(VAR_COST_RAGE_AMOUNT, cost.Amount);
+            Variables.Set(VAR_COST_OPTIONAL_RAGE, cost.OptionalAmount);
+            if (!Variables.Exist(VAR_COST_TACTICIAN_RAGE))
+            {
+                int32 tacticianRage = cost.Amount;
+                // Deadly Calm / Sudden Death zero Amount through SPELLMOD_COST.
+                // Tactician still uses the unmodified rage cost of the ability.
+                if (tacticianRage <= 0)
+                {
+                    for (SpellPowerEntry const* power : m_spellInfo->PowerCosts)
+                    {
+                        if (!power || power->PowerType != POWER_RAGE)
+                            continue;
+
+                        tacticianRage = power->ManaCost;
+                        if (power->OptionalCost)
+                        {
+                            int32 remaining = m_caster->GetPower(POWER_RAGE) - power->ManaCost;
+                            tacticianRage += RoundToInterval(remaining, 0, int32(power->OptionalCost));
+                        }
+                        break;
+                    }
+                }
+                Variables.Set(VAR_COST_TACTICIAN_RAGE, tacticianRage);
+            }
+        }
+
         CallScriptOnTakePowerHandlers(cost);
 
         if (powerType == POWER_RUNES)
@@ -4831,7 +4860,7 @@ void Spell::TakePower()
         // Keep the paid rage on this cast, before later effects can refund or
         // generate rage. Free/triggered casts that skip TakePower have no entry.
         if (powerType == POWER_RAGE)
-            Variables.Set("PowerSpent.Rage", Variables.GetValue<int32>("PowerSpent.Rage", 0)
+            Variables.Set(VAR_POWER_SPENT_RAGE, Variables.GetValue<int32>(VAR_POWER_SPENT_RAGE, 0)
                 + std::max<int32>(0, powerBefore - m_caster->GetPower(powerType)));
     }
 }
@@ -7333,6 +7362,50 @@ bool Spell::CheckEffectTarget(Item const* /*target*/, SpellEffectInfo const* eff
 bool Spell::IsTriggered() const
 {
     return (_triggeredCastFlags & TRIGGERED_FULL_MASK) != 0;
+}
+
+void Spell::CopyCastContextFrom(Spell const* parent)
+{
+    if (!parent || parent == this)
+        return;
+
+    auto copyInt32 = [this, parent](char const* key)
+    {
+        if (parent->Variables.Exist(key))
+            Variables.Set(key, parent->Variables.GetValue<int32>(key, 0));
+    };
+    auto copyUInt32 = [this, parent](char const* key)
+    {
+        if (parent->Variables.Exist(key))
+            Variables.Set(key, parent->Variables.GetValue<uint32>(key, 0u));
+    };
+    auto copyFloat = [this, parent](char const* key)
+    {
+        if (parent->Variables.Exist(key))
+            Variables.Set(key, parent->Variables.GetValue<float>(key, 1.f));
+    };
+
+    copyInt32(VAR_COST_TACTICIAN_RAGE);
+    copyInt32(VAR_COST_RAGE_AMOUNT);
+    copyInt32(VAR_COST_OPTIONAL_RAGE);
+    copyInt32(VAR_POWER_SPENT_RAGE);
+    copyFloat(VAR_DAMAGE_COST_RATIO);
+    copyUInt32(VAR_CAST_ONCE_MASK);
+}
+
+bool Spell::TrySetOnceFlag(uint32 flag)
+{
+    uint32 const mask = Variables.GetValue<uint32>(VAR_CAST_ONCE_MASK, 0u);
+    if (mask & flag)
+        return false;
+
+    Variables.Set(VAR_CAST_ONCE_MASK, mask | flag);
+    return true;
+}
+
+bool Spell::HasOnceFlag(uint32 flag) const
+{
+    return (Variables.GetValue<uint32>(VAR_CAST_ONCE_MASK, 0u) & flag) != 0;
 }
 
 bool Spell::IsIgnoringCooldowns() const

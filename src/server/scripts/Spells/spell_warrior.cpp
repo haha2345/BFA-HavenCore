@@ -68,6 +68,20 @@ enum WarriorSpells
     SPELL_WARRIOR_DEEP_WOUNDS_RANK_2                = 12850,
     SPELL_WARRIOR_DEEP_WOUNDS_RANK_3                = 12868,
     SPELL_WARRIOR_DEEP_WOUNDS_RANK_PERIODIC         = 12721,
+    SPELL_WARRIOR_DEEP_WOUNDS_PASSIVE               = 262304,
+    SPELL_WARRIOR_DEEP_WOUNDS_DOT                   = 262115,
+    SPELL_WARRIOR_EXECUTE_DAMAGE                    = 260798,
+    SPELL_WARRIOR_EXECUTE_REFUND                    = 231830,
+    SPELL_WARRIOR_SUDDEN_DEATH_ARMS                 = 29725,
+    SPELL_WARRIOR_SUDDEN_DEATH_ARMS_BUFF            = 52437,
+    SPELL_WARRIOR_DEADLY_CALM                       = 262228,
+    SPELL_WARRIOR_SWEEPING_STRIKES                   = 260708,
+    SPELL_WARRIOR_COLLATERAL_DAMAGE                 = 268243,
+    SPELL_WARRIOR_MASSACRE_ARMS                     = 281001,
+    SPELL_WARRIOR_FERVOR_OF_BATTLE                  = 202316,
+    SPELL_WARRIOR_OVERPOWER                         = 7384,
+    SPELL_WARRIOR_CLEAVE                            = 845,
+    SPELL_WARRIOR_SKULLSPLITTER                     = 260643,
     SPELL_WARRIOR_DEVASTATE                         = 20243,
     SPELL_WARRIOR_DOUBLE_TIME                       = 103827,
     SPELL_WARRIOR_DRAGON_ROAR_KNOCK_BACK            = 118895,
@@ -114,7 +128,7 @@ enum WarriorSpells
     SPELL_WARRIOR_OPPORTUNITY_STRIKE_DAMAGE         = 76858,
     SPELL_WARRIOR_OVERPOWER_PROC                    = 60503,
     SPELL_WARRIOR_RALLYING_CRY                      = 97462,
-    SPELL_WARRIOR_RALLYING_CRY_TRIGGER              = 97462,
+    SPELL_WARRIOR_RALLYING_CRY_TRIGGER              = 97463,
     SPELL_WARRIOR_RAMPAGE                           = 184367,
     SPELL_WARRIOR_RAVAGER                           = 152277,
     SPELL_WARRIOR_RAVAGER_DAMAGE                    = 156287,
@@ -211,6 +225,58 @@ enum MiscSpells
 {
     SPELL_VISUAL_BLAZING_CHARGE                     = 26423,
 };
+
+namespace
+{
+bool IsArmsWarrior(Unit const* unit)
+{
+    Player const* player = unit ? unit->ToPlayer() : nullptr;
+    return player && player->GetSpecializationId() == TALENT_SPEC_WARRIOR_ARMS;
+}
+
+void ApplyArmsDeepWounds(Unit* caster, Unit* target)
+{
+    if (!caster || !target || !caster->HasAura(SPELL_WARRIOR_DEEP_WOUNDS_PASSIVE))
+        return;
+
+    caster->CastSpell(target, SPELL_WARRIOR_DEEP_WOUNDS_DOT, true);
+}
+
+void ApplyArmsSweepingStrikesHit(SpellScript* script)
+{
+    Unit* caster = script->GetCaster();
+    Unit* hit = script->GetHitUnit();
+    if (!caster || !hit)
+        return;
+
+    Aura* sweeping = caster->GetAura(SPELL_WARRIOR_SWEEPING_STRIKES);
+    if (!sweeping)
+        return;
+
+    Unit* main = script->GetExplTargetUnit();
+    if (!main || hit == main)
+        return;
+
+    if (AuraEffect const* pct = sweeping->GetEffect(EFFECT_1))
+        script->SetHitDamage(CalculatePct(script->GetHitDamage(), pct->GetAmount()));
+
+    if (caster->HasAura(SPELL_WARRIOR_COLLATERAL_DAMAGE) && script->GetSpell()->TrySetOnceFlag(Spell::CAST_ONCE_COLLATERAL))
+    {
+        int32 paid = script->GetSpell()->Variables.GetValue<int32>(Spell::VAR_POWER_SPENT_RAGE, 0);
+        if (paid <= 0)
+            paid = script->GetSpell()->Variables.GetValue<int32>(Spell::VAR_COST_TACTICIAN_RAGE, 0);
+        if (AuraEffect const* collateral = caster->GetAuraEffect(SPELL_WARRIOR_COLLATERAL_DAMAGE, EFFECT_0))
+            if (collateral->GetAmount() > 0 && paid > 0)
+                caster->ModifyPower(POWER_RAGE, CalculatePct(paid, collateral->GetAmount()));
+    }
+}
+
+bool HasFreeArmsExecute(Unit const* caster)
+{
+    return caster && (caster->HasAura(SPELL_WARRIOR_SUDDEN_DEATH_ARMS_BUFF)
+        || caster->HasAura(SPELL_WARRIOR_DEADLY_CALM));
+}
+}
 
 // 97462 Commanding Shout 7.3.5
 class spell_warr_commanding_shout : public SpellScript
@@ -582,6 +648,9 @@ public:
             if (!GetCaster())
                 return;
 
+            ApplyArmsDeepWounds(GetCaster(), GetHitUnit());
+            ApplyArmsSweepingStrikesHit(this);
+
             uint32 spellId = 0;
             if (GetCaster()->HasAura(SPELL_WARRIOR_UNRELENTING_ASSAULT_RANK_1))
                 spellId = SPELL_WARRIOR_UNRELENTING_ASSAULT_TRIGGER_1;
@@ -592,7 +661,7 @@ public:
                 return;
 
             if (Player* target = GetHitPlayer())
-                if (target->IsNonMeleeSpellCast(false, false, true)) // UNIT_STATE_CASTING should not be used here, it's present during a tick for instant casts
+                if (target->IsNonMeleeSpellCast(false, false, true))
                     target->CastSpell(target, spellId, true);
         }
 
@@ -620,6 +689,11 @@ public:
 
         void CalculateAmount(AuraEffect const* aurEff, int32& amount, bool& canBeRecalculated)
         {
+            // 8.3 Rend (772) stores AP coefficients on the spell. The WotLK
+            // weapon-speed formula must not stack on top of that.
+            if (GetId() == 772)
+                return;
+
             if (Unit* caster = GetCaster())
             {
                 canBeRecalculated = false;
@@ -684,7 +758,7 @@ class spell_warr_slam : public SpellScript
 
     void HandleOnHit()
     {
-        return;
+        ApplyArmsSweepingStrikesHit(this);
     }
 
     void Register() override
@@ -813,6 +887,11 @@ public:
 
         bool CheckProc(ProcEventInfo& eventInfo)
         {
+            // 8.3 Sweeping Strikes (260708) adds a second target through
+            // SPELLMOD_JUMP_TARGETS. Do not recast legacy extra-attack spells.
+            if (GetId() == SPELL_WARRIOR_SWEEPING_STRIKES)
+                return false;
+
             _procTarget = eventInfo.GetActor()->SelectNearbyTarget(eventInfo.GetProcTarget());
             return _procTarget != nullptr;
         }
@@ -1060,6 +1139,8 @@ public:
                 if (Unit* target = GetHitUnit())
                 {
                     _player->CastCustomSpell(SPELL_WARRIOR_COLOSSUS_SMASH_BUFF, SPELLVALUE_BASE_POINT0, 15.0f + _player->m_activePlayerData->Mastery, target, true);
+                    ApplyArmsDeepWounds(_player, target);
+                    ApplyArmsSweepingStrikesHit(this);
                 }
 
             if (Unit* caster = GetCaster())
@@ -1128,14 +1209,18 @@ public:
 
         void HandleOnHit()
         {
-            // Fix Apply Mortal strike buff on player only if he has the correct glyph
             if (Unit* caster = GetCaster())
             {
                 if (Unit* target = GetHitUnit())
                 {
                     caster->CastSpell(target, 115804, true); // Mortal Wounds
+                    ApplyArmsDeepWounds(caster, target);
+                    ApplyArmsSweepingStrikesHit(this);
                 }
-                caster->RemoveAurasDueToSpell(7384); // Mortal Strike buff
+                // Consume Overpower's damage aura after Mortal Strike has rolled
+                // with the current stacks. Leave WotLK Unrelenting Assault alone.
+                if (IsArmsWarrior(caster))
+                    caster->RemoveAurasDueToSpell(SPELL_WARRIOR_OVERPOWER);
             }
         }
 
@@ -1403,6 +1488,7 @@ class spell_warr_victory_rush : public SpellScript
         {
             caster->CastSpell(nullptr, 118779, true);
             caster->RemoveAura(SPELL_WARRIOR_VICTORIOUS);
+            ApplyArmsSweepingStrikesHit(this);
         }
     }
 
@@ -2099,6 +2185,7 @@ class spell_warr_impending_victory : public SpellScript
     {
         Unit* caster = GetCaster();
         caster->CastSpell(caster, 202166, true);
+        ApplyArmsSweepingStrikesHit(this);
     }
 
     void Register() override
@@ -2417,28 +2504,35 @@ public:
         void HandleEffectProc(AuraEffect const* aurEff, ProcEventInfo& procInfo)
         {
             PreventDefaultAction();
-            int32 rageSpent = 0;
 
-            if (Unit* caster = GetCaster())
+            Spell* procSpell = const_cast<Spell*>(procInfo.GetProcSpell());
+            if (!procSpell)
+                return;
+
+            // Copies, periodic ticks, and extra-attack recasts do not roll again.
+            // Execute damage (260798) is triggered from 163201 and is the hit
+            // that actually procs; other triggered children inherit cost but
+            // must not roll a second time.
+            if (procSpell->HasOnceFlag(Spell::CAST_ONCE_SWEEPING_COPY))
+                return;
+            if (procSpell->IsTriggered() && procSpell->GetSpellInfo()->Id != SPELL_WARRIOR_EXECUTE_DAMAGE)
+                return;
+
+            if (!procSpell->TrySetOnceFlag(Spell::CAST_ONCE_TACTICIAN))
+                return;
+
+            Unit* caster = GetCaster();
+            if (!caster)
+                return;
+
+            int32 rageSpent = procSpell->Variables.GetValue<int32>(Spell::VAR_COST_TACTICIAN_RAGE, 0);
+            if (rageSpent <= 0)
+                return;
+
+            if (roll_chance_f((rageSpent / 10.0f) * aurEff->GetAmount() / 100.0f))
             {
-                if (procInfo.GetSpellInfo())
-                {
-                    for (SpellPowerCost cost : procInfo.GetSpellInfo()->CalcPowerCost(caster, procInfo.GetSpellInfo()->GetSchoolMask()))
-                    {
-                        if (cost.Power != POWER_RAGE)
-                            continue;
-
-                        rageSpent = cost.Amount;
-                    }
-
-                    if (roll_chance_f((rageSpent / 10.0f) * aurEff->GetAmount() / 100.0f))
-                    {
-                        // 8.3 Tactician restores Overpower, not the Legion
-                        // Colossus Smash / Mortal Strike cooldowns.
-                        if (SpellInfo const* overpower = sSpellMgr->GetSpellInfo(7384))
-                            caster->GetSpellHistory()->RestoreCharge(overpower->ChargeCategoryId);
-                    }
-                }
+                if (SpellInfo const* overpower = sSpellMgr->GetSpellInfo(SPELL_WARRIOR_OVERPOWER))
+                    caster->GetSpellHistory()->RestoreCharge(overpower->ChargeCategoryId);
             }
         }
 
@@ -2621,7 +2715,7 @@ class spell_warr_ravager_damage : public SpellScript
             _alreadyProc = true;
         }
         if (GetCaster()->HasAura(262304)) // Deep Wounds
-            GetCaster()->CastSpell(GetHitUnit(), 262115, true); // Deep Wounds
+            ApplyArmsDeepWounds(GetCaster(), GetHitUnit());
     }
 
     void Register() override
@@ -2640,30 +2734,84 @@ class spell_warr_execute : public SpellScript
 {
     PrepareSpellScript(spell_warr_execute);
 
-    float m_powerTaken = 0.f;
+    SpellCastResult CheckCast()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetExplTargetUnit();
+        if (!caster || !target)
+            return SPELL_FAILED_BAD_TARGETS;
+
+        if (HasFreeArmsExecute(caster) || caster->HasAura(SPELL_WARRIOR_SUDDEN_DEATH_PROC))
+            return SPELL_CAST_OK;
+
+        int32 threshold = 20;
+        if (AuraEffect const* massacre = caster->GetAuraEffect(SPELL_WARRIOR_MASSACRE_ARMS, EFFECT_1))
+            threshold = massacre->GetAmount();
+
+        if (!target->HealthBelowPct(threshold))
+            return SPELL_FAILED_BAD_TARGETS;
+
+        return SPELL_CAST_OK;
+    }
 
     void HandleTakePower(SpellPowerCost& powerCost)
     {
-        m_powerTaken = powerCost.Amount;
-        uint32 requiredAmount = powerCost.Amount - powerCost.OptionalAmount;
-        float dmgMultiplier = powerCost.Amount / (requiredAmount ? requiredAmount : 1);
-        GetCaster()->Variables.Set("spell_warr_execute_damages::multiplier", dmgMultiplier);
+        int32 requiredAmount = powerCost.Amount - powerCost.OptionalAmount;
+        if (requiredAmount <= 0)
+            requiredAmount = powerCost.Amount;
+
+        bool const freeExecute = HasFreeArmsExecute(GetCaster()) || GetCaster()->HasAura(SPELL_WARRIOR_SUDDEN_DEATH_PROC);
+        int32 tacticianRage = powerCost.Amount;
+        float dmgMultiplier = 1.f;
+
+        if (freeExecute)
+        {
+            int32 fullCost = requiredAmount + powerCost.OptionalAmount;
+            if (fullCost <= 0)
+                fullCost = powerCost.Amount;
+            if (fullCost <= 0)
+            {
+                for (SpellPowerEntry const* power : GetSpellInfo()->PowerCosts)
+                {
+                    if (power && power->PowerType == POWER_RAGE)
+                    {
+                        fullCost = power->ManaCost + int32(power->OptionalCost);
+                        requiredAmount = power->ManaCost;
+                        break;
+                    }
+                }
+            }
+            if (requiredAmount <= 0)
+                requiredAmount = 1;
+            dmgMultiplier = float(fullCost) / float(requiredAmount);
+            tacticianRage = fullCost;
+            powerCost.Amount = 0;
+        }
+        else if (requiredAmount > 0)
+            dmgMultiplier = float(powerCost.Amount) / float(requiredAmount);
+
+        Spell* spell = GetSpell();
+        spell->Variables.Set(Spell::VAR_DAMAGE_COST_RATIO, dmgMultiplier);
+        spell->Variables.Set(Spell::VAR_COST_TACTICIAN_RAGE, tacticianRage);
+        spell->Variables.Set(Spell::VAR_COST_OPTIONAL_RAGE, powerCost.OptionalAmount);
+        GetCaster()->Variables.Remove("spell_warr_execute_damages::multiplier");
     }
 
-    void HandleAfterHit()
+    void HandleAfterCast()
     {
-        if (Unit* target = GetHitUnit())
-            if (target->IsAlive())
-                GetCaster()->ModifyPower(POWER_RAGE, CalculatePct(m_powerTaken, GetEffectInfo(EFFECT_1)->BasePoints));
-
-        GetCaster()->Variables.Remove("spell_warr_execute_damages::multiplier");
-        GetCaster()->RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH);
+        if (Unit* caster = GetCaster())
+        {
+            caster->RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH_ARMS_BUFF);
+            if (!IsArmsWarrior(caster))
+                caster->RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH);
+        }
     }
 
     void Register() override
     {
+        OnCheckCast += SpellCheckCastFn(spell_warr_execute::CheckCast);
         OnTakePower += SpellOnTakePowerFn(spell_warr_execute::HandleTakePower);
-        AfterHit += SpellHitFn(spell_warr_execute::HandleAfterHit);
+        AfterCast += SpellCastFn(spell_warr_execute::HandleAfterCast);
     }
 };
 
@@ -2674,13 +2822,46 @@ class spell_warr_execute_damages : public SpellScript
 
     void HandleDamage(SpellEffIndex /*effIndex*/)
     {
-        float damageMultiplier = GetCaster()->Variables.GetValue<float>("spell_warr_execute_damages::multiplier", 1.f);
-        SetHitDamage(GetHitDamage() * damageMultiplier);
+        float damageMultiplier = GetSpell()->Variables.GetValue<float>(Spell::VAR_DAMAGE_COST_RATIO, 1.f);
+        SetHitDamage(int32(GetHitDamage() * damageMultiplier));
+        ApplyArmsDeepWounds(GetCaster(), GetHitUnit());
+        ApplyArmsSweepingStrikesHit(this);
+    }
+
+    void HandleAfterHit()
+    {
+        Unit* caster = GetCaster();
+        Unit* original = GetExplTargetUnit();
+        if (!caster || !original || !original->IsAlive())
+            return;
+
+        if (!GetSpell()->TrySetOnceFlag(Spell::CAST_ONCE_EXECUTE_REFUND))
+            return;
+
+        if (!caster->HasAura(SPELL_WARRIOR_EXECUTE_REFUND))
+        {
+            Player* player = caster->ToPlayer();
+            if (!player || !player->HasSpell(SPELL_WARRIOR_EXECUTE_REFUND))
+                return;
+        }
+
+        int32 paid = GetSpell()->Variables.GetValue<int32>(Spell::VAR_POWER_SPENT_RAGE, 0);
+        if (paid <= 0)
+            return;
+
+        int32 pct = 20;
+        if (SpellInfo const* execute = sSpellMgr->GetSpellInfo(SPELL_WARRIOR_EXECUTE))
+            if (SpellEffectInfo const* eff = execute->GetEffect(EFFECT_1))
+                pct = eff->BasePoints;
+
+        if (pct > 0)
+            caster->ModifyPower(POWER_RAGE, CalculatePct(paid, pct));
     }
 
     void Register() override
     {
         OnEffectHitTarget += SpellEffectFn(spell_warr_execute_damages::HandleDamage, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+        AfterHit += SpellHitFn(spell_warr_execute_damages::HandleAfterHit);
     }
 };
 
@@ -2796,6 +2977,7 @@ class spell_warr_warbreaker : public SpellScript
         {
             if (Unit* target = GetHitUnit())
                 caster->CastSpell(target, SPELL_WARRIOR_COLOSSUS_SMASH_BUFF, true);
+            ApplyArmsDeepWounds(caster, GetHitUnit());
         }
     }
 
@@ -2839,14 +3021,15 @@ class spell_warr_wirlwind_dmg : public SpellScript
     {
         if (Player* caster = GetCaster()->ToPlayer())
         {
-            if (caster->HasAura(202316)) // Fervor of Battle
+            if (caster->HasAura(SPELL_WARRIOR_FERVOR_OF_BATTLE))
             {
+                if (!GetSpell()->TrySetOnceFlag(Spell::CAST_ONCE_FERVOR_SLAM))
+                    return;
+
                 if (Unit* target = caster->GetSelectedUnit())
                 {
                     if (caster->IsValidAttackTarget(target))
-                    {
                         caster->CastSpell(target, SPELL_WARRIOR_SLAM_ARMS, true);
-                    }
                 }
             }
         }
@@ -2900,8 +3083,15 @@ public:
         if (player->GetSpecializationId() != TALENT_SPEC_WARRIOR_ARMS)
             return;
 
+        if (spell->IsTriggered() || spell->HasOnceFlag(Spell::CAST_ONCE_SWEEPING_COPY)
+            || spell->HasOnceFlag(Spell::CAST_ONCE_ANGER_MANAGEMENT))
+            return;
+
+        if (!spell->TrySetOnceFlag(Spell::CAST_ONCE_ANGER_MANAGEMENT))
+            return;
+
         AuraEffect const* anger = player->GetAuraEffect(SPELL_WARRIOR_ANGER_MANAGEMENT, EFFECT_0);
-        int32 const paidRage = spell->Variables.GetValue<int32>("PowerSpent.Rage", 0);
+        int32 const paidRage = spell->Variables.GetValue<int32>(Spell::VAR_POWER_SPENT_RAGE, 0);
         if (!anger || anger->GetAmount() <= 0 || paidRage <= 0)
             return;
 
@@ -2962,7 +3152,10 @@ class spell_warr_sudden_death : public AuraScript
 
     void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
     {
-        GetTarget()->CastSpell(GetTarget(), SPELL_WARRIOR_SUDDEN_DEATH_PROC, true);
+        uint32 buffId = GetId() == SPELL_WARRIOR_SUDDEN_DEATH_ARMS
+            ? SPELL_WARRIOR_SUDDEN_DEATH_ARMS_BUFF
+            : SPELL_WARRIOR_SUDDEN_DEATH_PROC;
+        GetTarget()->CastSpell(GetTarget(), buffId, true);
     }
 
     void Register() override
@@ -3108,6 +3301,55 @@ class spell_defensive_state : public AuraScript
     }
 };
 
+// 50622 - Bladestorm periodic damage
+class spell_warr_bladestorm_periodic_damage : public SpellScript
+{
+    PrepareSpellScript(spell_warr_bladestorm_periodic_damage);
+
+    void HandleOnHit()
+    {
+        ApplyArmsDeepWounds(GetCaster(), GetHitUnit());
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_warr_bladestorm_periodic_damage::HandleOnHit);
+    }
+};
+
+// 845 - Cleave
+class spell_warr_cleave : public SpellScript
+{
+    PrepareSpellScript(spell_warr_cleave);
+
+    void HandleOnHit()
+    {
+        ApplyArmsDeepWounds(GetCaster(), GetHitUnit());
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_warr_cleave::HandleOnHit);
+    }
+};
+
+// 260643 - Skullsplitter
+class spell_warr_skullsplitter : public SpellScript
+{
+    PrepareSpellScript(spell_warr_skullsplitter);
+
+    void HandleOnHit()
+    {
+        ApplyArmsDeepWounds(GetCaster(), GetHitUnit());
+        ApplyArmsSweepingStrikesHit(this);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_warr_skullsplitter::HandleOnHit);
+    }
+};
+
 void AddSC_warrior_spell_scripts()
 {
     new spell_warr_avatar();
@@ -3188,4 +3430,7 @@ void AddSC_warrior_spell_scripts()
     RegisterPlayerScript(war_machine);
     RegisterCreatureAI(npc_warr_banner);
     RegisterAuraScript(spell_defensive_state);
+    RegisterSpellScript(spell_warr_bladestorm_periodic_damage);
+    RegisterSpellScript(spell_warr_cleave);
+    RegisterSpellScript(spell_warr_skullsplitter);
 }
