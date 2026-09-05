@@ -58,7 +58,6 @@ struct boss_king_gobbamak : public BossAI
         DoCastSelf(SPELL_PERIODIC_ENERGY_GAIN);
         events.ScheduleEvent(EVENT_ELECTRICAL_CHARGE, 3s);
         events.ScheduleEvent(EVENT_RUMBLE, 8s);
-        events.ScheduleEvent(EVENT_CHARGED_SMASH, 12s);
         events.ScheduleEvent(EVENT_GETEM, 17s);
     }
 
@@ -147,16 +146,13 @@ struct boss_king_gobbamak : public BossAI
             Talk(SAY_GETEM);
             me->GetScheduler().Schedule(3s, [this] (TaskContext context)
             {
-                for (uint8 i = 0; i < 4; i++)
-                {
-                    pack_counter++;
-                    me->SummonCreature(NPC_SCRAPBONE_GRUNTER, cave_pos, TEMPSUMMON_MANUAL_DESPAWN);
-                }                
+                me->SummonCreature(NPC_SCRAPBONE_GRUNTER, me->GetRandomPoint(cave_pos, 5.0f), TEMPSUMMON_MANUAL_DESPAWN);
+                pack_counter++;
 
                 if (this->pack_counter < 4)
                     context.Repeat(3s);
-
-                else this->pack_counter = 0;
+                else
+                    this->pack_counter = 0;
             });
             events.Repeat(25s);
             break;
@@ -192,7 +188,7 @@ struct npc_stolen_scrapbot : public ScriptedAI
     {
         events.Update(diff);
 
-        if (Creature* gobbamak = me->FindNearestCreature(NPC_SCRAPBONE_GRUNTER, 30.0f, true))
+        if (Creature* gobbamak = me->FindNearestCreature(NPC_KING_GOBBAMAK, 30.0f, true))
         {
             if (gobbamak->IsInCombat())
             {
@@ -246,7 +242,7 @@ struct npc_stolen_shock_coil : public ScriptedAI
     {
         events.Update(diff);
 
-        if (Creature* gobbamak = me->FindNearestCreature(NPC_SCRAPBONE_GRUNTER, 30.0f, true))
+        if (Creature* gobbamak = me->FindNearestCreature(NPC_KING_GOBBAMAK, 30.0f, true))
         {
             if (gobbamak->IsInCombat())
             {

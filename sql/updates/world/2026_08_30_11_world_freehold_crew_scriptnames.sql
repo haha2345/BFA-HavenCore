@@ -1,0 +1,11 @@
+-- 837 blizzlike: Bind crew-event ScriptName by creature.guid only; never UPDATE creature_template for 129547.
+
+-- This round only inserted guid 280003427 (Rummy). Template ScriptName is already npc_rummy_mancomb;
+-- creature.ScriptName stays empty so ObjectMgr falls back to the template. Do not rename that template.
+-- guid 280003425 / 426 / 428 / 429 / 430 were not inserted (week IDs and brew entry still unset). After the user
+-- confirms those IDs and the spawn file inserts the rows, run:
+-- UPDATE `creature` SET `ScriptName`='npc_freehold_crew_knuckleduster' WHERE `guid` IN (280003428, 280003429);
+-- UPDATE `creature` SET `ScriptName`='npc_freehold_murphy' WHERE `guid`=280003425;
+-- UPDATE `creature` SET `ScriptName`='npc_freehold_otis' WHERE `guid`=280003426;
+-- UPDATE `creature` SET `ScriptName`='npc_freehold_crew_brew' WHERE `guid`=280003430;
+-- 已由 21 号落地（2026_08_30_21_world_freehold_crew_week.sql）。

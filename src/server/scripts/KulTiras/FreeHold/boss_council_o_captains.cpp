@@ -25,9 +25,11 @@
 #include "Map.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
+#include "ObjectDefines.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
+#include "ScriptedGossip.h"
 #include "SpellInfo.h"
 #include "SpellScript.h"
 #include "TemporarySummon.h"
@@ -79,7 +81,7 @@ enum CouncilCaptainEvents
     ///Heroic Difficulty
     EventLaunchBrew,
     ///Check Player
-    EventCheckPlayers ///Is necesary because whit a captain friendly never end the fight
+    EventCheckPlayers /// wipe: evade if no living players remain in combat
 };
 
 enum CouncilCaptainAction
@@ -172,7 +174,7 @@ struct npc_captains_controller : public ScriptedAI
     {
         if (instance)
         {
-            if (captainsDeathCount > 2 && instance->GetBossState(FreeholdData::DataCounciloCaptains) != DONE)
+            if (captainsDeathCount >= 2 && instance->GetBossState(FreeholdData::DataCounciloCaptains) != DONE)
             {
                 if (!summonChest)
                 {
@@ -200,7 +202,6 @@ struct boss_council_captain : public BossAI
     boss_council_captain(Creature* creature) : BossAI(creature, FreeholdData::DataCounciloCaptains)
     {
         m_Instance = creature->GetInstanceScript();
-        captainRaoulActivated = false;
         reset = false;
     }
 
@@ -256,7 +257,10 @@ struct boss_council_captain : public BossAI
 
         AddTimedDelayedOperation(3 * TimeConstants::IN_MILLISECONDS, [this]() -> void
             {
-                if (captainRaoulActivated && me->GetEntry() == FreeholdCreature::NpcCaptainRaoul)
+                // Reset always sets FactionEnemy first; restore friendly from instance GetData
+                // (same memory-only source OnPlayerEnter uses). Not a Raoul-only bool.
+                if (instance && instance->GetData(uint32(FreeholdData::DataCrewEventDone)) != 0
+                    && instance->GetData(uint32(FreeholdData::DataFriendlyCaptain)) == me->GetEntry())
                 {
                     me->SetFaction(FreeHoldFaction::FactionFriendlyFake);
                     me->RemoveAura(CouncilCaptainSpells::UnderOneBanner);
@@ -310,6 +314,11 @@ struct boss_council_captain : public BossAI
         }
         me->setActive(true);
         CaptainEnterCombat();
+        if (IsFreeholdHeroicPlus(me->GetMap()))
+        {
+            if (Creature* rummy = me->FindNearestCreature(uint32(FreeholdCreature::NpcRummyMancomb), 80.f))
+                rummy->AI()->DoAction(CouncilCaptainAction::ActionStartLaunchBrew);
+        }
         reset = true;
 
         switch (me->GetEntry())
@@ -359,20 +368,34 @@ struct boss_council_captain : public BossAI
 
     void DoAction(int32 const action) override
     {
-        if (action == FreeholdAction::ActionSelectCaptainRaoul)
+        bool selected = false;
+        switch (action)
         {
-            if (me->GetEntry() == FreeholdCreature::NpcCaptainRaoul)
-            {
-                me->SetFaction(FreeHoldFaction::FactionFriendlyFake);
-                checkFaction();
-                captainRaoulActivated = true;
-            }
+        case FreeholdAction::ActionSelectCaptainRaoul:
+            selected = me->GetEntry() == uint32(FreeholdCreature::NpcCaptainRaoul);
+            break;
+        case FreeholdAction::ActionSelectCaptainJolly:
+            selected = me->GetEntry() == uint32(FreeholdCreature::NpcCaptainJolly);
+            break;
+        case FreeholdAction::ActionSelectCaptainEudora:
+            selected = me->GetEntry() == uint32(FreeholdCreature::NpcCaptainEudora);
+            break;
+        default:
+            break;
+        }
+
+        if (selected)
+        {
+            me->SetFaction(FreeHoldFaction::FactionFriendlyFake);
+            checkFaction();
         }
     }
     
-     Creature* GetController()
+    Creature* GetController()
     {
-        return me->FindNearestCreature(NpcCaptainsController, 500.0f);
+        if (!instance)
+            return nullptr;
+        return ObjectAccessor::GetCreature(*me, instance->GetGuidData(DataCaptainsController));
     }
 
     void JustDied(Unit* /*killer*/) override
@@ -390,7 +413,10 @@ struct boss_council_captain : public BossAI
             break;
         }
         }
-        
+
+        if (me->getFaction() == FreeHoldFaction::FactionFriendlyFake)
+            return;
+
         if (Creature* controller = GetController())
         {
             controller->AI()->DoAction(ACTION_COUNT_DEATHS);
@@ -582,7 +608,6 @@ struct boss_council_captain : public BossAI
     }
 
 private:
-    bool captainRaoulActivated;
     bool resetFight;
     bool evadeModeActivated;
     bool reset;
@@ -644,14 +669,12 @@ private:
                         else
                             jolly->AI()->AttackStart(eudora);
                     }
-                    else if (raoul->getFaction() == FreeHoldFaction::FactionFriendlyFake)
+                    else if (eudora->getFaction() == FreeHoldFaction::FactionFriendlyFake)
                     {
-                        captainRaoulActivated = true;
-
                         if (urand(0, 1) == 1)
-                            raoul->AI()->AttackStart(jolly);
+                            eudora->AI()->AttackStart(raoul);
                         else
-                            raoul->AI()->AttackStart(eudora);
+                            eudora->AI()->AttackStart(jolly);
                     }
                 }
             }
@@ -666,7 +689,6 @@ private:
         float x = me->GetPositionX() + (float)(frand(distMin, distMax) * std::sin(angle));
         float y = me->GetPositionY() + (float)(frand(distMin, distMax) * std::cos(angle));
         float z = me->GetPositionZ();
-        me->UpdateAllowedPositionZ(x, y, z);
         return { x, y, z };
     }
 };
@@ -858,13 +880,140 @@ struct at_whirlpool_of_blades : AreaTriggerAI
     }
 };
 
+/// 129547 event bodies only (creature.ScriptName on guid 280003428 / 280003429). Do not bind dump's eight regular knuckledusters.
+struct npc_freehold_crew_knuckleduster : public ScriptedAI
+{
+    npc_freehold_crew_knuckleduster(Creature* creature) : ScriptedAI(creature) { }
+
+    void EnterCombat(Unit* /*who*/) override
+    {
+        for (uint8 i = 0; i < 4; ++i)
+            me->SummonCreature(uint32(FreeholdCreature::NpcBlacktoothKnuckleduster), me->GetRandomNearPosition(5.0f), TEMPSUMMON_CORPSE_DESPAWN);
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        if (GetActiveFreeholdCrewWeek(me->GetInstanceScript()) != CrewWeekBlacktooth)
+            return;
+
+        std::list<Creature*> others;
+        me->GetCreatureListWithEntryInGrid(others, uint32(FreeholdCreature::NpcBlacktoothKnuckleduster), 200.0f);
+        for (Creature* creature : others)
+        {
+            if (!creature || creature == me || !creature->IsAlive())
+                continue;
+            if (creature->GetScriptName() == "npc_freehold_crew_knuckleduster")
+                return;
+        }
+
+        NotifyCrewEventComplete(me->GetInstanceScript(), uint32(FreeholdCreature::NpcCaptainRaoul));
+    }
+};
+
+/// 130467 Murphy. Simplified gossip: no sniff pathing. Completing the Cutwater week is Otis, not Murphy.
+struct npc_freehold_murphy : public ScriptedAI
+{
+    npc_freehold_murphy(Creature* creature) : ScriptedAI(creature) { }
+
+    void Reset() override
+    {
+        me->AddNpcFlag(UNIT_NPC_FLAG_GOSSIP);
+        me->SetReactState(REACT_PASSIVE);
+    }
+
+    void sGossipHello(Player* player) override
+    {
+        if (!player)
+            return;
+        if (GetActiveFreeholdCrewWeek(me->GetInstanceScript()) != CrewWeekCutwater)
+        {
+            CloseGossipMenuFor(player);
+            return;
+        }
+        CloseGossipMenuFor(player);
+    }
+};
+
+/// 129441 Otis (Imprisoned Corsair). Never 12944.
+struct npc_freehold_otis : public ScriptedAI
+{
+    npc_freehold_otis(Creature* creature) : ScriptedAI(creature) { }
+
+    void Reset() override
+    {
+        me->AddNpcFlag(UNIT_NPC_FLAG_GOSSIP);
+        me->SetReactState(REACT_PASSIVE);
+    }
+
+    void sGossipHello(Player* player) override
+    {
+        if (!player)
+            return;
+        if (GetActiveFreeholdCrewWeek(me->GetInstanceScript()) != CrewWeekCutwater)
+        {
+            CloseGossipMenuFor(player);
+            return;
+        }
+        CloseGossipMenuFor(player);
+        NotifyCrewEventComplete(me->GetInstanceScript(), uint32(FreeholdCreature::NpcCaptainJolly));
+    }
+};
+
+/// Weekly brew NPC. Entry is not pinned; struct + Register must exist anyway.
+struct npc_freehold_crew_brew : public ScriptedAI
+{
+    npc_freehold_crew_brew(Creature* creature) : ScriptedAI(creature) { }
+
+    void Reset() override
+    {
+        me->AddNpcFlag(UNIT_NPC_FLAG_GOSSIP);
+        me->SetReactState(REACT_PASSIVE);
+    }
+
+    void sGossipHello(Player* player) override
+    {
+        if (!player)
+            return;
+        if (GetActiveFreeholdCrewWeek(me->GetInstanceScript()) != CrewWeekBilgeRats)
+        {
+            CloseGossipMenuFor(player);
+            return;
+        }
+
+        me->CastSpell(player, CouncilCaptainSpells::BilgeRatBrew, true);
+        CloseGossipMenuFor(player);
+
+        Map* map = me->GetMap();
+        if (!map)
+            return;
+
+        Map::PlayerList const& players = map->GetPlayers();
+        if (players.isEmpty())
+            return;
+
+        for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+        {
+            Player* member = itr->GetSource();
+            if (!member || !member->IsAlive())
+                continue;
+            if (!member->HasAura(CouncilCaptainSpells::BilgeRatBrew))
+                return;
+        }
+
+        NotifyCrewEventComplete(me->GetInstanceScript(), uint32(FreeholdCreature::NpcCaptainEudora));
+    }
+};
+
 void AddSC_boss_council_o_captains()
 {
-    ///Creature
     RegisterCreatureAI(boss_council_captain);
     RegisterCreatureAI(npc_rummy_mancomb);
     RegisterCreatureAI(npc_blackout_barrel);
     RegisterCreatureAI(npc_captains_controller);
+    RegisterCreatureAI(npc_freehold_crew_knuckleduster);
+    RegisterCreatureAI(npc_freehold_murphy);
+    RegisterCreatureAI(npc_freehold_otis);
+    RegisterCreatureAI(npc_freehold_crew_brew);
     ///Spell
     RegisterSpellScript(spell_blackout_vehicle);
     RegisterSpellScript(spell_trade_winds_vigor);

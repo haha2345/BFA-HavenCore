@@ -140,6 +140,7 @@ struct boss_tusle_tonks : public BossAI
             {
                 me->GetScheduler().Schedule(1s, [this, target] (TaskContext context)
                 {
+                    me->CastSpell(target, SPELL_MAXIMUM_THRUST_DAMAGE, false);
                     me->GetMotionMaster()->MoveCharge(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 100.0f, 1, true);
                 });
             }
@@ -192,12 +193,14 @@ struct boss_tusle_tonks : public BossAI
         switch (me->GetEntry())
         {
         case NPC_PLATINUM_PUMMELER:
-            _JustDied();
+            if (!me->FindNearestCreature(NPC_GNOMERCY, 100.0f, true))
+                _JustDied();
             instance->DoModifyPlayerCurrencies(1553, 35);
             break;
 
         case NPC_GNOMERCY:
-            _JustDied();
+            if (!me->FindNearestCreature(NPC_PLATINUM_PUMMELER, 100.0f, true))
+                _JustDied();
             break;
         }        
     }

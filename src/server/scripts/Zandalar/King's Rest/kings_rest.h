@@ -3,6 +3,9 @@
 #ifndef KINGS_REST
 #define KINGS_REST
 
+#include "DBCEnums.h"
+#include "Map.h"
+
 #define DataHeader "KR"
 
 uint32 const EncounterCount = 5;
@@ -17,6 +20,8 @@ enum Data
 
 enum Creatures
 {
+    NPC_GOLDEN_SERPENT = 135322,
+    NPC_MCHIMBA = 134993,
     NPC_KULA_THE_BUTCHER = 135475,
     NPC_AKALI_THE_CONQUEROR = 135470,
     NPC_ZANAZAL_THE_WISE = 135472,
@@ -38,5 +43,13 @@ enum Gameobjects
     GO_THE_COUNCILS_CACHE = 288637,
     GO_BOON_OF_THE_FIRST_KING = 288638,
 };
+
+inline bool IsKingsRestHeroicPlus(Map const* map)
+{
+    if (!map)
+        return false;
+    Difficulty const d = map->GetDifficultyID();
+    return d == DIFFICULTY_HEROIC || d == DIFFICULTY_MYTHIC; // 2 or 23, not 8
+}
 
 #endif // KINGS_REST

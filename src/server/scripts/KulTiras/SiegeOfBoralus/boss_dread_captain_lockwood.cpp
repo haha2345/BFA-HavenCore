@@ -95,7 +95,6 @@ struct boss_dread_captain_lockwood : public BossAI
 	{
 		_EnterCombat();
 		Talk(SAY_AGGRO);
-		events.ScheduleEvent(EVENT_RANGE, 500ms);
 		events.ScheduleEvent(EVENT_SHOOT, 1s);
 		events.ScheduleEvent(EVENT_GUT_SHOT, 3s);
 		events.ScheduleEvent(EVENT_EVASIVE, 4s);
@@ -162,16 +161,13 @@ struct boss_dread_captain_lockwood : public BossAI
 				if (Creature* dread_cannon = me->FindNearestCreature(NPC_DREAD_CANNON, 100.0f, true))
 				{
 					dread_cannon->CastSpell(nullptr, DREAD_VOLLEY_CHANNEL);
-					if (Creature* lockwoodbunny = me->FindNearestCreature(NPC_DREAD_CANNON_BUNNY, 100.0f, true))
+					dread_cannon->GetScheduler().Schedule(3000ms, [dread_cannon](TaskContext /*context*/)
 					{
-						lockwoodbunny->GetScheduler().Schedule(3000ms, [lockwoodbunny](TaskContext /*context*/)
-						{
-							std::list<Creature*> c_list;
-							lockwoodbunny->GetCreatureListWithEntryInGrid(c_list, NPC_CANNON_BARRAGE, 250.0f);
-							for (auto & controllers : c_list)
-							lockwoodbunny->AI()->DoCast(controllers, DREAD_VOLLEY_MISSILE);
-						});
-					}
+						std::list<Creature*> c_list;
+						dread_cannon->GetCreatureListWithEntryInGrid(c_list, NPC_CANNON_BARRAGE, 250.0f);
+						for (auto & controllers : c_list)
+							dread_cannon->AI()->DoCast(controllers, DREAD_VOLLEY_MISSILE);
+					});
 				}			
 			}
 			events.Repeat(15s);

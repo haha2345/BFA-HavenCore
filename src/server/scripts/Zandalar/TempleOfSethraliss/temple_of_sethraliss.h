@@ -1,6 +1,9 @@
 #ifndef TEMPLE_OF_SETHRALISS_H
 #define TEMPLE_OF_SETHRALISS_H
 
+#include "DBCEnums.h"
+#include "Map.h"
+
 #define DataHeader "TOS"
 
 uint32 const EncounterCount = 4;
@@ -28,6 +31,12 @@ enum CreatureIds
     NPC_PLAGUE_DOCTOR           = 139949,
     NPC_HEART_GUARDIAN          = 139946,
     NPC_PLAGUE_TOAD             = 137233,
+    NPC_ENERGY_FRAGMENT         = 142929,
+};
+
+enum SpellIds
+{
+    SPELL_ENERGY_FRAGMENT = 278894,
 };
 
 enum Gameobjects
@@ -38,5 +47,13 @@ enum Gameobjects
     GO_MEREKTHA_EXIT = 290906,
     GO_GALVAZZT_EXIT = 292414,
 };
+
+inline bool IsSethralissHeroicPlus(Map const* map)
+{
+    if (!map)
+        return false;
+    Difficulty const d = map->GetDifficultyID();
+    return d == DIFFICULTY_HEROIC || d == DIFFICULTY_MYTHIC; // 2 or 23, not 8
+}
 
 #endif // TEMPLE_OF_SETHRALISS_H

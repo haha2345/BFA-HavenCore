@@ -18,6 +18,9 @@
 #ifndef TOL_DAGOR_H
 #define TOL_DAGOR_H
 
+#include "DBCEnums.h"
+#include "Map.h"
+
 #define DataHeader "TD"
 
 uint32 const EncounterCount = 4;
@@ -40,6 +43,15 @@ enum CreatureIds
     NPC_ASHAVANE_QUATERMASTER   = 131856,
     NPC_MUNITIONS_BARREL        = 129437,
     NPC_HEAVY_CANNON            = 134025,
+    NPC_BOBBY_HOWLIS            = 130655,
 };
+
+inline bool IsTolDagorHeroicPlus(Map const* map)
+{
+    if (!map)
+        return false;
+    Difficulty const d = map->GetDifficultyID();
+    return d == DIFFICULTY_HEROIC || d == DIFFICULTY_MYTHIC; // 2 or 23, not 8
+}
 
 #endif // TOL_DAGOR_H

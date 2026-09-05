@@ -105,6 +105,7 @@ struct boss_trixie_naeno : public BossAI
             events.ScheduleEvent(EVENT_TAZE, 3s);
             events.ScheduleEvent(EVENT_ELECTRIC_SLIDE, 10s);
             events.ScheduleEvent(EVENT_MEGA_TAZE, 15s);
+            events.ScheduleEvent(EVENT_JUMP_START, 25s);
             if (Creature* mechacycle = me->FindNearestCreature(NPC_MECHACYCLE, 100.f, true))
                 mechacycle->AI()->DoZoneInCombat(nullptr);
 
@@ -165,7 +166,7 @@ struct boss_trixie_naeno : public BossAI
             Talk(SAY_TRIXIE_ELECTRIC_SLIDE);
             if (Creature* stalker = me->FindNearestCreature(NPC_JUMP_POINT_STALKER, 25.0f, true))
             {                
-                //me->CastSpell(stalker->GetPosition(), SPELL_ELECTRIC_SLIDE, false);
+                me->CastSpell(stalker->GetPosition(), SPELL_ELECTRIC_SLIDE, false);
                 me->GetMotionMaster()->MoveJump(stalker->GetPosition(), 0.8F, 30.0f, 30.0f, true);
                 me->GetScheduler().Schedule(3s, [this] (TaskContext /*context*/)
                 {
@@ -191,6 +192,12 @@ struct boss_trixie_naeno : public BossAI
                 });
             }
             events.Repeat(30s);
+            break;
+
+        case EVENT_JUMP_START:
+            Talk(SAY_TRIXIE_JUMP_START);
+            DoCastSelf(SPELL_JUMP_START);
+            events.Repeat(40s);
             break;
 
         case EVENT_BOLT_BUSTER:
@@ -273,18 +280,19 @@ struct boss_trixie_naeno : public BossAI
         switch (me->GetEntry())
         {
         case NPC_TRIXIE:
-            _JustDied();
             Talk(SAY_DEATH_NAENO_TRIXIE);
-            if (Creature* trixie = me->FindNearestCreature(NPC_TRIXIE, 100.0f, true))            
-                trixie->AI()->DoCastSelf(SPELL_SUPER_BOOST);
-          
+            if (Creature* naeno = me->FindNearestCreature(NPC_NAENO, 100.0f, true))
+                naeno->AI()->DoCastSelf(SPELL_TURBO_BOOST);
+            else
+                _JustDied();
             break;
 
-        case NPC_NAENO:            
-            _JustDied();
+        case NPC_NAENO:
             Talk(SAY_DEATH_NAENO);
-            if (Creature* naeno = me->FindNearestCreature(NPC_NAENO, 100.0f, true))            
-                naeno->AI()->DoCastSelf(SPELL_TURBO_BOOST);
+            if (Creature* trixie = me->FindNearestCreature(NPC_TRIXIE, 100.0f, true))
+                trixie->AI()->DoCastSelf(SPELL_SUPER_BOOST);
+            else
+                _JustDied();
 
             if (Creature* mechacycle = me->FindNearestCreature(NPC_MECHACYCLE, 100.0f, true))
                 mechacycle->DespawnOrUnsummon();
@@ -293,7 +301,6 @@ struct boss_trixie_naeno : public BossAI
             break;
 
         case NPC_MECHACYCLE:
-            _JustDied();
             break;
         }
     }

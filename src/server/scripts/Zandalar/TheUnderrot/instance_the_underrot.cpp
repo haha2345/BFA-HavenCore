@@ -84,9 +84,8 @@ struct instance_the_underrot : public InstanceScript
             }
             case DATA_FACELESS_CORRUPTOR_2:
             {
-                if (GetData(DATA_FACELESS_CORRUPTOR_2) > 0)
-                    if (Creature* hezrel = GetCreature(DATA_EVENT_HERZEL))
-                        hezrel->AI()->SetData(DATA_EVENT_HERZEL, 2);
+                if (Creature* hezrel = GetCreature(DATA_EVENT_HERZEL))
+                    hezrel->AI()->SetData(DATA_EVENT_HERZEL, 2);
 
                 break;
             }

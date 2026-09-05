@@ -18,17 +18,21 @@
 #ifndef ATAL_DAZAR_H
 #define ATAL_DAZAR_H
 
+#include "DBCEnums.h"
+#include "Map.h"
+
 #define DataHeader "AD"
 
+uint32 const EncounterCount = 4;
 
 enum EncounterData
 {
-    DATA_PRIESTESS_ALUNZA,
-    DATA_VOLKAAL,
-    DATA_REZAN,
-    DATA_YAZMA,
-    DATA_ACHIEVEMENT_COUNT = 0,
-    DATA_MAX_ENCOUNTERS,
+    DATA_PRIESTESS_ALUNZA = 0,
+    DATA_VOLKAAL          = 1,
+    DATA_REZAN            = 2,
+    DATA_YAZMA            = 3,
+    DATA_MAX_ENCOUNTERS,      // 4；SetBossNumber 用 EncounterCount，两者必须同为 4
+    DATA_ACHIEVEMENT_COUNT,   // 5；只走 SetData/GetData，禁止 SetBossState，禁止写成 = 0
 };
 
 enum CreatureIds
@@ -72,6 +76,14 @@ enum AtalDazarSpells
 {
     SPELL_UNSTABLE_HEX = 252781,
 };
+
+inline bool IsAtalDazarHeroicPlus(Map const* map)
+{
+    if (!map)
+        return false;
+    Difficulty const d = map->GetDifficultyID();
+    return d == DIFFICULTY_HEROIC || d == DIFFICULTY_MYTHIC; // 2 or 23, not 8
+}
 
 //int8 achievementCont = 0;
 #endif // ATAL_DAZAR_H

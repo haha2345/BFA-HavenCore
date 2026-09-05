@@ -322,8 +322,12 @@ struct npc_gurgthock : public ScriptedAI
         case RingOfBootyAction::ActionThirdEvent:
         {
             Talk(TalkGurgthock::TalkKillTortolan);
-            if (Creature* trothak = me->SummonCreature(FreeholdCreature::NpcTrothak, TrothakMovePos[0], TEMPSUMMON_MANUAL_DESPAWN))
+            if (Creature* trothak = m_Instance->instance->GetCreature(m_Instance->GetGuidData(FreeholdCreature::NpcTrothak)))
+            {
+                if (trothak->isDead())
+                    trothak->Respawn(true);
                 trothak->GetMotionMaster()->MovePoint(RingOfBootyPoint::MovementPointTrothakFirstPoint, TrothakMovePos[1]);
+            }
 
             AddTimedDelayedOperation(6000, [this]() -> void
                 {
@@ -496,7 +500,6 @@ private:
         float x = center.GetPositionX() + std::sin(angle) * randomRadius;
         float y = center.GetPositionY() + std::cos(angle) * randomRadius;
         float z = center.GetPositionZ();
-        unit->UpdateAllowedPositionZ(x, y, z);
         return Position(x, y, z);
     }
 
@@ -661,6 +664,36 @@ struct boss_trothak : public BossAI
         //     sawtooth->CastSpell(me, RingOfBootySpells::RiderShark, true);
         //     sawtooth->CastSpell(sawtooth, RingOfBootySpells::SawtoothSharkAura, true);
         // }
+
+        // Creature::AI_InitializeAndEnable calls InitializeAI()->Reset() before Vehicle::Reset
+        // installs accessories, so seats are empty on first Reset. Do not gate on GetPassenger.
+        // Accessory sharks already on this vehicle have GetVehicleBase()==me and are kept.
+        // Immediate scan: wipe/respawn Reset when sharks are already in the grid.
+        // First spawn: CellGuidSet loads Trothak spawnId 280003417 before static sharks
+        // 280003418/419, so GetCreatureListWithEntryInGrid is empty until they AddToWorld.
+        auto despawnNearbyStaticSharks = [this]()
+        {
+            if (!me->GetVehicleKit())
+                return;
+
+            std::list<Creature*> nearbySharks;
+            me->GetCreatureListWithEntryInGrid(nearbySharks, uint32(FreeholdCreature::NpcHammerShark), 80.0f);
+            for (Creature* shark : nearbySharks)
+                if (shark && shark->GetVehicleBase() != me)
+                    shark->DespawnOrUnsummon();
+
+            nearbySharks.clear();
+            me->GetCreatureListWithEntryInGrid(nearbySharks, uint32(FreeholdCreature::NpcSawtoothShark), 80.0f);
+            for (Creature* shark : nearbySharks)
+                if (shark && shark->GetVehicleBase() != me)
+                    shark->DespawnOrUnsummon();
+        };
+
+        despawnNearbyStaticSharks();
+        AddTimedDelayedOperation(1000, [despawnNearbyStaticSharks]() -> void
+        {
+            despawnNearbyStaticSharks();
+        });
     }
 
     void JustReachedHome() override
@@ -690,7 +723,7 @@ struct boss_trothak : public BossAI
             events.ScheduleEvent(RingOfBootyEvents::EventsRipperPunch, 3000);
             events.ScheduleEvent(RingOfBootyEvents::EventsSharkTornado, 10000);
             events.ScheduleEvent(RingOfBootyEvents::EventsSharkToss, 8000);
-            if (IsHeroic())
+            if (IsFreeholdHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(RingOfBootyEvents::EventsThrowChum, 8000);
             break;
         }
@@ -717,6 +750,8 @@ struct boss_trothak : public BossAI
 
     void UpdateAI(uint32 diff) override
     {
+        UpdateOperations(diff);
+
         if (rearm)
         {
             if (checkTimer <= diff)
@@ -784,7 +819,7 @@ struct boss_trothak : public BossAI
                 sharkGUID.Clear();
                 if (me->IsVehicle())
                 {
-                    if (Vehicle* vehicle = me->GetVehicle())
+                    if (Vehicle* vehicle = me->GetVehicleKit())
                     {
                         uint8 passengerSeat = urand(0, 1);
                         if (Unit* shark = vehicle->GetPassenger(passengerSeat))
@@ -792,6 +827,8 @@ struct boss_trothak : public BossAI
                             if (shark->IsCreature())
                             {
                                 shark->ExitVehicle();
+                                shark->Relocate(me->GetPosition());
+                                shark->SetDisableGravity(true);
                                 shark->ToCreature()->SetReactState(REACT_PASSIVE);
                                 sharkGUID = shark->GetGUID();
                                 if (shark->GetEntry() == FreeholdCreature::NpcHammerShark)
@@ -848,7 +885,7 @@ struct npc_shark_trothak : public ScriptedAI
 {
     npc_shark_trothak(Creature* creature) : ScriptedAI(creature)
     {
-        if (IsHeroic())
+        if (IsFreeholdHeroicPlus(me->GetMap()))
             checkAreatriggerTimer = 500;
 
         delayShark = false;

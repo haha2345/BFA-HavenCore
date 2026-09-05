@@ -199,22 +199,22 @@ public:
             }
         }
 
-        void Reste()
+        void Reset()
         {
+            _Reset();
             events.Reset();
 
             DespawnAurasWipe();
             me->SetPowerType(POWER_ENERGY);
             me->SetMaxPower(POWER_ENERGY, 100);
             me->SetPower(POWER_ENERGY, 0);
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         }
 
         void JustDied(Unit*)
         {
+            _JustDied();
             DespawnAurasWipe();
             SelectSoundAndText(me, 4);
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         }
 
         void EnterEvadeMode(EvadeReason /*why*/)
@@ -225,6 +225,7 @@ public:
 
         bool CheckCheaters()
         {
+            // 比较 Boss 到 centerPlatform 的距离 >= 30.0f，不是玩家出圈
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
                 if (Player* player = i->GetSource())
@@ -249,14 +250,13 @@ public:
         void EnterCombat(Unit*)
         {
             SelectSoundAndText(me, 1);
+            _EnterCombat();
             events.ScheduleEvent(EVENT_SHOCKWAVE, TIMER_SHOCKWAVE);
             events.ScheduleEvent(EVENT_UPHEAVAL, TIMER_UPHEAVAL);
             events.ScheduleEvent(EVENT_SPAWN_SPORE, TIMER_SPAWN_SPORE);
             events.ScheduleEvent(EVENT_ENERGY_REGEN, TIMER_ENERGY_REGEN);
 
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
-
-            if (me->GetMap()->IsHeroic() || me->GetMap()->IsMythic())
+            if (IsUnderrotHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_SPAWN_VOLATILE_SPORE, TIMER_SPAWN_VOLATILE_SPORE);
         }
 
@@ -399,6 +399,8 @@ public:
                     break;
                 case EVENT_SPAWN_VOLATILE_SPORE:
                     SelectSoundAndText(me, 7);
+                    me->CastSpell(me, SPELL_VOLATILE_POD);
+                    me->CastSpell(me, SPELL_VOLATILE_POD_EXPLOSION_VISUAL);
                     for (uint8 i = 0; i < 6; ++i)
                     {
                         me->SummonCreature(NPC_VOLATILE_POD_TRIGGER, volatilePodsPositions[i], TEMPSUMMON_MANUAL_DESPAWN);

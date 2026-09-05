@@ -24,6 +24,10 @@
 #include "MoveSplineInit.h"
 #include "SpellAuraEffects.h"
 #include "G3D/Vector3.h"
+#include "DBCEnums.h"
+#include "Map.h"
+
+#define DataHeader "FH"
 
 enum FreeholdCreature
 {
@@ -37,6 +41,7 @@ enum FreeholdCreature
 
     ///Council o Captains
     NpcMurphy = 130467,
+    NpcOtis = 129441, /// Imprisoned corsair; not NpcLokhtosDarkbargainer 12944
     NpcLokhtosDarkbargainer = 12944,
     NpcCaptainJolly = 126845,
     NpcCaptainEudora = 126848,
@@ -70,6 +75,9 @@ enum FreeholdCreature
     NpcCutwaterDuelist = 129559,
     NpcIrontideOarsman = 127111,
     NpcBilgeRatPadfoot = 129550,
+    NpcBilgeRatBuccaneer = 129527,
+    NpcBilgeRatBrinescale = 129600,
+    NpcBilgeRatSwabby = 129526,
     NpcCutwaterKnifeJuggler = 129599,
     NpcVerminTrapper = 130404,
     NpcSoggyShiprat = 130024,
@@ -92,7 +100,9 @@ enum FreeholdGameObject
 
 enum FreeholdAction
 {
-    ActionSelectCaptainRaoul
+    ActionSelectCaptainRaoul,
+    ActionSelectCaptainJolly,
+    ActionSelectCaptainEudora
 };
 
 enum FreeholdData
@@ -103,6 +113,8 @@ enum FreeholdData
     DataHarlanSweete,
     DataMaxEncounters,
     DataCaptainsController,
+    DataFriendlyCaptain,
+    DataCrewEventDone,
 };
 
 enum FreeHoldFaction
@@ -114,3 +126,24 @@ enum FreeHoldFaction
     FactionCutwaterCorsairs = 2936, ///Jolly Faction
     FactionFriendlyFake = 2580, ///This isn�t the original faction
 };
+
+inline bool IsFreeholdHeroicPlus(Map const* map)
+{
+    if (!map)
+        return false;
+    Difficulty const d = map->GetDifficultyID();
+    return d == DIFFICULTY_HEROIC || d == DIFFICULTY_MYTHIC; // 2 or 23, not 8
+}
+
+class InstanceScript;
+
+enum FreeholdCrewWeek : uint32
+{
+    CrewWeekNone = 0,
+    CrewWeekCutwater = 1,
+    CrewWeekBlacktooth = 2,
+    CrewWeekBilgeRats = 3
+};
+
+FreeholdCrewWeek GetActiveFreeholdCrewWeek(InstanceScript const* instance);
+void NotifyCrewEventComplete(InstanceScript* instance, uint32 captainEntry);

@@ -71,7 +71,7 @@ struct boss_hk_8 : public BossAI
 
     void EnterCombat(Unit* /*who*/) override
     {
-
+        _EnterCombat();
     }
 
     void JustDied(Unit* /*killer*/) override
@@ -167,7 +167,10 @@ struct npc_tank_buster_mk1 : public ScriptedAI
                 {
                     hk8->NearTeleportTo(annhilation_pos, false);
                     hk8->CastSpell(center_stalker, SPELL_ANNIHILATION_RAY_CHANNEL, false);
-                    events.ScheduleEvent(EVENT_ANNIHILATION_EXPLOSION, 3min);
+                    hk8->GetScheduler().Schedule(3min, [hk8] (TaskContext /*context*/)
+                    {
+                        hk8->CastSpell(hk8, SPELL_ANNIHILATION_BLAST, false);
+                    });
                 }
                 if (Creature* station = me->FindNearestCreature(NPC_OVERCHARGE_STATION, 250.0f, true))
                 {

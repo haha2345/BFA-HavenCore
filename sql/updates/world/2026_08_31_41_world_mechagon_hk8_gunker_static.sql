@@ -1,0 +1,2 @@
+-- 837 blizzlike: map 2097 HK-8 Enable/credit is 150190. Static guid 3300000000000921 sits on Gunker floor (~313 yards from Junkwatt Summon). Killing it credits 2291 and marks slot 3 DONE before arena Summon. DELETE that guid only; arena 150190 still comes from existing SummonCreature. Do not INSERT 150190 xyz. Do not INSERT 155157. Do not touch 2026_08_31_40.
+DELETE FROM `creature` WHERE `map`=2097 AND `guid`=3300000000000921;

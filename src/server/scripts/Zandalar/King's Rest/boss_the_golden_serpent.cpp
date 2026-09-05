@@ -35,6 +35,7 @@ struct boss_golden_serpent : public BossAI
         events.ScheduleEvent(EVENT_SPIRIT_OF_GOLD, 5s);
         events.ScheduleEvent(EVENT_TAIL_THRASH, 10s);
         events.ScheduleEvent(EVENT_SERPENT_GUST_WIND, 15s);
+        events.ScheduleEvent(EVENT_LUCRESS_CALL, 8s); // min-playable, not verified 8.3 EventMap
     }
 
     void EnterEvadeMode(EvadeReason /*why*/) override
@@ -56,10 +57,14 @@ struct boss_golden_serpent : public BossAI
              DoCastRandom(SPELL_SPIRIT_OF_GOLD_PERIODIC, 100.0f);
              events.Repeat(15s);
              break;
+        case EVENT_LUCRESS_CALL:
+             DoCast(SPELL_LUCRES_CALL);
+             events.Repeat(30s); // min-playable, not plugin CD
+             break;
         case EVENT_TAIL_THRASH:
              DoCastVictim(SPELL_TAIL_THRASH);
              events.Repeat(25s);
-             /* fallthrough */
+             break;
         case EVENT_SERPENT_GUST_WIND:
              DoCastAOE(SPELL_SERPENTINE_GUST, false);
              events.Repeat(35s);

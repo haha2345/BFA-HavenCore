@@ -39,7 +39,6 @@ enum Events{
     EVENT_UPHEAVAL = 2,
     EVENT_SANDSTORM = 3,
     EVENT_UPHEAVAL_TARGET_SELECTION = 4,
-    EVENT_UPHEAVAL_DAMAGE = 5,
 };
 
 
@@ -87,12 +86,6 @@ struct boss_sand_queen : public BossAI
                 me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
                 me->CastSpell(me, SPELL_UPHEAVAL_TARGET_SELECTOR);
                 break;
-            case EVENT_UPHEAVAL_DAMAGE:
-                if (upheaval_target->IsAlive())
-                {
-                    me->CastSpell(upheaval_target, SPELL_UPHEAVAL_DAMAGE);
-                }
-                break;
             default:
                 break;
             }
@@ -100,9 +93,6 @@ struct boss_sand_queen : public BossAI
 
         DoMeleeAttackIfReady();
     }
-private:
-    Unit* upheaval_target;
-
 };
 
 struct areatrigger_sand_trap : AreaTriggerAI
@@ -135,7 +125,8 @@ class bfa_spell_sand_trap : public SpellScript
             return;
 
         caster->CastSpell(target, SPELL_SAND_TRAP_AREATRIGGER);
-        caster->SummonCreature(NPC_BUZZING_DRONE, target->GetPosition(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5000);
+        if (IsTolDagorHeroicPlus(caster->GetMap()))
+            caster->SummonCreature(NPC_BUZZING_DRONE, target->GetPosition(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5000);
     }
 
     void Register() override

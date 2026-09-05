@@ -142,32 +142,11 @@ public:
             }
         }
 
-        void HardResetCheck()
-        {
-            Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
-            for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
-                if (Player* player = i->GetSource())
-                {
-                    if (!player->IsGameMaster()) //gm check
-                    {
-                        if (!player->IsAlive())
-                        {
-                            if (Creature* titan = GetTitan())
-                            {
-                                instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, titan);
-                                me->Kill(titan);
-                            }
-                            EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
-                        }
-                    }
-                }
-        }
-
         void Reset()
         {
+            _Reset();
             events.Reset();
             summons.DespawnAll();
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
             me->RemoveAllAreaTriggers();
         }
         
@@ -190,6 +169,7 @@ public:
 
         void JustDied(Unit*)
         {
+            _JustDied();
             SelectSoundAndText(me, 2);
             if (Creature* titan = GetTitan())
             {
@@ -198,8 +178,6 @@ public:
             }
             summons.DespawnAll();
             me->RemoveAllAreaTriggers();
-
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         }
 
         void EnterEvadeMode(EvadeReason /*why*/)
@@ -250,11 +228,11 @@ public:
         void EnterCombat(Unit*)
         {
             SelectSoundAndText(me, 1);
+            _EnterCombat();
             visage = 0;
 
             me->RemoveAllAreaTriggers();
             me->AddAura(SPELL_BLOOD_BARRIER, me);
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
 
             if (Creature* titan = me->SummonCreature(NPC_TITAN_KEEPER_HEZREL, centerPosition.GetPositionX(), centerPosition.GetPositionY(), centerPosition.GetPositionZ(), TEMPSUMMON_MANUAL_DESPAWN))
                 titan->AI()->AttackStart(me);
@@ -290,9 +268,6 @@ public:
         void UpdateAI(uint32 diff)
         {
             events.Update(diff);
-
-            if (me->IsInCombat())
-                HardResetCheck();
 
             if (!UpdateVictim())
                 return;
@@ -330,13 +305,9 @@ public:
                     {
                         if (Creature* visage1 = me->SummonCreature(NPC_BLOOD_VISAGE, 1228.46f, 1459.84f, -181.44f, TEMPSUMMON_CORPSE_DESPAWN))
                             visage1->SetInCombatWithZone();
-                        if (Creature* visage2 = me->SummonCreature(NPC_BLOOD_VISAGE, 1168.01f, 1499.57f, -181.48f, TEMPSUMMON_CORPSE_DESPAWN))
-                            visage2->SetInCombatWithZone();
 
                         me->SetPower(POWER_ENERGY, 0);
                     }
-                    else
-                        me->SetPower(POWER_ENERGY, me->GetPower(POWER_ENERGY) - urand(5, 10));
                     events.ScheduleEvent(EVENT_CHECK_ENERGY, TIMER_CHECK_ENERGY);
                     break;
                 }
@@ -359,20 +330,53 @@ public:
 
     struct bfa_npc_titan_keeper_hezrel_AI : public ScriptedAI
     {
-        bfa_npc_titan_keeper_hezrel_AI(Creature* creature) : ScriptedAI(creature)
+        bfa_npc_titan_keeper_hezrel_AI(Creature* creature) : ScriptedAI(creature),
+            _facelessCorruptor1Dead(false), _facelessCorruptor2Dead(false), _webDoorOpened(false)
         {
             me->AddUnitState(UNIT_STATE_ROOT);
         }
 
         EventMap events;
-        
+        bool _facelessCorruptor1Dead;
+        bool _facelessCorruptor2Dead;
+        bool _webDoorOpened;
+
         void Reset()
         {
             events.Reset();
+        }
+
+        void EnterCombat(Unit*)
+        {
+            if (me->GetPositionZ() >= -100.f)
+                return;
+
             events.ScheduleEvent(EVENT_HOLY_BOLT, TIMER_HOLY_BOLT);
             events.ScheduleEvent(EVENT_CLEANSING_LIGHT, TIMER_CLEANSING_LIGHT);
-
             SelectSoundAndText(me, 1);
+        }
+
+        void SetData(uint32 id, uint32 value) override
+        {
+            if (me->GetPositionZ() < -100.f)
+                return;
+
+            if (id != DATA_EVENT_HERZEL)
+                return;
+
+            if (value == 1)
+                _facelessCorruptor1Dead = true;
+            else if (value == 2)
+                _facelessCorruptor2Dead = true;
+            else
+                return;
+
+            if (_facelessCorruptor1Dead && _facelessCorruptor2Dead && !_webDoorOpened)
+            {
+                // This pass does not walk to the web; upper 134419 casts in place.
+                me->CastSpell(me, SPELL_OPEN_WEB_DOOR);
+                _webDoorOpened = true;
+            }
         }
 
 
@@ -666,7 +670,7 @@ public:
             at->SetDuration(110 * IN_MILLISECONDS);
 
             if (Unit* caster = at->GetCaster())
-                if (caster->GetMap()->IsHeroic() || caster->GetMap()->IsMythic())
+                if (IsUnderrotHeroicPlus(caster->GetMap()))
                     caster->SummonCreature(NPC_ROTTING_SPORE, at->GetPosition(), TEMPSUMMON_CORPSE_DESPAWN);
         }
 

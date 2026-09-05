@@ -3,8 +3,8 @@
 
 enum Spells
 {
-	TENDERIZE = 264923,
-	TENDERIZE_DAMAGE = 262371,
+	TENDERIZE = 264923, // 插件/手册号，正文不要 DoCast
+	TENDERIZE_DAMAGE = 262371, // 实际施法
 	CONSUME_ALL = 264734,
 	CALL_SERVANT = 264931,
 	CONSUME_SERVANT_INSTAKILL = 265002,
@@ -64,8 +64,9 @@ struct boss_raal_the_gluttonous : public BossAI
 		events.ScheduleEvent(EVENT_CALL_SERVANT, 9s);
 	}
 
-	void JustSummoned(Creature* summon)
+	void JustSummoned(Creature* summon) override
 	{
+		BossAI::JustSummoned(summon);
 		if (summon->GetEntry() == NPC_BILE_OOZELING)
 			summon->AI()->DoZoneInCombat();
 	}

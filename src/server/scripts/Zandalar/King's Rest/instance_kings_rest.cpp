@@ -3,11 +3,24 @@
 #include "InstanceScript.h"
 #include "kings_rest.h"
 
+ObjectData const creatureData[] =
+{
+    { NPC_GOLDEN_SERPENT, NPC_GOLDEN_SERPENT },
+    { NPC_MCHIMBA, NPC_MCHIMBA },
+    { NPC_KULA_THE_BUTCHER, NPC_KULA_THE_BUTCHER },
+    { NPC_AKALI_THE_CONQUEROR, NPC_AKALI_THE_CONQUEROR },
+    { NPC_ZANAZAL_THE_WISE, NPC_ZANAZAL_THE_WISE },
+    { NPC_DAZAR, NPC_DAZAR },
+    { 0, 0 }
+};
+
 struct instance_kings_rest : public InstanceScript
 {
     instance_kings_rest(InstanceMap* map) : InstanceScript(map)
     {
+        SetHeaders(DataHeader);
         SetBossNumber(EncounterCount);
+        LoadObjectData(creatureData, nullptr);
     }
 
     void OnGameObjectCreate(GameObject* go) override

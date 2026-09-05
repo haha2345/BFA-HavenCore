@@ -32,6 +32,7 @@ enum Events
 	EVENT_GORE_CRASH = 1,
 	EVENT_ON_THE_HOOK,
 	EVENT_BARRAGE,
+	EVENT_SIGHTED_ARTILLERY,
 };
 
 enum Spells
@@ -43,9 +44,11 @@ enum Spells
 	MEAT_HOOK_SPAWN_EFFECT = 257342,
 	MEAT_HOOK_STUN = 257354,
 	BOILING_RAGE = 257650,
+	CANNON_BARRAGE = 257585,
+	SIGHTED_ARTILLERY = 272425,
 };
 
-//128650, 128649 bainbridge
+//128650 Chopper Redhook; Bainbridge is boss_sergeant_bainbridge
 struct boss_chopper_redhook : public BossAI
 {
 	boss_chopper_redhook(Creature* creature) : BossAI(creature, DATA_CHOPPER_REDHOOK) { }
@@ -60,7 +63,8 @@ struct boss_chopper_redhook : public BossAI
 		_EnterCombat();
 		events.ScheduleEvent(EVENT_GORE_CRASH, 1s);
 		events.ScheduleEvent(EVENT_ON_THE_HOOK, 3s);
-		events.ScheduleEvent(EVENT_BARRAGE, 6s);
+		events.ScheduleEvent(EVENT_SIGHTED_ARTILLERY, 6s); // was DoCast(272425); Sighted Artillery, not Cannon Barrage
+		events.ScheduleEvent(EVENT_BARRAGE, 8s); // 257585 min-playable, not plugin CD 11/60
 	}
 
 	void JustDied(Unit* /*killer*/) override
@@ -99,16 +103,21 @@ struct boss_chopper_redhook : public BossAI
 			events.Repeat(15s);
 			break;
 
-		case EVENT_BARRAGE:
+		case EVENT_SIGHTED_ARTILLERY:
 		{
-			Talk(SAY_INCOMING);
 			std::list<Player*> p_list;
 			me->GetPlayerListInGrid(p_list, 300.0f);
 			for (auto & p : p_list)
-			DoCast(p, 272425);
+			DoCast(p, SIGHTED_ARTILLERY);
 		}
-		events.Repeat(20s);
+		events.Repeat(20s); // existing timing for 272425, not plugin CD
 		break;
+
+		case EVENT_BARRAGE:
+			Talk(SAY_INCOMING);
+			DoCast(CANNON_BARRAGE);
+			events.Repeat(25s); // min-playable, not plugin CD 60
+			break;
 
 		default:
 			break;
@@ -132,8 +141,77 @@ struct npc_meat_hook_target_stalker : public ScriptedAI
 	}
 };
 
+enum BainbridgeEvents
+{
+	EVENT_IRON_GAZE = 1,
+	EVENT_HANGMANS_NOOSE,
+	EVENT_STEEL_TEMPEST,
+	EVENT_BAINBRIDGE_BARRAGE,
+};
+
+enum BainbridgeSpells
+{
+	IRON_GAZE = 260954,
+	HANGMANS_NOOSE = 261428,
+	STEEL_TEMPEST = 260924,
+	BAINBRIDGE_CANNON_BARRAGE = 257585,
+};
+
+//128649 Sergeant Bainbridge; do not bind DATA_CHOPPER_REDHOOK
+struct boss_sergeant_bainbridge : public BossAI
+{
+	boss_sergeant_bainbridge(Creature* creature) : BossAI(creature, DATA_SERGEANT_BAINBRIDGE) { }
+
+	void Reset() override
+	{
+		BossAI::Reset();
+	}
+
+	void EnterCombat(Unit* /*unit*/) override
+	{
+		_EnterCombat();
+		events.ScheduleEvent(EVENT_IRON_GAZE, 5s); // min-playable, not plugin CD
+		events.ScheduleEvent(EVENT_HANGMANS_NOOSE, 10s);
+		events.ScheduleEvent(EVENT_STEEL_TEMPEST, 8s);
+		events.ScheduleEvent(EVENT_BAINBRIDGE_BARRAGE, 8s);
+	}
+
+	void JustDied(Unit* /*killer*/) override
+	{
+		_JustDied();
+	}
+
+	void ExecuteEvent(uint32 eventid) override
+	{
+		switch (eventid)
+		{
+		case EVENT_IRON_GAZE:
+			if (Unit* tar = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+				DoCast(tar, IRON_GAZE);
+			events.Repeat(20s); // min-playable, not plugin CD
+			break;
+		case EVENT_HANGMANS_NOOSE:
+			if (Unit* tar = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+				DoCast(tar, HANGMANS_NOOSE);
+			events.Repeat(15s);
+			break;
+		case EVENT_STEEL_TEMPEST:
+			DoCast(STEEL_TEMPEST);
+			events.Repeat(18s);
+			break;
+		case EVENT_BAINBRIDGE_BARRAGE:
+			DoCast(BAINBRIDGE_CANNON_BARRAGE);
+			events.Repeat(25s);
+			break;
+		default:
+			break;
+		}
+	}
+};
+
 void AddSC_boss_chopper_redhook()
 {
 	RegisterCreatureAI(boss_chopper_redhook);
 	RegisterCreatureAI(npc_meat_hook_target_stalker);
+	RegisterCreatureAI(boss_sergeant_bainbridge);
 }

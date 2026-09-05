@@ -18,21 +18,36 @@
 #ifndef THE_UNDERROT_H
 #define THE_UNDERROT_H
 
-#define DataHeader "TU"
+#include "DBCEnums.h"
+#include "Map.h"
 
-uint32 const EncounterCount = 8;
+#define DataHeader "TU"
 
 enum EncounterData
 {
-    DATA_ELDER_LEAXA = 1,
-    DATA_CRAGMAW_THE_INFESTED,
-    DATA_SPORECALLER_ZANCHA,
-    DATA_UNBOUND_ABOMINATION,
-    DATA_FACELESS_CORRUPTOR_1,
-    DATA_FACELESS_CORRUPTOR_2,
-    DATA_EVENT_HERZEL,
-    DATA_BOSS_HERZEL,
+    DATA_ELDER_LEAXA            = 0,
+    DATA_CRAGMAW_THE_INFESTED   = 1,
+    DATA_SPORECALLER_ZANCHA     = 2,
+    DATA_UNBOUND_ABOMINATION    = 3
 };
+
+uint32 const EncounterCount = 4;
+
+enum UnderrotEventData
+{
+    DATA_FACELESS_CORRUPTOR_1   = 5,
+    DATA_FACELESS_CORRUPTOR_2   = 6,
+    DATA_EVENT_HERZEL           = 7,
+    DATA_BOSS_HERZEL            = 8 // AddObject / GetCreature only; never SetBossState
+};
+
+inline bool IsUnderrotHeroicPlus(Map const* map)
+{
+    if (!map)
+        return false;
+    Difficulty const d = map->GetDifficultyID();
+    return d == DIFFICULTY_HEROIC || d == DIFFICULTY_MYTHIC; // 2 or 23, not 8
+}
 
 enum CreatureIds
 {

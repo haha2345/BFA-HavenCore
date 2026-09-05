@@ -63,7 +63,8 @@ enum CoinoperatedcrowdpummelerEvents : uint8
     EVENT_FOOTBOMB_LAUNCHER		= 2,
 	EVENT_SHOCKING_CLAW			= 3,
     EVENT_COIN_MAGNET			= 4,
-    EVENT_PAY_TO_WIN			= 5
+    EVENT_PAY_TO_WIN			= 5,
+    EVENT_THROW_COINS			= 6
 };
 
 
@@ -93,10 +94,11 @@ struct boss_Coin_operated_crowd_pummeler : public BossAI
 		events.ScheduleEvent(EVENT_FOOTBOMB_LAUNCHER, 4000);
         events.ScheduleEvent(EVENT_SHOCKING_CLAW, 7000);
 
-        if (IsMythic() || IsHeroic())
+        if (IsTheMotherlodeHeroicPlus(me->GetMap()))
         {
             events.ScheduleEvent(EVENT_COIN_MAGNET, 8000);
-			events.ScheduleEvent(EVENT_PAY_TO_WIN, 1000);
+            events.ScheduleEvent(EVENT_PAY_TO_WIN, 1000);
+            events.ScheduleEvent(EVENT_THROW_COINS, 12000); // min-playable, not verified 8.3 EventMap
         }
 
         BossAI::EnterCombat(who);
@@ -153,6 +155,10 @@ struct boss_Coin_operated_crowd_pummeler : public BossAI
                 case EVENT_PAY_TO_WIN:
                     me->CastSpell(me, SPELL_PAY_TO_WIN);
                     events.ScheduleEvent(EVENT_PAY_TO_WIN, 30000);
+                    break;
+                case EVENT_THROW_COINS:
+                    me->CastSpell(me, SPELL_THROW_COINS);
+                    events.ScheduleEvent(EVENT_THROW_COINS, 30000); // min-playable, not plugin CD
                     break;
 
                 default:

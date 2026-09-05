@@ -18,17 +18,20 @@
 #ifndef SIEGEOFBORALUS_H
 #define SIEGEOFBORALUS_H
 
+#include "DBCEnums.h"
+#include "Map.h"
+
 #define DataHeader "SOB"
 
 uint32 const EncounterCount = 5;
 
 enum EncounterData
 {
-	DATA_CHOPPER_REDHOOK = 1,
-	DATA_SERGEANT_BAINBRIDGE,
-	DATA_DREAD_CAPTAIN_LOCKWOOD,
-	DATA_HADAL_DARKFATHOM,
-	DATA_VIQGOTH
+	DATA_CHOPPER_REDHOOK = 0,
+	DATA_SERGEANT_BAINBRIDGE = 1,
+	DATA_DREAD_CAPTAIN_LOCKWOOD = 2,
+	DATA_HADAL_DARKFATHOM = 3,
+	DATA_VIQGOTH = 4
 };
 
 enum CreatureIds
@@ -55,5 +58,13 @@ enum Gameobjects
 	GO_TREASURE_RICH_FLOTSAM = 288639,
 	GO_CHALLENGERS_CACHE_BORALUS = 288644
 };
+
+inline bool IsSiegeOfBoralusHeroicPlus(Map const* map)
+{
+    if (!map)
+        return false;
+    Difficulty const d = map->GetDifficultyID();
+    return d == DIFFICULTY_HEROIC || d == DIFFICULTY_MYTHIC; // 2 or 23, not 8
+}
 
 #endif // SOB

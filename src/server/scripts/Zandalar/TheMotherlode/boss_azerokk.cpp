@@ -164,14 +164,15 @@ struct bfa_boss_azerokk : public BossAI {
         Talk(SAY_KILL);
     }
 
-    void JustDied(Unit*) override
+    void JustDied(Unit* killer) override
     {
         instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         summons.DespawnAll();
         Talk(SAY_DEAD);
+        BossAI::JustDied(killer);
     }
 
-    void EnterCombat(Unit*) /*override*/
+    void EnterCombat(Unit* who) override
     {
         Talk(SAY_AGGRO);
         PlayAnimKits();
@@ -180,12 +181,13 @@ struct bfa_boss_azerokk : public BossAI {
 
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
 
-        if (me->GetMap()->IsMythic() || me->GetMap()->IsHeroic())
-            events.ScheduleEvent(EVENT_TECTONIC_SMASH, TIMER_TECTONIC_SMASH);
+        if (IsTheMotherlodeHeroicPlus(me->GetMap()))
+            events.ScheduleEvent(EVENT_TECTONIC_SMASH, TIMER_TECTONIC_SMASH); // 2 or 23, not 8; JSXD 18711 includes 8, keystone not this wave
 
         events.ScheduleEvent(EVENT_CALL_EARTHRAGER, TIMER_CALL_EARTHRAGER);
         events.ScheduleEvent(EVENT_AZERITE_INFUSION, TIMER_AZERITE_INFUSION);
         events.ScheduleEvent(EVENT_RESONANT_PULSE, TIMER_RESONANT_PULSE);
+        BossAI::EnterCombat(who);
     }
 
     void PlayAnimKits()
@@ -333,9 +335,10 @@ struct bfa_npc_earthrager : public ScriptedAI {
             {
             case EVENT_FIXATE:
             {
-                me->CastSpell(SELECT_TARGET_RANDOM, SPELL_RAGING_GAZE_SELECTOR);
+                // 50.0f: min-playable radius, not verified 8.3
+                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true))
+                    me->CastSpell(target, SPELL_RAGING_GAZE_SELECTOR);
                 me->CastSpell(me->GetVictim(), SPELL_RAGING_GAZE_BEAM);
-
                 break;
             }
 
@@ -374,7 +377,7 @@ struct bfa_npc_fracking_totem : public ScriptedAI {
         {
             canStun = true;
             me->AddUnitFlag(UnitFlags(UNIT_FLAG_IMMUNE_TO_NPC | UNIT_FLAG_IMMUNE_TO_PC));
-            Player* invoker;
+            Player* invoker = nullptr;
 
             if (me->IsSummon())
             {

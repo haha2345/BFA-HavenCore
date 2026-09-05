@@ -150,7 +150,7 @@ struct boss_priestess_alunza : public BossAI
         events.ScheduleEvent(EVENT_MOLTEN_GOLD, 16500);
         events.ScheduleEvent(EVENT_TAINTED_BLOOD, 18000);
 
-        if (IsMythic() || IsHeroic())
+        if (IsAtalDazarHeroicPlus(me->GetMap()))
         {
             events.ScheduleEvent(EVENT_SPAWN_CORRUPTED_GOLD, 2000);
             // Last event to add: Spawn add
@@ -248,7 +248,7 @@ struct boss_priestess_alunza : public BossAI
                     events.ScheduleEvent(EVENT_TAINTED_BLOOD_CAST, 2000);
                 else
                 {
-                    if (IsHeroic() || IsMythic())
+                    if (IsAtalDazarHeroicPlus(me->GetMap()))
                         events.ScheduleEvent(EVENT_SPIRIT_OF_GOLD, 8500);
                     events.ScheduleEvent(EVENT_TRANSFUSION, 13000);
                 }
@@ -479,23 +479,8 @@ class spell_priestess_transfusion_heal : public SpellScript
 {
     PrepareSpellScript(spell_priestess_transfusion_heal);
 
-    void HandleHeal(SpellEffIndex effIndex)
-    {
-        PreventHitDefaultEffect(effIndex);
-        if (Unit* caster = GetCaster())
-        {
-            float percent = 50 / 100;
-            if (caster->GetInstanceScript()->instance->IsHeroic())
-                percent = 1;
-            if (caster->GetInstanceScript()->instance->IsMythic())
-                percent = 2;
-            SetHitHeal((int32)((percent / 100) * caster->GetMaxHealth()));
-        }
-
-    }
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_priestess_transfusion_heal::HandleHeal, EFFECT_0, SPELL_EFFECT_HEAL_PCT);
     }
 };
 

@@ -97,7 +97,7 @@ public:
 
         void Reset()
         {
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+            _Reset();
 
             events.Reset();
             summons.DespawnAll();
@@ -106,8 +106,8 @@ public:
 
         void JustDied(Unit*)
         {
+            _JustDied();
             SelectSoundAndText(me, 4);
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
             me->RemoveAllAreaTriggers();
             summons.DespawnAll();
         }
@@ -132,6 +132,7 @@ public:
 
         bool CheckCheaters()
         {
+            // 比较 Boss 到 centerPlatform 的距离 >= 25.0f，不是玩家出圈
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
                 if (Player* player = i->GetSource())
@@ -216,7 +217,7 @@ public:
             float x;
             float y;
 
-            switch (rand() % 3)
+            switch (urand(1, 3))
             {
             case 1:
                 x = 875.113159f;
@@ -239,13 +240,13 @@ public:
         void EnterCombat(Unit*)
         {
             SelectSoundAndText(me, 1);
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
+            _EnterCombat();
 
             events.ScheduleEvent(EVENT_BLOOD_BOLT, TIMER_BLOOD_BOLT);
             events.ScheduleEvent(EVENT_BLOOD_MIRROR, TIMER_BLOOD_MIRROR);
             events.ScheduleEvent(EVENT_CREEPING_ROT, TIMER_CREEPING_ROT);
 
-            if(me->GetMap()->IsHeroic() || me->GetMap()->IsMythic())
+            if (IsUnderrotHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_SANGUINE_FEAST, TIMER_SANGUINE_FEAST);
         }
 
@@ -430,7 +431,7 @@ public:
         {
             events.ScheduleEvent(EVENT_BLOOD_BOLT, TIMER_BLOOD_BOLT);
 
-            if (me->GetMap()->IsHeroic() || me->GetMap()->IsMythic())
+            if (IsUnderrotHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_SANGUINE_FEAST, TIMER_SANGUINE_FEAST);
         }
 

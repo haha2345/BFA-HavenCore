@@ -15,7 +15,8 @@ enum Spells
     SPELL_CYCLONE_STRIKE_AT = 263325,
     SPELL_ARC_DASH = 263425,
     SPELL_ARCING_BLADE = 263234,
-    SPELL_A_PEAR_OF_THUNDER = 263365
+    SPELL_A_PEAR_OF_THUNDER = 263365,
+    SPELL_GALE_FORCE = 263779 // 263776 = UNIT 成功号，本波不 Cast、不删认知
 };
 
 enum Events
@@ -177,20 +178,17 @@ public:
         {
             SelectSoundAndText(me, 2);
 
-            if (instance)
-            {
-                switch (AdderisAndAspix(instance, me))
-                {
-                case 1:
-                    me->AddLootRecipient(nullptr);
-                    break;
-                case 0:
-                    if (Creature* aspix = GetAspixDead())
-                        aspix->AI()->DoAction(ACTION_FINISH_OTHER);
-                    instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
-                    break;
-                }
-            }
+            if (!instance)
+                return;
+
+            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+
+            if (GetAspix())
+                return;
+
+            _JustDied();
+            if (Creature* aspix = GetAspixDead())
+                aspix->AI()->DoAction(ACTION_FINISH_OTHER);
         }
 
         void EnterEvadeMode(EvadeReason /*why*/) override
@@ -214,7 +212,7 @@ public:
             events.ScheduleEvent(EVENT_CHECK_ENERGY, TIMER_CHECK_ENERGY);
             events.ScheduleEvent(EVENT_GUST, TIMER_GUST);
 
-            if (IsHeroic() || IsMythic())
+            if (IsSethralissHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_ARCING_BLADE, TIMER_ARCING_BLADE);
         }
 
@@ -432,20 +430,17 @@ public:
         {
             SelectSoundAndText(me, 2);
 
-            if (instance)
-            {
-                switch (AdderisAndAspix(instance, me))
-                {
-                case 1:
-                    me->AddLootRecipient(nullptr);
-                    break;
-                case 0:
-                    if (Creature* adderis = GetAdderisDead())
-                        adderis->AI()->DoAction(ACTION_FINISH_OTHER);
-                    instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
-                    break;
-                }
-            }
+            if (!instance)
+                return;
+
+            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+
+            if (GetAdderis())
+                return;
+
+            _JustDied();
+            if (Creature* adderis = GetAdderisDead())
+                adderis->AI()->DoAction(ACTION_FINISH_OTHER);
         }
 
         void EnterEvadeMode(EvadeReason /*w*/) override
@@ -473,7 +468,7 @@ public:
             events.ScheduleEvent(EVENT_CYCLONE_STRIKE, TIMER_CYCLONE_STRIKE);
             events.ScheduleEvent(EVENT_JOLT, TIMER_JOLT);
 
-            if (IsHeroic() || IsMythic())
+            if (IsSethralissHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_GALE_FORCE, TIMER_GALE_FORCE);
         }
 
@@ -503,6 +498,7 @@ public:
                 switch (eventId)
                 {
                 case EVENT_GALE_FORCE:
+                    me->CastSpell(me, SPELL_GALE_FORCE);
                     events.ScheduleEvent(EVENT_GALE_FORCE, TIMER_GALE_FORCE);
                     break;
                 case EVENT_CHECK_ENERGY:

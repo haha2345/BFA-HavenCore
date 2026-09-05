@@ -20,6 +20,13 @@
 #include "InstanceScript.h"
 #include "waycrest_manor.h"
 
+DoorData const doorData[] =
+{
+    { GO_HEARTSBANE_TRIAD_DOOR, DATA_HEARTSBANE_TRIAD, DOOR_TYPE_ROOM, BOUNDARY_NONE },
+    { DOODAD_SFX_LORD_AND_LADY_WAYCREST, DATA_LORD_AND_LADY_WAYCREST, DOOR_TYPE_PASSAGE, BOUNDARY_NONE },
+    { 0, 0, DOOR_TYPE_ROOM, BOUNDARY_NONE },
+};
+
 struct instance_waycrest_manor : public InstanceScript
 {
     instance_waycrest_manor(InstanceMap* map) : InstanceScript(map)
@@ -27,6 +34,8 @@ struct instance_waycrest_manor : public InstanceScript
         SetHeaders(DataHeader);
         SetBossNumber(EncounterCount);
     }
+
+    void Initialize() override { LoadDoorData(doorData); }
 };
 
 void AddSC_instance_waycrest_manor()

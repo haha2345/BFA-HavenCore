@@ -65,24 +65,26 @@ enum AnimKit
 struct boss_mogulrazdunk : public BossAI
 {
 public:
-    boss_mogulrazdunk (Creature* creature) : BossAI(creature, DATA_MOGUL_RAZDUNK)
+    boss_mogulrazdunk (Creature* creature) : BossAI(creature, DATA_MOGUL_RAZDUNK), _drillPhase(false)
     {
         Initialize();
     }
 
     void Initialize()
     {
+        _drillPhase = false;
         events.ScheduleEvent(EVENT_GATLING_GUN, 5000);
         events.ScheduleEvent(EVENT_DRILL_SMASH, 15000);
         events.ScheduleEvent(EVENT_ALPHA_CANNON, 11000);
-        if (IsHeroic() || IsMythic())
-            events.ScheduleEvent(EVENT_MICRO_MISSILES, 15800);
+        if (IsTheMotherlodeHeroicPlus(me->GetMap()))
+            events.ScheduleEvent(EVENT_MICRO_MISSILES, 15800); // 2 or 23, not 8
     }
 
 
     void Reset() override
     {
         BossAI::Reset();
+        _drillPhase = false;
         events.Reset();
         Initialize();
         instance->SetBossState(DATA_MOGUL_RAZDUNK, FAIL);
@@ -95,10 +97,21 @@ public:
         instance->SetBossState(DATA_MOGUL_RAZDUNK, IN_PROGRESS);
     }
 
-  
+    void DamageTaken(Unit* attacker, uint32& damage) override
+    {
+        BossAI::DamageTaken(attacker, damage);
+        // 50% is 2018 min-playable, not verified 8.3 EventMap; do not recast 260189; do not fly
+        if (!_drillPhase && me->HealthBelowPctDamaged(50, damage))
+        {
+            _drillPhase = true;
+            events.CancelEvent(EVENT_GATLING_GUN);
+            events.CancelEvent(EVENT_ALPHA_CANNON);
+            events.CancelEvent(EVENT_MICRO_MISSILES);
+        }
+    }
+
     void JustDied(Unit* killer) override
     {
-        _JustDied();
         BossAI::JustDied(killer);
         Talk(YELL_KILLED);
         instance->SetBossState(DATA_MOGUL_RAZDUNK, DONE);
@@ -153,6 +166,9 @@ public:
 
         DoMeleeAttackIfReady();
     }
+
+private:
+    bool _drillPhase;
 };
 
 

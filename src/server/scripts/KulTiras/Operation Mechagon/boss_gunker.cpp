@@ -104,7 +104,9 @@ struct boss_gunker : public BossAI
             events.Repeat(30s);
             break;
 
-        case EVENT_GOOPED:           
+        case EVENT_GOOPED:
+            DoCastRandom(SPELL_GOOPED_MAIN, 100.0f, false);
+            events.Repeat(30s);
             break;
 
         case EVENT_SLUDGE_BOLT:

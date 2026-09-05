@@ -63,6 +63,11 @@ struct boss_king_mechagon : public BossAI
         me->AddUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
     }
 
+    void EnterCombat(Unit* /*who*/) override
+    {
+        _EnterCombat();
+    }
+
     void EnterEvadeMode(EvadeReason /*why*/) override
     {
         me->ForcedDespawn(0, 15s);
@@ -179,7 +184,7 @@ struct npc_aeriel_unit : public BossAI
             {
                 std::list<Creature*> plasma_orbs_list;
                 plasma_orbs_list.clear();
-                me->GetCreatureListWithEntryInGrid(plasma_orbs_list, NPC_BUZZ_SAW, 300.0f);
+                me->GetCreatureListWithEntryInGrid(plasma_orbs_list, NPC_PLASMA_ORB, 300.0f);
                 for (auto& plasma_orbs : plasma_orbs_list)
                 {
                     plasma_orbs->SetFacingToObject(targets);
@@ -214,7 +219,6 @@ struct npc_aeriel_unit : public BossAI
 
     void JustDied(Unit* /*killer*/) override
     {
-        _JustReachedHome();
         if (Creature* king = me->FindNearestCreature(NPC_KING_MECHAGON, 100.0f, true))
         {
             king->ExitVehicle();
@@ -325,7 +329,7 @@ struct npc_omega_buster : public BossAI
             {
                 std::list<Creature*> plasma_orbs_list;
                 plasma_orbs_list.clear();
-                me->GetCreatureListWithEntryInGrid(plasma_orbs_list, NPC_BUZZ_SAW, 300.0f);
+                me->GetCreatureListWithEntryInGrid(plasma_orbs_list, NPC_PLASMA_ORB, 300.0f);
                 for (auto& plasma_orbs : plasma_orbs_list)
                 {
                     plasma_orbs->SetFacingToObject(targets);
@@ -362,7 +366,6 @@ struct npc_omega_buster : public BossAI
 
     void JustDied(Unit* /*unit*/) override
     {
-        _JustDied();
         me->DespawnCreaturesInArea(NPC_PLASMA_ORB, 125.0f);
         me->SetVisible(false);
         if (Creature* king = me->FindNearestCreature(NPC_KING_MECHAGON, 100.0f, true))
@@ -370,6 +373,8 @@ struct npc_omega_buster : public BossAI
             king->ExitVehicle(me);
             king->NearTeleportTo(king_mechagon_jump_pos, false);
             king->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+            king->RemoveUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
+            king->SetReactState(REACT_AGGRESSIVE);
         }
     }
 };

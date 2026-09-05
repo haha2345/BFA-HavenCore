@@ -148,6 +148,7 @@ struct boss_ataldazar_volkaal : public BossAI
 
     void Reset() override
     {
+        _Reset();
         phase = 1;
 
         events.Reset();
@@ -333,7 +334,7 @@ struct npc_ataldazar_reanimation_totem : public ScriptedAI
     {
         if (damage >= me->GetHealth())
         {
-            if (IsHeroic() || IsMythic())
+            if (IsAtalDazarHeroicPlus(me->GetMap()))
             {
                 damage = me->GetHealth() - 1;
                 if (!me->HasUnitState(UNIT_STATE_CASTING))
@@ -343,7 +344,7 @@ struct npc_ataldazar_reanimation_totem : public ScriptedAI
                         boss->AI()->DoAction(ACTION_TOTEM_DIED);
                 }
             }
-            if (!IsHeroic() && !IsMythic())
+            if (!IsAtalDazarHeroicPlus(me->GetMap()))
             {
                 if (Creature* boss = me->FindNearestCreature(NPC_VOLKAAL, 100.f))
                     boss->AI()->DoAction(ACTION_TOTEM_DIED);

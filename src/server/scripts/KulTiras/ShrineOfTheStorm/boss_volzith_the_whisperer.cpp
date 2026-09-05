@@ -25,7 +25,7 @@ enum Volzith
     SPELL_WHISPERS_OF_POWER_AURA                = 267037,
     SPELL_OLD_TONGUE                            = 274551,
 
-    SPELL_GRASP_OF_THE_SUNKEN_CITY              = 267360, // target entry 140038
+    SPELL_GRASP_OF_THE_SUNKEN_CITY              = 267360, // 手册 / 插件开读入口；Haven 打的是触发产物兼相位光环 267444。8.3 是否必须先放 267360：两边留，不得把 267360 当已有施法。
     SPELL_GRASP_OF_THE_SUNKEN_CITY_CHANNEL      = 267444,
     SPELL_GRASP_OF_THE_SUNKEN_CITY_DPS_PHASE    = 278209, // 267425 phaseid 10745 need to implement SPELL_AURA_164 - start drowning
     SPELL_GRASP_OF_THE_SUNKEN_CITY_TANK_PHASE   = 274556, // 267442 phaseid 10747
@@ -167,7 +167,7 @@ public:
 
         void Reset()
         {
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+            _Reset();
 
             me->SetPowerType(POWER_ENERGY);
             me->SetMaxPower(POWER_ENERGY, 100);
@@ -295,38 +295,34 @@ public:
             TanksHealersList.clear();
 
 
-            bool dps = false; // spliting with this, true = only dmg, false = tanks and healer
-
-            //gather info about available players
+            // 每个玩家单独分类。禁止再用跨玩家的 bool dps（现状初值 false 且从不 true，
+            // 五人从第一个起全进坦克治疗容器）。
+            // 本波唯一增项：TALENT_SPEC_PALADIN_HOLY（Player.h 65）。现网 HandleSunkenPhase
+            // 有防护骑士、没有神圣骑士。其余专精与现网那一段逐条相同，禁止再增删。
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
                 if (Player* player = i->GetSource())
                 {
-                    if (!player->IsGameMaster()) //gm check
-                    {
-                        uint32 specialization = player->GetSpecializationId();
-
-                        if ((player->getClass() == CLASS_PRIEST && specialization == TALENT_SPEC_PRIEST_DISCIPLINE) ||
-                            (player->getClass() == CLASS_PRIEST && specialization == TALENT_SPEC_PRIEST_HOLY) ||
-                            (player->getClass() == CLASS_DRUID && specialization == TALENT_SPEC_DRUID_RESTORATION) ||
-                            (player->getClass() == CLASS_MONK && specialization == TALENT_SPEC_MONK_MISTWEAVER) ||
-                            (player->getClass() == CLASS_SHAMAN && specialization == TALENT_SPEC_SHAMAN_RESTORATION) ||
-                            (player->getClass() == CLASS_WARRIOR && specialization == TALENT_SPEC_WARRIOR_PROTECTION) ||
-                            (player->getClass() == CLASS_DEATH_KNIGHT && specialization == TALENT_SPEC_DEATHKNIGHT_BLOOD) ||
-                            (player->getClass() == CLASS_PALADIN && specialization == TALENT_SPEC_PALADIN_PROTECTION) ||
-                            (player->getClass() == CLASS_MONK && specialization == TALENT_SPEC_MONK_BREWMASTER) ||
-                            (player->getClass() == CLASS_DEMON_HUNTER && specialization == TALENT_SPEC_DEMON_HUNTER_VENGEANCE) ||
-                            (player->getClass() == CLASS_DRUID && specialization == TALENT_SPEC_DRUID_BEAR))
-                        {
-                            dps = false;
-                        }
-
-                        if (!dps)
-                            TanksHealersList.push_back(player);
-                        else
-                            dpsList.push_back(player);
-                    }
-
+                    if (player->IsGameMaster())
+                        continue;
+                    uint32 specialization = player->GetSpecializationId();
+                    bool const isTankOrHealer =
+                        (player->getClass() == CLASS_PRIEST && specialization == TALENT_SPEC_PRIEST_DISCIPLINE) ||
+                        (player->getClass() == CLASS_PRIEST && specialization == TALENT_SPEC_PRIEST_HOLY) ||
+                        (player->getClass() == CLASS_DRUID && specialization == TALENT_SPEC_DRUID_RESTORATION) ||
+                        (player->getClass() == CLASS_MONK && specialization == TALENT_SPEC_MONK_MISTWEAVER) ||
+                        (player->getClass() == CLASS_SHAMAN && specialization == TALENT_SPEC_SHAMAN_RESTORATION) ||
+                        (player->getClass() == CLASS_WARRIOR && specialization == TALENT_SPEC_WARRIOR_PROTECTION) ||
+                        (player->getClass() == CLASS_DEATH_KNIGHT && specialization == TALENT_SPEC_DEATHKNIGHT_BLOOD) ||
+                        (player->getClass() == CLASS_PALADIN && specialization == TALENT_SPEC_PALADIN_PROTECTION) ||
+                        (player->getClass() == CLASS_PALADIN && specialization == TALENT_SPEC_PALADIN_HOLY) ||
+                        (player->getClass() == CLASS_MONK && specialization == TALENT_SPEC_MONK_BREWMASTER) ||
+                        (player->getClass() == CLASS_DEMON_HUNTER && specialization == TALENT_SPEC_DEMON_HUNTER_VENGEANCE) ||
+                        (player->getClass() == CLASS_DRUID && specialization == TALENT_SPEC_DRUID_BEAR);
+                    if (isTankOrHealer)
+                        TanksHealersList.push_back(player);
+                    else
+                        dpsList.push_back(player);
                 }
 
             if (!TanksHealersList.empty())
@@ -392,7 +388,7 @@ public:
         {
             if (me->HasAura(SPELL_GRASP_OF_THE_SUNKEN_CITY_CHANNEL))
             {
-                bool checkAlive;
+                bool checkAlive = false;
 
                 Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
                 for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
@@ -401,8 +397,6 @@ public:
                         if (!player->IsGameMaster() && player->IsAlive() &&
                             (player->HasAura(SPELL_GRASP_OF_THE_SUNKEN_CITY_DPS_PHASE) || player->HasAura(SPELL_GRASP_OF_THE_SUNKEN_CITY_TANK_PHASE)))
                             checkAlive = true;
-                        else
-                            checkAlive = false;
                     }
 
                 if (!checkAlive)
@@ -445,13 +439,14 @@ public:
 
         void JustDied(Unit*)
         {
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
             DespawnCreature(NPC_SUNKEN_DENIZEN);
             DespawnCreature(NPC_TENTACLE);
             DespawnCreature(NPC_FORGOTTEN_DENIZEN);
             DespawnCreature(NPC_MANIFESTATION_OF_THE_DEEP);
             me->RemoveAllAreaTriggers();
             SelectSoundAndText(me, 4);
+            events.Reset();
+            _JustDied();
         }
 
         void EnterCombat(Unit* /*unit*/)
@@ -462,14 +457,14 @@ public:
             dpsAdd = 0;
             endPhaseCheck = 0;
 
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
+            _EnterCombat();
 
             events.ScheduleEvent(EVENT_ADD_POWER, TIMER_ADD_POWER);
             events.ScheduleEvent(EVENT_YAWNING_GATE, TIMER_YAWNING_GATE);
             events.ScheduleEvent(EVENT_TENTACLE_SUMMON, TIMER_TENTACLE_SUMMON);
             events.ScheduleEvent(EVENT_WHISPER_OF_POWER, TIMER_WHISPERS_OF_POWER);
 
-            if (me->GetMap()->IsHeroic() || me->GetMap()->IsMythic())
+            if (IsShrineHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_CALL_THE_ABYSS, TIMER_CALL_THE_ABYSS);
         }
 
@@ -895,7 +890,7 @@ public:
 
         void OnPeriodic(AuraEffect const* aurEff)
         {
-            Position const dest = manifestSpawnPoints[urand(0, 15)];
+            Position const dest = manifestSpawnPoints[urand(0, 14)];
             GetCaster()->CastSpell(dest, SPELL_CALL_THE_ABYSS_SUMMON, true);
         }
 

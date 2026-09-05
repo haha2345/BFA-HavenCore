@@ -18,6 +18,9 @@
 #ifndef SHRINE_OF_THE_STORM_H
 #define SHRINE_OF_THE_STORM_H
 
+#include "DBCEnums.h"
+#include "Map.h"
+
 #define DataHeader "SOTS"
 
 uint32 const EncounterCount = 4;
@@ -37,12 +40,20 @@ enum CreatureIds
     NPC_AQUSIRR                 = 134056,
     NPC_BROTHER_IRONHULL        = 134063,
     NPC_GALECALLER_FAYE         = 134058,
-    NPC_LORD_STORMSONG          = 139737,
+    NPC_LORD_STORMSONG          = 139737, // 序章体，家在 shrine_of_the_storm.cpp；第三王战斗体是 boss 文件里的 134060
     NPC_VOLZITH_THE_WHISPERER   = 134069,
     NPC_REXXAR                  = 139971,
     NPC_BROTHER_PIKE            = 139970,
     NPC_ANCIENT_MINDBENDER      = 137051,
     NPC_AWOKEN_VOID             = 137036,
 };
+
+inline bool IsShrineHeroicPlus(Map const* map)
+{
+    if (!map)
+        return false;
+    Difficulty const d = map->GetDifficultyID();
+    return d == DIFFICULTY_HEROIC || d == DIFFICULTY_MYTHIC; // 2 or 23, not 8
+}
 
 #endif // SHRINE_OF_THE_STORM_H

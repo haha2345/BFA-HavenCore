@@ -89,7 +89,7 @@ struct boss_soulbound_goliath : public BossAI
 			me->CastSpell(me, BURNING_BRUSH_AURA);			
 			me->RemoveAurasDueToSpell(SOUL_HARVEST);
 			//On Heroic difficulty, when the The Soulbound Goliath runs into fire and gains Burning Brush it will spawn many Burning Souls adds.
-			if (IsHeroic() || IsMythic())
+			if (IsWaycrestHeroicPlus(me->GetMap()))
 			{
 				for (uint8 i = 0; i < 6; i++)
 				{
@@ -164,6 +164,13 @@ struct npc_burning_soul : public ScriptedAI
 		me->CastSpell(me, BURNING_FISTS);
 		me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
 		events.ScheduleEvent(EVENT_BURNING_SOUL_KILL, 10s);
+	}
+
+	void UpdateAI(uint32 diff) override
+	{
+		events.Update(diff);
+		while (uint32 eventId = events.ExecuteEvent())
+			ExecuteEvent(eventId);
 	}
 
 	void ExecuteEvent(uint32 eventId) override

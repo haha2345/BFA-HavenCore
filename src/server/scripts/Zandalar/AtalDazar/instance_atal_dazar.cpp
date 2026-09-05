@@ -36,7 +36,7 @@ struct instance_atal_dazar : public InstanceScript
     instance_atal_dazar(InstanceMap* map) : InstanceScript(map)
     {
         SetHeaders(DataHeader);
-        SetBossNumber(DATA_MAX_ENCOUNTERS);
+        SetBossNumber(EncounterCount);
     }
     void Initialize() override
     {
@@ -55,23 +55,6 @@ struct instance_atal_dazar : public InstanceScript
         }
 
         InstanceScript::OnCreatureCreate(cre);
-
-        if (instance->GetDifficultyID() == 1)
-        {
-            cre->SetLevel(110);
-        }
-        if (instance->GetDifficultyID() == 2)
-        {
-            cre->SetLevel(121);
-        }
-        if (instance->GetDifficultyID() == 23)
-        {
-            cre->SetLevel(122);
-        }
-        if (instance->GetDifficultyID() == 8)
-        {
-            cre->SetLevel(122);
-        }
     };
 
     void OnPlayerEnter(Player* player) override
@@ -155,25 +138,25 @@ struct instance_atal_dazar : public InstanceScript
         case GO_GATE_005:
             Gate05GUID = go->GetGUID();
             if (instance->GetGameObject(ancientSwitchGUID))
-                go->SetGoState(GetBossState(NPC_VOLKAAL) == IN_PROGRESS ? GO_STATE_READY : GO_STATE_ACTIVE);
+                go->SetGoState(GetBossState(DATA_VOLKAAL) == IN_PROGRESS ? GO_STATE_READY : GO_STATE_ACTIVE);
             go->AddFlag(GO_FLAG_NOT_SELECTABLE);
             break;
         case GO_GATE_006:
             Gate06GUID = go->GetGUID();
             if (instance->GetGameObject(ancientSwitchGUID))
-                go->SetGoState(GetBossState(NPC_VOLKAAL) == IN_PROGRESS ? GO_STATE_READY : GO_STATE_ACTIVE);
+                go->SetGoState(GetBossState(DATA_VOLKAAL) == IN_PROGRESS ? GO_STATE_READY : GO_STATE_ACTIVE);
             go->AddFlag(GO_FLAG_NOT_SELECTABLE);
             break;
         case GO_GATE_007:
             Gate07GUID = go->GetGUID();
             if (instance->GetGameObject(ancientSwitchGUID))
-                go->SetGoState(GetBossState(NPC_VOLKAAL) == IN_PROGRESS ? GO_STATE_READY : GO_STATE_ACTIVE);
+                go->SetGoState(GetBossState(DATA_VOLKAAL) == IN_PROGRESS ? GO_STATE_READY : GO_STATE_ACTIVE);
             go->AddFlag(GO_FLAG_NOT_SELECTABLE);
             break;
         case GO_GATE_008:
             Gate08GUID = go->GetGUID();
             if (instance->GetGameObject(ancientSwitchGUID))
-                go->SetGoState(GetBossState(NPC_VOLKAAL) == IN_PROGRESS ? GO_STATE_READY : GO_STATE_ACTIVE);
+                go->SetGoState(GetBossState(DATA_VOLKAAL) == IN_PROGRESS ? GO_STATE_READY : GO_STATE_ACTIVE);
             go->AddFlag(GO_FLAG_NOT_SELECTABLE);
             break;
         case GO_GATE_009:

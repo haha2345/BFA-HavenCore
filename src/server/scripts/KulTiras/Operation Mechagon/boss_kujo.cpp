@@ -73,6 +73,7 @@ struct boss_kujo : public BossAI
                 me->SetFacingToObject(target);
                 me->GetScheduler().Schedule(3s, [this, target](TaskContext /*context*/)
                 {
+                    me->CastSpell(target, SPELL_EXPLOSIVE_LEAP_TRIGGER, false);
                     me->GetMotionMaster()->MoveCharge(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 80.0f, 1, true);
                 });
             }
@@ -82,6 +83,7 @@ struct boss_kujo : public BossAI
         case EVENT_AIR_DROP:
             if (Creature* wendy = me->FindNearestCreature(NPC_WENDY_COGSWORTH, 300.0f, true))
                 wendy->AI()->Talk(SAY_AIR_DROP);
+            DoCastSelf(SPELL_AIR_DROP_DAMAGE_KNOCK);
             me->SummonCreature(NPC_FLYING_CLAW, me->GetRandomPoint(middle_of_the_room, 30.0f));
             events.Repeat(30s);
             break;
@@ -121,6 +123,10 @@ struct npc_flying_claw : public ScriptedAI
     void IsSummonedBy(Unit* /*summoner*/) override
     {        
         me->GetMotionMaster()->MoveFall();
+        me->GetScheduler().Schedule(2s, [this](TaskContext /*context*/)
+        {
+            DoCastAOE(SPELL_JUNK_BOMB_DAMAGE, true);
+        });
     }
 };
 

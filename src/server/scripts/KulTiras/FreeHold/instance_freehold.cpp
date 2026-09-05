@@ -16,6 +16,7 @@
  */
 
 #include "Creature.h"
+#include "GameEventMgr.h"
 #include "Group.h"
 #include "Player.h"
 #include "ScriptedGossip.h"
@@ -23,6 +24,7 @@
 #include "World.h"
 #include "InstanceScript.h"
 #include "freehold.h"
+#include <list>
 
 struct instance_free_hold : public InstanceScript
 {
@@ -43,17 +45,12 @@ struct instance_free_hold : public InstanceScript
         gurgthockGuid = ObjectGuid::Empty;
         daveyGuid = ObjectGuid::Empty;
         captainsControllerGuid = ObjectGuid::Empty;
-        countRaoul = 0;
+        SetHeaders(DataHeader);
         SetBossNumber(FreeholdData::DataMaxEncounters);
     }
 
     void OnCreatureCreate(Creature* creature) override
     {
-        if (instance->IsHeroic())
-            creature->SetBaseHealth(creature->GetMaxHealth() * 2.f);
-        if (instance->IsMythic())
-            creature->SetBaseHealth(creature->GetMaxHealth() * 1.33f);
-
         switch (creature->GetEntry())
         {
         case uint32(FreeholdCreature::NpcSkycapKragg):
@@ -98,41 +95,36 @@ struct instance_free_hold : public InstanceScript
         default:
             break;
         }
+
+        Position const home = creature->GetHomePosition();
+        creature->Relocate(home);
+        creature->SetDisableGravity(true);
     }
 
     void OnPlayerEnter(Player* /*player*/) override
     {
-        if (GetData(FreeholdData::DataCounciloCaptains) != DONE)
-        {
-            if (countRaoul >= 2)
-            {
-                if (Creature* raoul = instance->GetCreature(raoulGuid))
-                {
-                    raoul->AI()->DoAction(FreeholdAction::ActionSelectCaptainRaoul);
-                }
-            }
-        }
-    }
-
-    void OnUnitDeath(Unit* unit) override
-    {
-        if (!unit->IsCreature())
+        if (GetBossState(FreeholdData::DataCounciloCaptains) == DONE)
             return;
 
-        if (GetData(FreeholdData::DataCounciloCaptains) != DONE)
-        {
-            if (unit->GetEntry() == FreeholdCreature::NpcBlacktoothKnuckleduster)
-            {
-                countRaoul++;
+        if (GetData(FreeholdData::DataCrewEventDone) == 0)
+            return;
 
-                if (countRaoul >= 2)
-                {
-                    if (Creature* raoul = instance->GetCreature(raoulGuid))
-                    {
-                        raoul->AI()->DoAction(FreeholdAction::ActionSelectCaptainRaoul);
-                    }
-                }
-            }
+        switch (GetData(FreeholdData::DataFriendlyCaptain))
+        {
+        case uint32(FreeholdCreature::NpcCaptainJolly):
+            if (Creature* jolly = instance->GetCreature(jollyGuid))
+                jolly->AI()->DoAction(FreeholdAction::ActionSelectCaptainJolly);
+            break;
+        case uint32(FreeholdCreature::NpcCaptainRaoul):
+            if (Creature* raoul = instance->GetCreature(raoulGuid))
+                raoul->AI()->DoAction(FreeholdAction::ActionSelectCaptainRaoul);
+            break;
+        case uint32(FreeholdCreature::NpcCaptainEudora):
+            if (Creature* eudora = instance->GetCreature(eudoraGuid))
+                eudora->AI()->DoAction(FreeholdAction::ActionSelectCaptainEudora);
+            break;
+        default:
+            break;
         }
     }
 
@@ -185,6 +177,91 @@ struct instance_free_hold : public InstanceScript
         return ObjectGuid::Empty;
     }
 
+    // Haven private Freehold crew-week calendar (not 8.3 DBC). User confirmed 2026-08-30: 209/210/211.
+    FreeholdCrewWeek GetActiveFreeholdCrewWeek() const
+    {
+        if (sGameEventMgr->IsActiveEvent(209))
+            return CrewWeekCutwater;
+        if (sGameEventMgr->IsActiveEvent(210))
+            return CrewWeekBlacktooth;
+        if (sGameEventMgr->IsActiveEvent(211))
+            return CrewWeekBilgeRats;
+        return CrewWeekNone;
+    }
+
+    void NotifyCrewEventComplete(uint32 captainEntry)
+    {
+        SetData(uint32(FreeholdData::DataCrewEventDone), 1);
+        SetData(uint32(FreeholdData::DataFriendlyCaptain), captainEntry);
+
+        Creature* captain = nullptr;
+        int32 action = 0;
+        uint32 const* crewEntries = nullptr;
+        uint8 crewCount = 0;
+
+        static uint32 const CutwaterCrew[] =
+        {
+            uint32(FreeholdCreature::NpcCutwaterDuelist),
+            uint32(FreeholdCreature::NpcCutwaterKnifeJuggler),
+            uint32(FreeholdCreature::NpcCutwaterHarpooner),
+            uint32(FreeholdCreature::NpcCaptainJolly)
+        };
+        static uint32 const BlacktoothCrew[] =
+        {
+            uint32(FreeholdCreature::NpcBlacktoothBrutes),
+            uint32(FreeholdCreature::NpcBlacktoothScrapper),
+            uint32(FreeholdCreature::NpcBlacktoothKnuckleduster),
+            uint32(FreeholdCreature::NpcCaptainRaoul)
+        };
+        static uint32 const BilgeRatsCrew[] =
+        {
+            uint32(FreeholdCreature::NpcBilgeRatPadfoot),
+            uint32(FreeholdCreature::NpcBilgeRatBuccaneer),
+            uint32(FreeholdCreature::NpcBilgeRatBrinescale),
+            uint32(FreeholdCreature::NpcBilgeRatSwabby),
+            uint32(FreeholdCreature::NpcCaptainEudora)
+        };
+
+        switch (captainEntry)
+        {
+        case uint32(FreeholdCreature::NpcCaptainJolly):
+            captain = instance->GetCreature(jollyGuid);
+            action = FreeholdAction::ActionSelectCaptainJolly;
+            crewEntries = CutwaterCrew;
+            crewCount = uint8(sizeof(CutwaterCrew) / sizeof(CutwaterCrew[0]));
+            break;
+        case uint32(FreeholdCreature::NpcCaptainRaoul):
+            captain = instance->GetCreature(raoulGuid);
+            action = FreeholdAction::ActionSelectCaptainRaoul;
+            crewEntries = BlacktoothCrew;
+            crewCount = uint8(sizeof(BlacktoothCrew) / sizeof(BlacktoothCrew[0]));
+            break;
+        case uint32(FreeholdCreature::NpcCaptainEudora):
+            captain = instance->GetCreature(eudoraGuid);
+            action = FreeholdAction::ActionSelectCaptainEudora;
+            crewEntries = BilgeRatsCrew;
+            crewCount = uint8(sizeof(BilgeRatsCrew) / sizeof(BilgeRatsCrew[0]));
+            break;
+        default:
+            break;
+        }
+
+        if (captain && captain->AI())
+            captain->AI()->DoAction(action);
+
+        if (!captain || !crewEntries)
+            return;
+
+        for (uint8 i = 0; i < crewCount; ++i)
+        {
+            std::list<Creature*> list;
+            captain->GetCreatureListWithEntryInGrid(list, crewEntries[i], 200.0f);
+            for (Creature* creature : list)
+                if (creature)
+                    creature->SetFaction(uint32(FreeHoldFaction::FactionFriendlyFake));
+        }
+    }
+
     ObjectGuid skycapGuid;
     ObjectGuid sharkbaitGuid;
     ObjectGuid jollyGuid;
@@ -198,7 +275,6 @@ struct instance_free_hold : public InstanceScript
     ObjectGuid gurgthockGuid;
     ObjectGuid daveyGuid;
     ObjectGuid captainsControllerGuid;
-    uint8 countRaoul;
 };
 
 // 9000000 - NPC Teleporter Free Hold
@@ -254,6 +330,19 @@ public:
         return new npc_free_hold_entrance_teleporterAI(creature);
     }
 };
+
+FreeholdCrewWeek GetActiveFreeholdCrewWeek(InstanceScript const* instance)
+{
+    if (instance_free_hold const* fh = dynamic_cast<instance_free_hold const*>(instance))
+        return fh->GetActiveFreeholdCrewWeek();
+    return CrewWeekNone;
+}
+
+void NotifyCrewEventComplete(InstanceScript* instance, uint32 captainEntry)
+{
+    if (instance_free_hold* fh = dynamic_cast<instance_free_hold*>(instance))
+        fh->NotifyCrewEventComplete(captainEntry);
+}
 
 void AddSC_instance_freehold()
 {

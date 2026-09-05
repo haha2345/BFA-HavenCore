@@ -10,6 +10,7 @@ enum Spells
     SPELL_BLINDING_SAND = 263914,
     SPELL_DUST_CLOUD_DUMMY = 256359,
     SPELL_DUST_CLOUD_MISSILE = 256336, // npc 134390, spawn spell 267047
+    SPELL_SNAKE_WRAP = 263958,
     // When she reach 60% -> burrow
     SPELL_BURROW_KNOCKBACK = 264206,
     SPELL_BURROW_CREAT_AT = 264194, // at 12779
@@ -23,7 +24,8 @@ enum Events
     EVENT_BURROW,
     EVENT_UNBURROW,
     EVENT_WAVE_1,
-    EVENT_WAVE_2
+    EVENT_WAVE_2,
+    EVENT_SNAKE_WRAP
 };
 
 enum Phases
@@ -38,11 +40,12 @@ const Position wave_1_pos = { 3550.0f, 3447.0f, 51.0f, 4.5f };
 //133384
 struct boss_merektha : public BossAI
 {
-    boss_merektha(Creature* creature) : BossAI(creature, DATA_MEREKTHA) { }
+    boss_merektha(Creature* creature) : BossAI(creature, DATA_MEREKTHA), burrow_count(0) { }
 
     void Reset() override
     {
         BossAI::Reset();
+        burrow_count = 0;
         me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
     }
 
@@ -52,6 +55,8 @@ struct boss_merektha : public BossAI
         events.SetPhase(PHASE_1);
         events.ScheduleEvent(EVENT_NOXIOUS_BREATH, 3s);
         events.ScheduleEvent(EVENT_BLINDING_SAND, 8s);
+        if (IsSethralissHeroicPlus(me->GetMap()))
+            events.ScheduleEvent(EVENT_SNAKE_WRAP, 12s);
     }
 
     void JustDied(Unit* /*killer*/) override
@@ -109,6 +114,7 @@ struct boss_merektha : public BossAI
              me->NearTeleportTo(3557.0f, 3422.0f, 40.0f, 3.3f, false);
              events.CancelEvent(EVENT_NOXIOUS_BREATH);
              events.CancelEvent(EVENT_BLINDING_SAND);
+             events.CancelEvent(EVENT_SNAKE_WRAP);
              events.ScheduleEvent(EVENT_UNBURROW, 30s);
              if (burrow_count == 2)
              {
@@ -125,6 +131,14 @@ struct boss_merektha : public BossAI
              events.ScheduleEvent(EVENT_NOXIOUS_BREATH, 3s);
              events.ScheduleEvent(EVENT_BLINDING_SAND, 8s);
              events.ScheduleEvent(EVENT_BURROW, 30s);
+             if (IsSethralissHeroicPlus(me->GetMap()))
+                 events.ScheduleEvent(EVENT_SNAKE_WRAP, 12s);
+             break;
+
+        case EVENT_SNAKE_WRAP:
+             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+                 me->CastSpell(target, SPELL_SNAKE_WRAP);
+             events.Repeat(20s);
              break;
 
         case EVENT_WAVE_1:

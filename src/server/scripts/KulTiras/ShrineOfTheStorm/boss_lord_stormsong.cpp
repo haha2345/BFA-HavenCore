@@ -143,26 +143,27 @@ public:
         }
         void Reset()
         {
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+            _Reset();
             events.Reset();
             summons.DespawnAll();
         }
 
         void JustDied(Unit*)
         {
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
             summons.DespawnAll();
             RemoveAdditionalAura(SPELL_DISCIPLE_OF_THE_VOLZITH);
             RemoveAdditionalAura(SPELL_ANCIENT_MINDBENDER);
+            events.Reset();
+            _JustDied();
         }
 
         void EnterCombat(Unit*)
         {
             SelectSoundAndText(me, 1);
 
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
+            _EnterCombat();
 
-            if (me->GetMap()->IsHeroic() || me->GetMap()->IsHeroic())
+            if (IsShrineHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_MIND_REND, TIMER_MIND_REND);
 
             events.ScheduleEvent(EVENT_WAKEN_THE_VOID, TIMER_WAKEN_THE_VOID);

@@ -58,7 +58,8 @@ struct instance_shrine_of_the_storm : public InstanceScript
     }
 
 protected:
-    uint32 TeamInInstance;
+    // 本波 fortify 显式写成 = 0，不是「打开仓库时已经是 0」。
+    uint32 TeamInInstance = 0;
 };
 
 void AddSC_instance_shrine_of_the_storm()

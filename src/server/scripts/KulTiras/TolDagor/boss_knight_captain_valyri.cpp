@@ -50,7 +50,7 @@ enum Actions {
 
 //todo correct
 Position BarrelPositions[]{
-    { 60.00f, -2962.62f, 60.92f },
+    { 60.00f, -2662.62f, 60.92f },
     { 67.81f, -2674.87f, 60.92f },
     { 62.545f, -2682.86f, 60.92f },
     { 71.17f, -2690.06f, 60.83f },
@@ -255,7 +255,13 @@ class bfa_spell_fuselighter : public AuraScript
         if (!caster || !target)
             return;
 
+        if (target->HasAura(SPELL_CARRYING_MUNITIONS))
+        {
+            target->RemoveAura(SPELL_CARRYING_MUNITIONS);
 
+            if (Creature* barrel = caster->SummonCreature(NPC_MUNITIONS_BARREL, target->GetPosition(), TEMPSUMMON_MANUAL_DESPAWN, 60000))
+                barrel->CastSpell(nullptr, SPELL_BURNING_ARSENAL);
+        }
     }
 
     void Register() override

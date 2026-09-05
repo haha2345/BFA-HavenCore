@@ -29,6 +29,8 @@ enum Texts
 enum Events
 {
 	EVENT_BREAK_WATER = 1,
+	EVENT_CRASHING_TIDE,
+	EVENT_TIDAL_SURGE,
 };
 
 enum Spells
@@ -62,6 +64,8 @@ struct boss_hadal_darkfathom : public BossAI
 		_EnterCombat();
 		Talk(SAY_AGGRO);
 		events.ScheduleEvent(EVENT_BREAK_WATER, 5s);
+		events.ScheduleEvent(EVENT_CRASHING_TIDE, 8s); // min-playable, not plugin CD 12.5
+		events.ScheduleEvent(EVENT_TIDAL_SURGE, 12s); // min-playable, not plugin CD 23.5
 	}
 
 	void JustDied(Unit* /*killer*/) override
@@ -84,6 +88,14 @@ struct boss_hadal_darkfathom : public BossAI
 			events.Repeat(15s);
 			break;
 		}
+		case EVENT_CRASHING_TIDE:
+			DoCast(CRASHING_TIDE_SS);
+			events.Repeat(18s); // min-playable, not plugin CD 16
+			break;
+		case EVENT_TIDAL_SURGE:
+			DoCast(TIDAL_SURGE_SS);
+			events.Repeat(30s); // min-playable, not plugin CD 55
+			break;
 
 		default:
 			break;

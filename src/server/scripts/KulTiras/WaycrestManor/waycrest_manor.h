@@ -1,6 +1,9 @@
 #ifndef WAYCREST_MANOR_H
 #define WAYCREST_MANOR_H
 
+#include "DBCEnums.h"
+#include "Map.h"
+
 #define DataHeader "WM"
 
 uint32 const EncounterCount = 5;
@@ -14,11 +17,13 @@ enum EnconterData
     DATA_GORAK_TUL              = 4,
 	DATA_INTRO					= 5,
 	DATA_INTRO_LORD_AND_LADY	= 6,
+	DATA_IRIS_COUNT				= 7, // 只走 GetData/SetData，禁止 SetBossState
 };
 
 enum GameObjects
 {
 	DOODAD_SFX_LORD_AND_LADY_WAYCREST = 297809,
+	GO_HEARTSBANE_TRIAD_DOOR           = 282410,
 };
 
 enum CreatureIds
@@ -51,5 +56,13 @@ enum CreatureIds
 	NPC_DEATHTOUCHED_SLAVER		= 135552,
 	NPC_DRUSTWAR_SUMMONING_PORTAL = 133435,
 };
+
+inline bool IsWaycrestHeroicPlus(Map const* map)
+{
+    if (!map)
+        return false;
+    Difficulty const d = map->GetDifficultyID();
+    return d == DIFFICULTY_HEROIC || d == DIFFICULTY_MYTHIC; // 2 or 23, not 8
+}
 
 #endif // WAYCREST_MANOR_H

@@ -141,6 +141,7 @@ struct boss_ataldazar_rezan : public BossAI
 
     void Reset() override
     {
+        _Reset();
         events.Reset();
         summons.DespawnAll();
         for (Position point : AreatriggerPositions)

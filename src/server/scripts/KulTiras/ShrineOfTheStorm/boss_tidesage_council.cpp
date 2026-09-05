@@ -68,6 +68,11 @@ enum Actions
     ACTION_FINISH_OTHER = 1,
 };
 
+enum Misc
+{
+    ENCOUNTER_ID = 2131
+};
+
 #define IRONHULL_AGGRO "The tides shall take you!"
 #define IRONHULL_WARD "My hull is impenetrable"
 
@@ -179,20 +184,19 @@ public:
 
         void JustDied(Unit*)
         {
-            if (instance)
+            Creature* otherAlive = Faye();
+            if (otherAlive)
             {
-                switch (CouncilActive(instance, me))
-                {
-                case 1:
-                    me->AddLootRecipient(NULL);
-                    break;
-                case 0:
-                    if (Creature* faye = fayeDead())
-                        faye->AI()->DoAction(ACTION_FINISH_OTHER);
-                    instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
-                    break;
-                }
+                me->AddLootRecipient(NULL);
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+                return;
             }
+
+            if (Creature* faye = fayeDead())
+                faye->AI()->DoAction(ACTION_FINISH_OTHER);
+            events.Reset();
+            _JustDied();
+            instance->SendBossKillCredit(ENCOUNTER_ID);
         }
 
         void HandleManaRegen()
@@ -206,20 +210,20 @@ public:
 
         void Reset()
         {
+            _Reset();
             events.Reset();
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         }
 
         void EnterCombat(Unit*)
         {
             SelectSoundAndText(me, 1);
+            _EnterCombat();
             if (Creature* faye = Faye())
                 faye->SetInCombatWithZone();
             HandleManaRegen();
             events.ScheduleEvent(EVENT_HINDERING_CLEAVE, TIMER_HINDERING_CLEAVE);
-            if (me->GetMap()->IsHeroic() || me->GetMap()->IsMythic())
+            if (IsShrineHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_BLESSING_OF_IRONSIDE, TIMER_BLESSING_OF_IRONSIDE);
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         }
 
         void SelectSoundAndText(Creature* me, uint32  selectedTextSound = 0)
@@ -314,21 +318,20 @@ public:
 
         void JustDied(Unit*)
         {
-            if (instance)
+            Creature* otherAlive = Ironhull();
+            if (otherAlive)
             {
-                switch (CouncilActive(instance, me))
-                {
-                case 1:
-                    SelectSoundAndText(me, 2);
-                    me->AddLootRecipient(NULL);
-                    break;
-                case 0:
-                    if (Creature* ironhull = ironhullDead())
-                        ironhull->AI()->DoAction(ACTION_FINISH_OTHER);
-                    instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
-                    break;
-                }
+                SelectSoundAndText(me, 2);
+                me->AddLootRecipient(NULL);
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+                return;
             }
+
+            if (Creature* ironhull = ironhullDead())
+                ironhull->AI()->DoAction(ACTION_FINISH_OTHER);
+            events.Reset();
+            _JustDied();
+            instance->SendBossKillCredit(ENCOUNTER_ID);
         }
 
         void SelectSoundAndText(Creature* me, uint32  selectedTextSound = 0)
@@ -396,8 +399,8 @@ public:
 
         void Reset()
         {
+            _Reset();
             events.Reset();
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         }
 
         void EnterEvadeMode(EvadeReason /*why*/)
@@ -431,14 +434,14 @@ public:
 
         void EnterCombat(Unit*)
         {
+            _EnterCombat();
             if (Creature* iron = Ironhull())
                 iron->SetInCombatWithZone();
 
             HandleManaRegen();
             events.ScheduleEvent(EVENT_SLICING_BLAST, TIMER_SLICING_BLAST);
-            if (me->GetMap()->IsHeroic() || me->GetMap()->IsMythic())
+            if (IsShrineHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_BLESSING_OF_THE_TEMPEST, TIMER_BLESSING_OF_THE_TEMPEST);
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         }
 
         void UpdateAI(uint32 diff)

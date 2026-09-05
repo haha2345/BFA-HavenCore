@@ -21,6 +21,7 @@ enum Spells
     SPELL_DRAIN_FLUIDS = 267618,
     SPELL_BURNING_GROUND_AT_DAMAGE = 267874,
     SPELL_DESSICATION = 267626,
+    SPELL_ENTOMB = 267702,
 };
 
 enum Events
@@ -77,6 +78,7 @@ struct boss_mchimba : public BossAI
 
         case EVENT_ENTOMB:
              Talk(SAY_ENTOMB);
+             DoCastRandom(SPELL_ENTOMB, 300.0f); // 267702 KR2; do not INSERT 289642; effect 86 GO not this wave
              events.Repeat(30s);
              break;
         }

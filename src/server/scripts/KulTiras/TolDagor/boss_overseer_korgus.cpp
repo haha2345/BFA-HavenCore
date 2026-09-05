@@ -21,6 +21,7 @@
 enum Spells {
     SPELL_ARBLAST = 256199,
     SPELL_ARI = 256198,
+    SPELL_HEARTSTOPPER_VENOM = 256200,
     SPELL_CROSSIGNITION = 256083,
     SPELL_CROSSIGNITION_VISUAL = 256057,
     //for the player
@@ -73,16 +74,35 @@ struct boss_overseer_korgus : public BossAI
             switch (eventId)
             {
             case EVENT_MUNITION:
-                random = urand(0, 1);
-                if (random == 0)
+                if (!IsTolDagorHeroicPlus(me->GetMap()))
                 {
-                    DoCast(SPELL_ARBLAST);
+                    random = urand(0, 1);
+                    if (random == 0)
+                    {
+                        DoCast(SPELL_ARBLAST);
+                    }
+                    else
+                    {
+                        DoCast(SPELL_ARI);
+                    }
                 }
                 else
                 {
-                    DoCast(SPELL_ARI);
+                    random = urand(0, 2);
+                    if (random == 0)
+                    {
+                        DoCast(SPELL_ARBLAST);
+                    }
+                    else if (random == 1)
+                    {
+                        DoCast(SPELL_ARI);
+                    }
+                    else
+                    {
+                        DoCast(SPELL_HEARTSTOPPER_VENOM);
+                    }
                 }
-                events.ScheduleEvent(EVENT_MUNITION, 44800);
+                events.ScheduleEvent(EVENT_MUNITION, 44800); // DBM NewCDTimer placeholder, not 8.3 interval
                 break;
             case EVENT_CROSSIGNITION:
                 DoCastVictim(SPELL_CROSSIGNITION);
@@ -114,13 +134,11 @@ struct boss_overseer_korgus : public BossAI
                 events.ScheduleEvent(EVENT_MASSIVE_BLAST, 22000);
                 break;
             case EVENT_EXPLOSIVE_BURST:
-                //todo should target multiple players
+                // todo should target multiple players — conflict 13, this wave stays single target
                 if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true))
-                {
                     me->CastSpell(target, SPELL_EXPLOSIVE_BURST);
-                    events.ScheduleEvent(EVENT_EXPLOSIVE_BURST, 44800);
-                    break;
-                }
+                events.ScheduleEvent(EVENT_EXPLOSIVE_BURST, 44800);
+                break;
             default:
                 break;
             }

@@ -87,7 +87,7 @@ public:
 
         void Reset() override
         {
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+            _Reset();
             summons.DespawnAll();
             events.Reset();
             REMOVE_ROOT;
@@ -130,7 +130,8 @@ public:
         void JustDied(Unit*)
         {
             summons.DespawnAll();
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+            events.Reset();
+            _JustDied();
         }
         
         void JustSummoned(Creature* summon)
@@ -153,6 +154,7 @@ public:
                 splitPhase2 = true;
                 cannotAttack = true;
                 me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+                me->CastSpell(me, SPELL_ERUPTING_WATER);
                 me->SummonCreature(NPC_AQUALING, 3939.58f, -1221.45f, 128.424f, TEMPSUMMON_CORPSE_DESPAWN);
                 me->SummonCreature(NPC_AQUALING, 3954.12f, -1250.46f, 127.809f, TEMPSUMMON_CORPSE_DESPAWN);
                 me->SummonCreature(NPC_AQUALING, 3920.58f, -1258.02f, 128.144f, TEMPSUMMON_CORPSE_DESPAWN);
@@ -163,7 +165,7 @@ public:
         void EnterCombat(Unit*)
         {
             ROOT;
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
+            _EnterCombat();
             HandleNormalEvents();
         }
 
@@ -175,7 +177,7 @@ public:
             events.ScheduleEvent(EVENT_CHOKING_BRINE, TIMER_CHOKING_BRINE);
             events.ScheduleEvent(EVENT_SURGING_RUSH, TIMER_SURGING_RUSH);
 
-            if (me->GetMap()->IsHeroic() && me->GetMap()->IsMythic())
+            if (IsShrineHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_GRASPING_TENTACLES, TIMER_GRASPING_TENTACLES);
         }
 

@@ -44,6 +44,7 @@ enum KraggSpells
     AzeritePowderShot = 256106, /// Without Mount 
     RevitalizingBrewSkyCap = 256060, /// Without Mount
     RevitalizingBrewPlayer = 263297,
+    SpawnParrot = 256056, /// Unmount / phase 2 CLEU anchor; effect 28 summons 126841
     ///Heroic
     DiveBomb = 272046  ///Sharkbait will then charge across the arena in a straight line, dealing damage and knocking back all players in the path
 };
@@ -63,6 +64,11 @@ enum KraggDatas
 {
     DataCharge,
     DataMountInCombat
+};
+
+enum KraggActions
+{
+    ActionSharkbaitStopCombat = 1
 };
 
 enum KraggPhases
@@ -99,7 +105,6 @@ Position GetRandomPositionAround(Unit* unit, float distMin, float distMax)
     float x = unit->GetPositionX() + (float)(frand(distMin, distMax) * std::sin(angle));
     float y = unit->GetPositionY() + (float)(frand(distMin, distMax) * std::cos(angle));
     float z = unit->GetPositionZ();
-    unit->UpdateAllowedPositionZ(x, y, z);
     return { x, y, z };
 }
 
@@ -203,8 +208,35 @@ struct boss_skycap_kragg : public BossAI
         }
     }
 
+    void OnSpellCasted(SpellInfo const* spellInfo) override
+    {
+        if (spellInfo->Id != KraggSpells::SpawnParrot)
+            return;
+
+        me->ExitVehicle();
+        me->SetDisableGravity(true);
+
+        if (Creature* mount = ObjectAccessor::GetCreature(*me, mountGUID))
+        {
+            mount->SetReactState(REACT_PASSIVE);
+            mount->GetMotionMaster()->MovePoint(KraggMovementPoint::MovementPointMiddle, MiddlePos);
+        }
+
+        events.Reset();
+        events.ScheduleEvent(KraggEvents::EventAzeritePowderShot, 2000);
+        events.ScheduleEvent(KraggEvents::EventRevitalizingBrew, 15000);
+    }
+
     void JustDied(Unit* /*killer*/) override
     {
+        events.Reset();
+        fightStarted = false;
+        me->RemoveAllAreaTriggers();
+        if (Creature* mount = ObjectAccessor::GetCreature(*me, mountGUID))
+        {
+            if (mount->IsAIEnabled)
+                mount->AI()->DoAction(KraggActions::ActionSharkbaitStopCombat);
+        }
         _JustDied();
         Talk(KraggTalk::TalkDead);
         if (instance)
@@ -217,18 +249,7 @@ struct boss_skycap_kragg : public BossAI
         {
             phase = PhaseUnmount;
             Talk(KraggTalk::TalkUnmount);
-            me->ExitVehicle();
-
-            if (Creature* mount = ObjectAccessor::GetCreature(*me, mountGUID))
-            {
-                mount->SetReactState(REACT_PASSIVE);
-                mount->GetMotionMaster()->MovePoint(KraggMovementPoint::MovementPointMiddle, MiddlePos);
-            }
-
-            events.Reset();
-
-            events.ScheduleEvent(KraggEvents::EventAzeritePowderShot, 2000);
-            events.ScheduleEvent(KraggEvents::EventRevitalizingBrew, 15000);
+            me->CastSpell(me, KraggSpells::SpawnParrot, false);
         }
     }
 
@@ -240,6 +261,9 @@ struct boss_skycap_kragg : public BossAI
 
     void UpdateAI(uint32 diff) override
     {
+        if (!me->IsAlive())
+            return;
+
         if (fightStarted)
         {
             if (checkTimer <= diff)
@@ -280,6 +304,9 @@ struct boss_skycap_kragg : public BossAI
 
         while (uint32 eventId = events.ExecuteEvent())
         {
+            if (!me->IsAlive())
+                break;
+
             switch (eventId)
             {
             case KraggEvents::EventChaaarrge:
@@ -311,7 +338,7 @@ struct boss_skycap_kragg : public BossAI
                 if (urand(0, 1) == 1)
                     Talk(KraggTalk::TalkAzeritePowderShot1);
                 else
-                    Talk(KraggTalk::TalkAzeritePowderShot1);
+                    Talk(KraggTalk::TalkAzeritePowderShot2);
 
                 if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0.0, 0.0, true))
                     me->CastSpell(target, KraggSpells::AzeritePowderShot, false);
@@ -369,6 +396,20 @@ struct npc_sharkbait : public ScriptedAI
             InCombat = value;
     }
 
+    void DoAction(int32 const action) override
+    {
+        if (action != KraggActions::ActionSharkbaitStopCombat)
+            return;
+
+        events.Reset();
+        DiveBomb = false;
+        InCombat = false;
+        me->RemoveAllAreaTriggers();
+        me->CombatStop(true);
+        me->DeleteThreatList();
+        me->GetMotionMaster()->Clear();
+    }
+
     void MovementInform(uint32 type, uint32 pointId) override
     {
         if (type != POINT_MOTION_TYPE && type != EFFECT_MOTION_TYPE)
@@ -383,7 +424,7 @@ struct npc_sharkbait : public ScriptedAI
 
             events.Reset();
             events.ScheduleEvent(KraggEvents::EventVileBombadment, 5000);
-            if (IsHeroic())
+            if (IsFreeholdHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(KraggEvents::EventDiveBombs, 17000);
             break;
         }
@@ -409,6 +450,25 @@ struct npc_sharkbait : public ScriptedAI
 
     void UpdateAI(uint32 diff) override
     {
+        if (m_Instance)
+        {
+            if (Creature* kragg = m_Instance->instance->GetCreature(m_Instance->GetGuidData(FreeholdCreature::NpcSkycapKragg)))
+            {
+                if (!kragg->IsAlive())
+                {
+                    events.Reset();
+                    DiveBomb = false;
+                    InCombat = false;
+                    if (me->IsInCombat())
+                    {
+                        me->CombatStop(true);
+                        me->DeleteThreatList();
+                    }
+                    return;
+                }
+            }
+        }
+
         if ((!UpdateVictim() && InCombat) || DiveBomb)
             return;
 
@@ -432,7 +492,8 @@ struct npc_sharkbait : public ScriptedAI
             case KraggEvents::EventDiveBombs:
             {
                 if (Creature* kragg = m_Instance->instance->GetCreature(m_Instance->GetGuidData(FreeholdCreature::NpcSkycapKragg)))
-                    kragg->AI()->Talk(KraggTalk::TalkDiveBomb);
+                    if (kragg->IsAlive())
+                        kragg->AI()->Talk(KraggTalk::TalkDiveBomb);
 
                 if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0.0, 0.0, true))
                     me->GetMotionMaster()->MovePoint(KraggMovementPoint::MovementPointDiveBomb, GetRandomPositionAround(target, 10.0f, 15.0f));
@@ -505,6 +566,30 @@ class spell_dive_bomb : public SpellScript
     }
 };
 
+///256056 Spawn Parrot — block default effect 28 summon if Reset already spawned 126841
+class spell_spawn_parrot : public SpellScript
+{
+    PrepareSpellScript(spell_spawn_parrot);
+
+    void HandleSummon(SpellEffIndex effIndex)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        InstanceScript* instance = caster->GetInstanceScript();
+        if (!instance)
+            return;
+
+        if (ObjectAccessor::GetCreature(*caster, instance->GetGuidData(uint32(FreeholdCreature::NpcSharkBaitBoss))))
+            PreventHitDefaultEffect(effIndex);
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_spawn_parrot::HandleSummon, EFFECT_0, SPELL_EFFECT_SUMMON);
+    }
+};
 
 void AddSC_boss_skycapn_kragg()
 {
@@ -516,4 +601,5 @@ void AddSC_boss_skycapn_kragg()
     RegisterAreaTriggerAI(at_vile_bombardment);
     ///Spell
     RegisterSpellScript(spell_dive_bomb);
+    RegisterSpellScript(spell_spawn_parrot);
 }

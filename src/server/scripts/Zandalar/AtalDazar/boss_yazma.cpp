@@ -88,6 +88,7 @@ struct boss_ataldazar_yazma : public BossAI
 
     void Reset() override
     {
+        _Reset();
         summons.DespawnAll();
         events.Reset();
     }
@@ -121,7 +122,7 @@ struct boss_ataldazar_yazma : public BossAI
             //TODO: This event is when yazma has 100 of mana, is made it in correct time but not blizzlike
             case EVENT_SOULREND:
             {
-                if (IsHeroic() || IsMythic())
+                if (IsAtalDazarHeroicPlus(me->GetMap()))
                 {
                     std::list<Player*> playerList;
                     me->GetPlayerListInGrid(playerList, 100.0f);
@@ -180,7 +181,7 @@ struct boss_ataldazar_yazma : public BossAI
         summons.DespawnAll();
         BossAI::JustDied(killer);
 
-        if (IsHeroic() || IsMythic())
+        if (IsAtalDazarHeroicPlus(me->GetMap()))
             instance->DoCompleteAchievement(AtalDazarAchievements::ACHIEVEMENT_ATAL_DAZAR_COMPLETED_HEROIC);
         if (IsMythic())
             instance->DoCompleteAchievement(AtalDazarAchievements::ACHIEVEMENT_ATAL_DAZAR_COMPLETED_MYTHIC);

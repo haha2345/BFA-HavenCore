@@ -20,6 +20,7 @@ enum Spells
     SPELL_ROARING_FLAME_MISSILE = 294867,
     SPELL_DISCOM_MISSILE = 285454,
     SPELL_SELF_TRIMMING_HEDGE_DAMAGE = 294954,
+    SPELL_ACTIVATE_PLANT = 294853,
 };
 
 enum Events
@@ -46,6 +47,9 @@ struct boss_head_machinist_sparkflux : public BossAI
     {
         _EnterCombat();
         DoCastSelf(SPELL_PERIODIC_ENERGY_GAIN);
+        events.ScheduleEvent(EVENT_PLANTS, 10s);
+        events.ScheduleEvent(EVENT_HEDGE, 18s);
+        events.ScheduleEvent(EVENT_DISCOM, 25s);
     }
 
     void ExecuteEvent(uint32 eventid) override
@@ -59,9 +63,12 @@ struct boss_head_machinist_sparkflux : public BossAI
         switch (eventid)
         {
         case EVENT_HIDDEN_FLAME_CANNON:
+            DoCastSelf(SPELL_HIDDEN_FLAME_CANNON_APPLY_AT);
             break;
 
         case EVENT_PLANTS:
+            DoCastRandom(SPELL_ACTIVATE_PLANT, 100.0f, true);
+            events.Repeat(30s);
             break;
 
         case EVENT_DISCOM:
@@ -70,6 +77,8 @@ struct boss_head_machinist_sparkflux : public BossAI
             break;
 
         case EVENT_HEDGE:
+            DoCastRandom(SPELL_SELF_TRIMMING_HEDGE_DAMAGE, 100.0f, true);
+            events.Repeat(20s);
             break;
         }
     }

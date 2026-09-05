@@ -31,41 +31,41 @@ struct npc_lucille_waycrest_intro : public ScriptedAI
 	{
 			me->GetScheduler().Schedule(3s, [this](TaskContext /*context*/)
 			{
-				if (Creature* lady = instance->GetCreature(NPC_LADY_WAYCREST_INTRO))
+				if (Creature* lady = me->FindNearestCreature(NPC_LADY_WAYCREST_INTRO, 500.0f, true))
 					lady->AI()->Talk(SAY_LADY_INTRO);
 			});
 
 			me->GetScheduler().Schedule(8s, [this](TaskContext /*context*/)
 			{
-				if (Creature* lucille = instance->GetCreature(NPC_LUCILLE_WAYCREST_INTRO))
+				if (Creature* lucille = me->FindNearestCreature(NPC_LUCILLE_WAYCREST_INTRO, 500.0f, true))
 					lucille->AI()->Talk(SAY_LUCILLE_INTRO);
 			});
 
 			me->GetScheduler().Schedule(11s, [this](TaskContext /*context*/)
 			{
-				if (Creature* lady = instance->GetCreature(NPC_LADY_WAYCREST_INTRO))
+				if (Creature* lady = me->FindNearestCreature(NPC_LADY_WAYCREST_INTRO, 500.0f, true))
 					lady->AI()->Talk(SAY_LADY_INTRO_2);
 			});
 
 			me->GetScheduler().Schedule(14s, [this](TaskContext /*context*/)
 			{
-				if (Creature* lady = instance->GetCreature(NPC_LADY_WAYCREST_INTRO))	
+				if (Creature* lady = me->FindNearestCreature(NPC_LADY_WAYCREST_INTRO, 500.0f, true))	
 					lady->SetVisible(false);
 
-				if (Creature* solena = instance->GetCreature(NPC_SISTER_SOLENA_INTRO))
+				if (Creature* solena = me->FindNearestCreature(NPC_SISTER_SOLENA_INTRO, 500.0f, true))
 					solena->SetVisible(false);
 
-				if (Creature* briar = instance->GetCreature(NPC_SISTER_BRIAR_INTRO))
+				if (Creature* briar = me->FindNearestCreature(NPC_SISTER_BRIAR_INTRO, 500.0f, true))
 					briar->SetVisible(false);
 
-				if (Creature* malady = instance->GetCreature(NPC_SISTER_MALADY_INTRO))
+				if (Creature* malady = me->FindNearestCreature(NPC_SISTER_MALADY_INTRO, 500.0f, true))
 					malady->SetVisible(false);
 
 			});
 
 			me->GetScheduler().Schedule(21s, [this](TaskContext /*context*/)
 			{
-				if (Creature* mace = instance->GetCreature(NPC_INQUISITOR_MACE))
+				if (Creature* mace = me->FindNearestCreature(NPC_INQUISITOR_MACE, 500.0f, true))
 				{
 					mace->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);
 					std::list<Creature*> c_list;
@@ -80,7 +80,7 @@ struct npc_lucille_waycrest_intro : public ScriptedAI
 
 			me->GetScheduler().Schedule(23s, [this](TaskContext /*context*/)
 			{
-				if (instance->GetCreature(NPC_INQUISITOR_NOTLEY))
+				if (me->FindNearestCreature(NPC_INQUISITOR_NOTLEY, 500.0f, true))
 				{
 					std::list<Creature*> c_list;
 					me->GetCreatureListWithEntryInGrid(c_list, NPC_INQUISITOR_NOTLEY, 500.0f);
@@ -93,7 +93,7 @@ struct npc_lucille_waycrest_intro : public ScriptedAI
 
 			me->GetScheduler().Schedule(25s, [this](TaskContext /*context*/)
 			{
-				if (instance->GetCreature(NPC_INQUISITOR_NOTLEY))
+				if (me->FindNearestCreature(NPC_INQUISITOR_NOTLEY, 500.0f, true))
 				{
 					std::list<Creature*> c_list;
 					me->GetCreatureListWithEntryInGrid(c_list, NPC_INQUISITOR_NOTLEY, 500.0f);
@@ -106,13 +106,13 @@ struct npc_lucille_waycrest_intro : public ScriptedAI
 
 			me->GetScheduler().Schedule(33s, [this](TaskContext /*context*/)
 			{
-				if (Creature* lucille = instance->GetCreature(NPC_LUCILLE_WAYCREST_INTRO))
+				if (Creature* lucille = me->FindNearestCreature(NPC_LUCILLE_WAYCREST_INTRO, 500.0f, true))
 					lucille->AI()->Talk(SAY_HEROES);
 			});
 
 			me->GetScheduler().Schedule(40s, [this](TaskContext /*context*/)
 			{
-				if ([[maybe_unused]] Creature* yorrick = instance->GetCreature(NPC_INQUISITOR_YORRICK))
+				if ([[maybe_unused]] Creature* yorrick = me->FindNearestCreature(NPC_INQUISITOR_YORRICK, 500.0f, true))
 				{
 					std::list<Creature*> c_list;
 					me->GetCreatureListWithEntryInGrid(c_list, NPC_INQUISITOR_YORRICK, 500.0f);
@@ -125,7 +125,7 @@ struct npc_lucille_waycrest_intro : public ScriptedAI
 
 			me->GetScheduler().Schedule(44s, [this](TaskContext /*context*/)
 			{
-				if (Creature* lucille = instance->GetCreature(NPC_LUCILLE_WAYCREST_INTRO))
+				if (Creature* lucille = me->FindNearestCreature(NPC_LUCILLE_WAYCREST_INTRO, 500.0f, true))
 				{
 					std::list<Creature*> c_list;
 					lucille->GetCreatureListInGrid(c_list, 13.0f);

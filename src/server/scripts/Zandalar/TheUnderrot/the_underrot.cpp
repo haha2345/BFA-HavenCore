@@ -21,10 +21,33 @@
 #include "ScriptMgr.h"
 #include "the_underrot.h"
 
+enum FacelessCorruptorSpells
+{
+    SPELL_MADDENING_GAZE = 272609,
+    SPELL_ABYSSAL_REACH  = 272592
+};
+
+enum FacelessCorruptorEvents
+{
+    EVENT_MADDENING_GAZE = 1,
+    EVENT_ABYSSAL_REACH
+};
+
 // 138281
 struct npc_underrot_faceless_corruptor : public ScriptedAI
 {
     npc_underrot_faceless_corruptor(Creature* creature) : ScriptedAI(creature) { }
+
+    void Reset() override
+    {
+        events.Reset();
+    }
+
+    void EnterCombat(Unit* /*who*/) override
+    {
+        events.ScheduleEvent(EVENT_MADDENING_GAZE, 3s, 5s); // dump SAI id 0: 3000,5000 then 12000,15000; not DBC
+        events.ScheduleEvent(EVENT_ABYSSAL_REACH, 10s);     // dump SAI id 1: 10000,10000 then 18000,22000; not DBC
+    }
 
     void JustDied(Unit* /*killer*/) override
     {
@@ -37,6 +60,39 @@ struct npc_underrot_faceless_corruptor : public ScriptedAI
             else if (param.numericValue == 2)
                 instanceScript->SetData(DATA_FACELESS_CORRUPTOR_2, 1);
         }
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim())
+            return;
+
+        events.Update(diff);
+
+        if (me->HasUnitState(UNIT_STATE_CASTING))
+            return;
+
+        while (uint32 eventId = events.ExecuteEvent())
+        {
+            switch (eventId)
+            {
+                case EVENT_MADDENING_GAZE:
+                    DoCastVictim(SPELL_MADDENING_GAZE);
+                    events.Repeat(12s, 15s); // dump SAI id 0 repeat; not DBC
+                    break;
+                case EVENT_ABYSSAL_REACH:
+                    DoCastSelf(SPELL_ABYSSAL_REACH);
+                    events.Repeat(18s, 22s); // dump SAI id 1 repeat; not DBC
+                    break;
+                default:
+                    break;
+            }
+
+            if (me->HasUnitState(UNIT_STATE_CASTING))
+                return;
+        }
+
+        DoMeleeAttackIfReady();
     }
 };
 

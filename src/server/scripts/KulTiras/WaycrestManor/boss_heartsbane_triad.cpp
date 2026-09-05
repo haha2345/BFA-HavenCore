@@ -88,25 +88,44 @@ enum Texts
 	//Inquisitor Yorrick says : Continue your hunt for Lady Waycrest.I will ensure these rooms are clear.
 };
 
+enum Misc
+{
+	ENCOUNTER_ID = 2113,
+};
+
 struct boss_heartsbane_triad : public BossAI
 {
 	boss_heartsbane_triad(Creature* creature) : BossAI(creature, DATA_HEARTSBANE_TRIAD) { }
 
-	uint8 iris_count;
+private:
+	Creature* GetIrisClockOwner()
+	{
+		if (Creature* solena = me->FindNearestCreature(NPC_SISTER_SOLENA, 150.0f, true))
+			return solena;
+		if (Creature* briar = me->FindNearestCreature(NPC_SISTER_BRIAR, 150.0f, true))
+			return briar;
+		if (Creature* malady = me->FindNearestCreature(NPC_SISTER_MALADY, 150.0f, true))
+			return malady;
+		return nullptr;
+	}
 
+public:
 	void Reset() override
 	{
-		BossAI::Reset();	
-		iris_count = 0;
-		me->SetPowerType(POWER_COMBO_POINTS);
-		me->SetPower(POWER_COMBO_POINTS, 0);
+		BossAI::Reset();
+		instance->SetData(DATA_IRIS_COUNT, 0);
+		me->SetPowerType(POWER_ENERGY);
+		me->SetMaxPower(POWER_ENERGY, 100);
+		me->SetPower(POWER_ENERGY, 0);
+		me->AddAura(IRONBARK_SHIELD, me);
 	}
 
 	void PassIris()
-	{		
+	{
+		uint32 const irisCount = instance->GetData(DATA_IRIS_COUNT);
 		if (Creature* solena = me->FindNearestCreature(NPC_SISTER_SOLENA, 100.0f, true))
 		{
-			if (iris_count == 1)
+			if (irisCount == 1)
 			{								
 				if (Creature* iris = me->FindNearestCreature(NPC_FOCUSING_IRIS, 100.0f, true))
 				{
@@ -115,9 +134,9 @@ struct boss_heartsbane_triad : public BossAI
 					solena->CastStop();
 					solena->CastSpell(iris, CLAIM_THE_IRIS);
 					solena->AddAura(FOCUSING_IRIS);
+					solena->RemoveAura(IRONBARK_SHIELD);
 					events.ScheduleEvent(EVENT_SOUL_MANIPULATION, 5s);
-					events.ScheduleEvent(EVENT_DIRE_RITUAL, 15s);
-					if (IsHeroic() || IsMythic())
+					if (IsWaycrestHeroicPlus(me->GetMap()))
 					{
 						events.ScheduleEvent(EVENT_AURA_OF_APATHY, 2s);
 					}
@@ -126,11 +145,12 @@ struct boss_heartsbane_triad : public BossAI
 		}
 		if (Creature* briar = me->FindNearestCreature(NPC_SISTER_BRIAR, 100.0f, true))
 		{
-			if (iris_count == 2)
+			if (irisCount == 2)
 			{		
 				if (Creature* solena = me->FindNearestCreature(NPC_SISTER_SOLENA, 100.0f, true))
 				{
 					solena->RemoveAura(FOCUSING_IRIS);
+					solena->AddAura(IRONBARK_SHIELD);
 					instance->DoRemoveAurasDueToSpellOnPlayers(AURA_OF_APATHY_DEBUFF);
 				}				
 				if (Creature* iris = me->FindNearestCreature(NPC_FOCUSING_IRIS, 100.0f, true))
@@ -144,8 +164,7 @@ struct boss_heartsbane_triad : public BossAI
 						briar->AddAura(FOCUSING_IRIS);
 						briar->RemoveAura(IRONBARK_SHIELD);
 						events.ScheduleEvent(EVENT_JAGGED_NEATTLES, 5s);
-						events.ScheduleEvent(EVENT_DIRE_RITUAL, 15s);
-						if (IsHeroic() || IsMythic())	
+						if (IsWaycrestHeroicPlus(me->GetMap()))
 							events.ScheduleEvent(EVENT_AURA_OF_THORNS, 2s);
 					}
 				}
@@ -153,12 +172,13 @@ struct boss_heartsbane_triad : public BossAI
 		}
 		if (Creature* malady = me->FindNearestCreature(NPC_SISTER_MALADY, 100.0f, true))
 		{
-			if (iris_count == 3)
+			if (irisCount == 3)
 			{				
 				if (Creature* briar = me->FindNearestCreature(NPC_SISTER_BRIAR, 100.0f, true))
 				{
 					briar->RemoveAura(FOCUSING_IRIS);
 					briar->RemoveAura(AURA_OF_THORNS);
+					briar->AddAura(IRONBARK_SHIELD);
 				}					
 				if (Creature* iris = me->FindNearestCreature(NPC_FOCUSING_IRIS, 100.0f, true))
 				{
@@ -170,10 +190,10 @@ struct boss_heartsbane_triad : public BossAI
 						malady->CastSpell(iris, CLAIM_THE_IRIS);
 						malady->AddAura(FOCUSING_IRIS);
 						malady->RemoveAura(RUNIC_MARK);
+						malady->RemoveAura(IRONBARK_SHIELD);
 						events.ScheduleEvent(EVENT_UNSTABLE_RUNIC_MARK, 5s);
-						events.ScheduleEvent(EVENT_DIRE_RITUAL, 15s);
 						events.ScheduleEvent(EVENT_RESET_IRIS, 18s);
-						if (IsHeroic() || IsMythic())
+						if (IsWaycrestHeroicPlus(me->GetMap()))
 							events.ScheduleEvent(EVENT_AURA_OF_DREAD, 2s);
 					}
 				}
@@ -195,11 +215,13 @@ struct boss_heartsbane_triad : public BossAI
 		case NPC_SISTER_BRIAR:		
 			 _EnterCombat();
 			 events.ScheduleEvent(EVENT_BRAMBLE_BOLT, 3s);
+			 events.ScheduleEvent(EVENT_FOCUSING_IRIS, 5s);
 			 break;
 
 		case NPC_SISTER_MALADY:
 			 _EnterCombat();
 			 events.ScheduleEvent(EVENT_RUINOUS_BOLT, 3s);
+			 events.ScheduleEvent(EVENT_FOCUSING_IRIS, 5s);
 			 break;
 
 		default:
@@ -255,7 +277,12 @@ struct boss_heartsbane_triad : public BossAI
 		}
 		case EVENT_FOCUSING_IRIS:
 		{
-			iris_count++;
+			if (GetIrisClockOwner() != me)
+			{
+				events.Repeat(30s);
+				break;
+			}
+			instance->SetData(DATA_IRIS_COUNT, instance->GetData(DATA_IRIS_COUNT) + 1);
 			PassIris();
 			events.Repeat(30s);
 			break;
@@ -265,14 +292,16 @@ struct boss_heartsbane_triad : public BossAI
 			if (Creature* malady = me->FindNearestCreature(NPC_SISTER_MALADY, 100.0f, true))
 			{
 				malady->RemoveAura(FOCUSING_IRIS);
+				malady->AddAura(IRONBARK_SHIELD);
 				instance->DoRemoveAurasDueToSpellOnPlayers(AURA_OF_DREAD_DEBUFF);
-				iris_count = 0;
+				instance->SetData(DATA_IRIS_COUNT, 0);
 			}			
 			break;
 		}
 		case EVENT_DIRE_RITUAL:
 		{
-			if (iris_count == 1)
+			uint32 const irisCount = instance->GetData(DATA_IRIS_COUNT);
+			if (irisCount == 1)
 			{
 				if (Creature* solena = me->FindNearestCreature(NPC_SISTER_SOLENA, 100.0f, true))
 				{
@@ -285,7 +314,7 @@ struct boss_heartsbane_triad : public BossAI
 				}
 			}
 
-			if (iris_count == 2)
+			if (irisCount == 2)
 			{
 				if (Creature* briar = me->FindNearestCreature(NPC_SISTER_BRIAR, 100.0f, true))
 				{
@@ -294,7 +323,7 @@ struct boss_heartsbane_triad : public BossAI
 				}
 			}
 
-			if (iris_count == 3)
+			if (irisCount == 3)
 			{
 				if (Creature* malady = me->FindNearestCreature(NPC_SISTER_MALADY, 100.0f, true))
 				{
@@ -380,23 +409,62 @@ struct boss_heartsbane_triad : public BossAI
 		{
 		case NPC_SISTER_SOLENA:
 			Talk(SAY_DEATH_SOLENA);
-			_JustDied();	
 			instance->DoRemoveAurasDueToSpellOnPlayers(AURA_OF_APATHY_DEBUFF);
-			instance->SetBossState(DATA_HEARTSBANE_TRIAD, DONE);
 			break;
 
 		case NPC_SISTER_BRIAR:
 			Talk(SAY_DEATH_BRIAR);
-			_JustDied();
 			instance->DoRemoveAurasDueToSpellOnPlayers(JAGGED_NEATTLES);
 			break;
 
 		case NPC_SISTER_MALADY:
 			Talk(SAY_DEATH_MALADY);
-			_JustDied();
 			instance->DoRemoveAurasDueToSpellOnPlayers(AURA_OF_DREAD_DEBUFF);
 			break;
 		}
+
+		Creature* otherA = nullptr;
+		Creature* otherB = nullptr;
+		switch (me->GetEntry())
+		{
+		case NPC_SISTER_SOLENA:
+			otherA = me->FindNearestCreature(NPC_SISTER_BRIAR, 150.0f, true);
+			otherB = me->FindNearestCreature(NPC_SISTER_MALADY, 150.0f, true);
+			break;
+		case NPC_SISTER_BRIAR:
+			otherA = me->FindNearestCreature(NPC_SISTER_SOLENA, 150.0f, true);
+			otherB = me->FindNearestCreature(NPC_SISTER_MALADY, 150.0f, true);
+			break;
+		case NPC_SISTER_MALADY:
+			otherA = me->FindNearestCreature(NPC_SISTER_SOLENA, 150.0f, true);
+			otherB = me->FindNearestCreature(NPC_SISTER_BRIAR, 150.0f, true);
+			break;
+		default:
+			break;
+		}
+
+		if (otherA || otherB)
+		{
+			instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+			return;
+		}
+
+		_JustDied();
+		instance->SendBossKillCredit(ENCOUNTER_ID);
+	}
+
+	void UpdateAI(uint32 diff) override
+	{
+		if (me->HasAura(FOCUSING_IRIS) && me->GetPower(POWER_ENERGY) >= me->GetMaxPower(POWER_ENERGY))
+		{
+			me->SetPower(POWER_ENERGY, 0);
+			if (me->GetEntry() == NPC_SISTER_SOLENA)
+				Talk(SAY_WARNING_DIRE_RITUAL);
+			DoCastAOE(DIRE_RITUAL);
+			if (me->GetEntry() == NPC_SISTER_SOLENA)
+				Talk(SAY_DIRE_RITUAL_SOLENA);
+		}
+		BossAI::UpdateAI(diff);
 	}
 };
 

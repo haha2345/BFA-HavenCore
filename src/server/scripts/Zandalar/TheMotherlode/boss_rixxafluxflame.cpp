@@ -28,7 +28,9 @@ enum Spells
     SPELL_PROPELLANT_BLAST	= 260669,
 	
     SPELL_SEARING_REAGENT	= 259474,
-	
+
+    SPELL_AZERITE_CATALYST	= 270028,
+    SPELL_GUSHING_CATALYST	= 275992,
 };
 
 enum Events
@@ -36,6 +38,8 @@ enum Events
     EVENT_CHEMICAL_BURN		= 1,
     EVENT_PROPELLANT_BLAST	= 2,
     EVENT_SEARING_REAGENT	= 3,
+    EVENT_AZERITE_CATALYST	= 4,
+    EVENT_GUSHING_CATALYST	= 5,
 };
 
 enum Yells
@@ -66,6 +70,9 @@ public:
         events.ScheduleEvent(EVENT_CHEMICAL_BURN, 12000);
         events.ScheduleEvent(EVENT_PROPELLANT_BLAST, 6000);
         events.ScheduleEvent(EVENT_SEARING_REAGENT, 1500);
+        events.ScheduleEvent(EVENT_AZERITE_CATALYST, 8000); // min-playable, not verified 8.3 EventMap
+        if (IsTheMotherlodeHeroicPlus(me->GetMap()))
+            events.ScheduleEvent(EVENT_GUSHING_CATALYST, 20000); // min-playable; JSXD 18920 is 2+23
     }
 
     void Reset() override
@@ -125,6 +132,14 @@ public:
                 Talk(YELL_SEARING_REAGENT);
                 DoCastVictim(SPELL_SEARING_REAGENT);
                 events.ScheduleEvent(EVENT_SEARING_REAGENT, 15800);
+                break;
+            case EVENT_AZERITE_CATALYST:
+                DoCastVictim(SPELL_AZERITE_CATALYST);
+                events.ScheduleEvent(EVENT_AZERITE_CATALYST, 20000); // min-playable, not plugin CD
+                break;
+            case EVENT_GUSHING_CATALYST:
+                DoCastVictim(SPELL_GUSHING_CATALYST);
+                events.ScheduleEvent(EVENT_GUSHING_CATALYST, 40000); // min-playable, not plugin CD
                 break;
             default:
                 break;

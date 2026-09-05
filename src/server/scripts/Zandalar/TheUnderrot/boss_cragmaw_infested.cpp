@@ -86,7 +86,7 @@ public:
 
         void Reset()
         {
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+            _Reset();
             events.Reset();
             DespawnCreature(NPC_BLOOD_TICK);
             DespawnCreature(NPC_LARVES);
@@ -104,6 +104,7 @@ public:
 
         bool CheckCheaters()
         {
+            // 比较 Boss 到 centerZone 的距离 >= 80.0f，不是玩家出圈
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
                 if (Player* player = i->GetSource())
@@ -127,9 +128,9 @@ public:
 
         void JustDied(Unit*)
         {
+            _JustDied();
             DespawnCreature(NPC_BLOOD_TICK);
             DespawnCreature(NPC_LARVES);
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         }
 
         void EnterEvadeMode(EvadeReason /*why*/)
@@ -217,7 +218,7 @@ public:
 
         void EnterCombat(Unit*)
         {
-            instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
+            _EnterCombat();
 
             me->SetPowerType(POWER_ENERGY);
             me->SetMaxPower(POWER_ENERGY, 100);
@@ -226,7 +227,7 @@ public:
             events.ScheduleEvent(EVENT_INDIGESTION, TIMER_INDIGESTION);
             events.ScheduleEvent(EVENT_CHARGE_TARGET, TIMER_CHARGE);
 
-            if (me->GetMap()->IsHeroic() || me->GetMap()->IsMythic())
+            if (IsUnderrotHeroicPlus(me->GetMap()))
                 events.ScheduleEvent(EVENT_ENERGY_REGEN, TIMER_ENERGY_REGEN);
         }
 

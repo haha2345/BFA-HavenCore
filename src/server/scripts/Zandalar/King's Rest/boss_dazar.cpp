@@ -35,7 +35,10 @@ struct boss_dazar : public BossAI
     void EnterCombat(Unit* /*unit*/) override
     {
         _EnterCombat();
-    };
+        events.ScheduleEvent(EVENT_BLADE_COMBO, 5s); // min-playable, not plugin CD
+        events.ScheduleEvent(EVENT_QUAKING_LEAP, 10s); // min-playable, not verified 8.3 EventMap
+        events.ScheduleEvent(EVENT_GALE_SLASH, 15s); // min-playable; do not use 268932 as gale bar
+    }
 
     void ExecuteEvent(uint32 eventId) override
     {
@@ -73,7 +76,7 @@ struct boss_dazar : public BossAI
         }
         if (me->HealthBelowPct(60) && !hp60)
         {
-            hp80 = true;
+            hp60 = true;
             me->SummonCreature(NPC_TZALA, me->GetPosition(), TEMPSUMMON_MANUAL_DESPAWN);
         }
     };

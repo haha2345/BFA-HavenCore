@@ -93,6 +93,7 @@ struct boss_council_tribes : public BossAI
         switch (me->GetEntry())
         {
         case NPC_KULA_THE_BUTCHER:
+            // KR2: hardcoded Kula -> Akali -> Zanazal; weekly rotation is conflict 2, not this wave
             _JustDied();
             me->SummonCreature(NPC_AKALI_THE_CONQUEROR, akali_pos, TEMPSUMMON_MANUAL_DESPAWN);
             break;

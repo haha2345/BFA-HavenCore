@@ -78,6 +78,7 @@ struct boss_harlan_sweete : public BossAI
     void Reset() override
     {
         _Reset();
+        me->RemoveAllAreaTriggers();
         sixtyPercent = false;
         thirtyPercent = false;
         instance->SetBossState(FreeholdData::DataHarlanSweete, NOT_STARTED);
@@ -101,6 +102,8 @@ struct boss_harlan_sweete : public BossAI
 
     void JustDied(Unit* /*killer*/) override
     {
+        events.Reset();
+        me->RemoveAllAreaTriggers();
         _JustDied();
         Talk(HarlanTalk::TalkDead);
         instance->SetBossState(FreeholdData::DataHarlanSweete, DONE);
@@ -124,6 +127,9 @@ struct boss_harlan_sweete : public BossAI
 
     void UpdateAI(uint32 diff) override
     {
+        if (!me->IsAlive())
+            return;
+
         if (!UpdateVictim())
             return;
 
@@ -134,6 +140,9 @@ struct boss_harlan_sweete : public BossAI
 
         while (uint32 eventId = events.ExecuteEvent())
         {
+            if (!me->IsAlive())
+                break;
+
             switch (eventId)
             {
             case HarlanSweeteEvents::EventCannonBarrage:
@@ -244,7 +253,7 @@ struct npc_irontide_granadier : public ScriptedAI
                 if (!me->HasAura(HarlanSweeteSpells::BlackPowderBombAura))
                     me->CastSpell(me, HarlanSweeteSpells::BlackPowderBomb, false);
 
-                if (Creature* target = ObjectAccessor::GetCreature(*me, targetGUID))
+                if (Unit* target = ObjectAccessor::GetUnit(*me, targetGUID))
                 {
                     if (me->GetDistance(target) <= 3.0f)
                         me->CastSpell(me, HarlanSweeteSpells::BlackPowderBomb, false);

@@ -1,6 +1,7 @@
 #include "ScriptMgr.h"
 #include "GameObject.h"
 #include "GameObjectAI.h"
+#include "Player.h"
 #include "temple_of_sethraliss.h"
 
 const Position pos = { };
@@ -9,6 +10,7 @@ enum Spells
 {
     SPELL_CONSUME_CHARGE = 266512,
     SPELL_CAPACITANCE = 266511,
+    SPELL_ENERGIZE = 265973,
     //Energy core
     SPELL_ENERGY_CORE_VISUAL = 265977,
     SPELL_SUMMON_ENERGY_CORE = 274006,
@@ -21,6 +23,36 @@ enum Events
     EVENT_ENERGY_CORE = 1,
     EVENT_CONSUME_CHARGE,
 };
+
+static bool IsPlayerBlockingGalvazztArc(Position const& core, Position const& boss, Player const* player)
+{
+    if (!player)
+        return false;
+
+    float const dx = boss.GetPositionX() - core.GetPositionX();
+    float const dy = boss.GetPositionY() - core.GetPositionY();
+    float const lengthSq = dx * dx + dy * dy;
+    if (lengthSq <= 0.0f)
+        return false;
+
+    float const t = ((player->GetPositionX() - core.GetPositionX()) * dx +
+                     (player->GetPositionY() - core.GetPositionY()) * dy) / lengthSq;
+    if (t <= 0.10f || t >= 0.90f)
+        return false;
+
+    float const closestX = core.GetPositionX() + t * dx;
+    float const closestY = core.GetPositionY() + t * dy;
+    float const distX = player->GetPositionX() - closestX;
+    float const distY = player->GetPositionY() - closestY;
+    if ((distX * distX + distY * distY) > (2.5f * 2.5f))
+        return false;
+
+    float const closestZ = core.GetPositionZ() + t * (boss.GetPositionZ() - core.GetPositionZ());
+    if (std::fabs(player->GetPositionZ() - closestZ) > 10.0f)
+        return false;
+
+    return true;
+}
 
 //133389
 struct boss_galvazzt : public BossAI
@@ -36,9 +68,9 @@ private:
     void Reset() override
     {
         BossAI::Reset();
-        me->SetPowerType(POWER_ENERGY);
-        me->SetMaxPower(POWER_ENERGY, 100);
-        me->SetPower(POWER_ENERGY, 0);
+        me->SetPowerType(POWER_ALTERNATE_POWER);
+        me->SetMaxPower(POWER_ALTERNATE_POWER, 100);
+        me->SetPower(POWER_ALTERNATE_POWER, 0);
         me->AddAura(AURA_OVERRIDE_POWER_COLOR_OCEAN);
         this->energyCore = 0;
     }
@@ -49,13 +81,18 @@ private:
         events.ScheduleEvent(EVENT_ENERGY_CORE, 15s);
     }
 
-    void ExecuteEvent(uint32 eventId) override
+    void UpdateAI(uint32 diff) override
     {
-        if (me->GetPower(POWER_ENERGY) == 100)
+        if (me->IsInCombat() && me->GetPower(POWER_ALTERNATE_POWER) >= 100)
         {
-            me->SetPower(POWER_ENERGY, 0);
+            me->SetPower(POWER_ALTERNATE_POWER, 0);
             me->CastSpell(nullptr, SPELL_CONSUME_CHARGE, false);
         }
+        BossAI::UpdateAI(diff);
+    }
+
+    void ExecuteEvent(uint32 eventId) override
+    {
         switch (eventId)
         {
         case EVENT_ENERGY_CORE:
@@ -96,7 +133,10 @@ private:
         me->SetReactState(REACT_PASSIVE);
         me->AddUnitFlag(UnitFlags(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_NPC));
         me->CastSpell(nullptr, SPELL_ENERGY_CORE_VISUAL, true);
-        me->CastSpell(nullptr, SPELL_ARC, true);
+        if (Unit* owner = me->GetOwner())
+            me->CastSpell(owner, SPELL_ARC, true);
+        else
+            me->CastSpell(nullptr, SPELL_ARC, true);
         me->GetOwnerGUID();
     }
 
@@ -113,16 +153,23 @@ private:
             {
                 if (owner->IsInCombat())
                 {
-                    if (Player* player = me->SelectNearestPlayer(5.0f))
+                    bool anyBlocking = false;
+                    Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
+                    for (Map::PlayerList::const_iterator itr = playerList.begin(); itr != playerList.end(); ++itr)
                     {
-                        me->CastSpell(player, SPELL_GALVANIZE, true);
-                        return;
+                        Player* player = itr->GetSource();
+                        if (!player || !player->IsAlive())
+                            continue;
+                        if (me->GetExactDist(player) > 100.0f)
+                            continue;
+                        if (IsPlayerBlockingGalvazztArc(*me, *owner, player))
+                        {
+                            me->CastSpell(player, SPELL_GALVANIZE, true);
+                            anyBlocking = true;
+                        }
                     }
-                    else
-                    {
-                        if (Creature* galvazzt = me->FindNearestCreature(NPC_GALVAZZT, 100.0f, true))                            
-                            galvazzt->ModifyPower(POWER_ENERGY, +1);
-                    }
+                    if (!anyBlocking)
+                        owner->CastSpell(owner, SPELL_ENERGIZE, true);
                 }
                 Timer = 1000;
             }

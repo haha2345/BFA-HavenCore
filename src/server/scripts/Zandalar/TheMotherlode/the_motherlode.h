@@ -18,6 +18,9 @@
 #ifndef THE_MOTHERLODE_H
 #define THE_MOTHERLODE_H
 
+#include "DBCEnums.h"
+#include "Map.h"
+
 #define DataHeader "TM"
 
 uint32 const EncounterCount = 4;
@@ -35,7 +38,15 @@ enum CreatureIds
 	NPC_COIN_OPERATED_CROWD_PUMMELER	= 129214,
     NPC_AZEROKK							= 129227,
     NPC_RIXXA_FLUXFLAME					= 129231,
-    NPC_MOGUL_RAZDUNK					= 129232,
+	NPC_MOGUL_RAZDUNK					= 129232,
 };
+
+inline bool IsTheMotherlodeHeroicPlus(Map const* map)
+{
+    if (!map)
+        return false;
+    Difficulty const d = map->GetDifficultyID();
+    return d == DIFFICULTY_HEROIC || d == DIFFICULTY_MYTHIC; // 2 or 23, not 8
+}
 
 #endif // THE_MOTHERLODE_H

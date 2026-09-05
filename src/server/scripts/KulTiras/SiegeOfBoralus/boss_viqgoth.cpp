@@ -52,6 +52,11 @@ enum Spells
 	BLAST_MISSILE = 269420,
 };
 
+enum ViqgothCannonData
+{
+	DATA_CANNON_COUNT = 1
+};
+
 //128652
 struct boss_viqgoth : public BossAI
 {
@@ -64,6 +69,20 @@ struct boss_viqgoth : public BossAI
 		me->AddUnitFlag(UNIT_FLAG_NON_ATTACKABLE);		
 		me->SetSwim(true);
 		this->encountered = 0;
+		cannon_count = 0;
+	}
+
+	void SetData(uint32 id, uint32 value) override
+	{
+		if (id == DATA_CANNON_COUNT)
+			cannon_count = value;
+	}
+
+	uint32 GetData(uint32 id) const override
+	{
+		if (id == DATA_CANNON_COUNT)
+			return cannon_count;
+		return 0;
 	}
 
 	void EnterEvadeMode(EvadeReason why) override
@@ -139,6 +158,7 @@ struct boss_viqgoth : public BossAI
 
 private:
 	uint8 encountered;
+	uint16 cannon_count;
 };
 
 enum DemolishingEvents
@@ -240,14 +260,16 @@ struct npc_cannon_viq : public ScriptedAI
 			{				
 				me->CastSpell(viqgoth, BLAST_SS, true);
 				me->CastSpell(viqgoth, BLAST_MISSILE, true);
-				float viqGothPct = (float)(this->cannon_count * 33) / 100;
+				uint32 cannon_count = viqgoth->AI()->GetData(DATA_CANNON_COUNT);
+				float viqGothPct = (float)(cannon_count * 33) / 100;
 				uint64 viqGothHealth = (viqgoth->GetMaxHealth() - (viqgoth->GetMaxHealth() * viqGothPct));
 				viqgoth->SetHealth(viqGothHealth);
 				//player->Kill(me);
-				this->cannon_count++;
+				++cannon_count;
+				viqgoth->AI()->SetData(DATA_CANNON_COUNT, cannon_count);
 			}
 
-			if (this->cannon_count == 3)
+			if (viqgoth->AI()->GetData(DATA_CANNON_COUNT) == 3)
 			{				
 				events.CancelEvent(EVENT_PUTRID_WATERS);
 				if (Creature* viqgoth = me->FindNearestCreature(NPC_VIQGOTH, 100.0f, true))
@@ -310,9 +332,6 @@ struct npc_cannon_viq : public ScriptedAI
 			}
 		}
 	}
-
-private:
-	uint16 cannon_count;
 };
 
 //142486

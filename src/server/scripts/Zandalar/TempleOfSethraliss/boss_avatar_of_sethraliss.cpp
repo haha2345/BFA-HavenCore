@@ -1,6 +1,12 @@
 #include "ScriptMgr.h"
 #include "temple_of_sethraliss.h"
 #include "ScriptedGossip.h"
+#include "ObjectMgr.h"
+#include "SpellAuraEffects.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
+#include "SpellScript.h"
+#include "Util.h"
 
 enum Misc
 {
@@ -54,7 +60,8 @@ struct boss_avatar_of_sethraliss : public BossAI
         BossAI::Reset();
         _JustReachedHome();
         instance->SetBossState(DATA_AVATAR_OF_SETHRALISS, NOT_STARTED);
-        this->wavecount = 0;           
+        this->wavecount = 0;
+        victoryHandled = false;
         me->RestoreFaction();
         std::list<Creature*> c_li;
         me->GetCreatureListWithEntryInGrid(c_li, NPC_HOODOO_HEXER, 150.0f);
@@ -82,8 +89,14 @@ struct boss_avatar_of_sethraliss : public BossAI
         events.ScheduleEvent(EVENT_CHECK_PLAYERS, 1s);
         events.ScheduleEvent(EVENT_HEART_GUARDIAN, 5s);
         events.ScheduleEvent(EVENT_TOAD, 25s);
-        if (IsHeroic() || IsMythic()) 
+        if (IsSethralissHeroicPlus(me->GetMap()))
             events.ScheduleEvent(EVENT_PLAGUE_DOCTOR, 10s);
+    }
+
+    void HealReceived(Unit* /*done_by*/, uint32& addhealth) override
+    {
+        if (AuraEffect const* aurEff = me->GetAuraEffect(SPELL_TAINT_CHANNEL, EFFECT_0))
+            AddPct(addhealth, aurEff->GetAmount());
     }
 
     void JustDied(Unit* /*killer*/) override
@@ -97,33 +110,7 @@ struct boss_avatar_of_sethraliss : public BossAI
 
     void DamageTaken(Unit* /*done_by*/, uint32& dmg) override
     {
-        if (me->HealthAbovePct(99))
-        {
-            me->CastStop();
-            instance->SetBossState(DATA_AVATAR_OF_SETHRALISS, DONE);
-            _JustReachedHome();
-            me->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
-            instance->SendBossKillCredit(ENCOUNTER_ID);
-            std::list<Player*> p_li;
-            me->GetPlayerListInGrid(p_li, 150.0f);
-            for (auto & players : p_li)
-            {
-                players->KilledMonsterCredit(me->GetEntry());
-                players->ClearInCombat();
-            }
-            Talk(SAY_THANK_YOU);
-            me->SummonGameObject(GO_SETHRALISS_TREASURE, 4149.73f, 3665.59f, -43.0365f, 3.68391f, QuaternionData(0, 0, -0.963461f, 0.267849f), false);
-            if (IsMythic() && instance->IsChallengeModeStarted())
-            {
-                me->SummonGameObject(GO_CHALLENGERS_CACHE_SETHRALISS, 4185.0f, 3688.0f, -43.0f, 3.84f, QuaternionData(), false);
-            }
-            me->DespawnCreaturesInArea(NPC_HOODOO_HEXER, 125.0f);
-            me->DespawnCreaturesInArea(NPC_HEART_GUARDIAN, 125.0f);
-            me->DespawnCreaturesInArea(NPC_PLAGUE_TOAD, 125.0f);
-            me->DespawnCreaturesInArea(NPC_PLAGUE_DOCTOR, 125.0f);
-        }
-
-        if (me->HealthBelowPctDamaged(80, dmg) && (this->wavecount = 0))
+        if (me->HealthBelowPctDamaged(80, dmg) && (this->wavecount == 0))
         {
             wavecount = 1;
             std::list<Creature*> c_li;
@@ -142,7 +129,7 @@ struct boss_avatar_of_sethraliss : public BossAI
             }
         }
 
-        if (me->HealthBelowPctDamaged(70, dmg) && (this->wavecount = 1))
+        if (me->HealthBelowPctDamaged(70, dmg) && (this->wavecount == 1))
         {
             wavecount = 2;
             std::list<Creature*> c_li;
@@ -161,7 +148,7 @@ struct boss_avatar_of_sethraliss : public BossAI
             }
         }
 
-        if (me->HealthBelowPctDamaged(40, dmg) && (this->wavecount = 2))
+        if (me->HealthBelowPctDamaged(40, dmg) && (this->wavecount == 2))
         {
             wavecount = 3;
             std::list<Creature*> c_li;
@@ -190,6 +177,45 @@ struct boss_avatar_of_sethraliss : public BossAI
         }
     }
 
+    void UpdateAI(uint32 diff) override
+    {
+        events.Update(diff);
+
+        if (instance && instance->GetBossState(DATA_AVATAR_OF_SETHRALISS) == IN_PROGRESS && me->HealthAbovePct(99) && !victoryHandled)
+        {
+            victoryHandled = true;
+            me->CastStop();
+            instance->SetBossState(DATA_AVATAR_OF_SETHRALISS, DONE);
+            _JustReachedHome();
+            me->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
+            instance->SendBossKillCredit(ENCOUNTER_ID);
+            std::list<Player*> p_li;
+            me->GetPlayerListInGrid(p_li, 150.0f);
+            for (auto & players : p_li)
+            {
+                players->KilledMonsterCredit(me->GetEntry());
+                players->ClearInCombat();
+            }
+            Talk(SAY_THANK_YOU);
+            me->SummonGameObject(GO_SETHRALISS_TREASURE, 4149.73f, 3665.59f, -43.0365f, 3.68391f, QuaternionData(0, 0, -0.963461f, 0.267849f), false);
+            if (IsMythic() && instance->IsChallengeModeStarted())
+            {
+                me->SummonGameObject(GO_CHALLENGERS_CACHE_SETHRALISS, 4185.0f, 3688.0f, -43.0f, 3.84f, QuaternionData(), false);
+            }
+            me->DespawnCreaturesInArea(NPC_HOODOO_HEXER, 125.0f);
+            me->DespawnCreaturesInArea(NPC_HEART_GUARDIAN, 125.0f);
+            me->DespawnCreaturesInArea(NPC_PLAGUE_TOAD, 125.0f);
+            me->DespawnCreaturesInArea(NPC_PLAGUE_DOCTOR, 125.0f);
+            return;
+        }
+
+        if (me->HasUnitState(UNIT_STATE_CASTING))
+            return;
+
+        while (uint32 eventId = events.ExecuteEvent())
+            ExecuteEvent(eventId);
+    }
+
     void ExecuteEvent(uint32 eventId) override
     {
         switch (eventId)
@@ -208,16 +234,21 @@ struct boss_avatar_of_sethraliss : public BossAI
         {
             std::list<Player*> p_li;
             me->GetPlayerListInGrid(p_li, 150.0f);
+            bool anyAlive = false;
             for (auto & players : p_li)
-            if (players->IsAlive())
             {
-                return;
+                if (players->IsAlive())
+                {
+                    anyAlive = true;
+                    break;
+                }
             }
-            else
+            if (anyAlive)
             {
-                BossAI::Reset();
+                events.Repeat(3s);
+                break;
             }
-            events.Repeat(3s);
+            BossAI::Reset();
             break;
         }
 
@@ -267,8 +298,19 @@ struct boss_avatar_of_sethraliss : public BossAI
         }
     }
 
-    void sGossipSelect(Player* /*player*/, uint32 /*menuId*/, uint32 /*gossipListId*/) 
-    { 
+    void sGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+    {
+        if (gossipListId == 1)
+        {
+            CloseGossipMenuFor(player);
+            if (WorldSafeLocsEntry const* loc = sObjectMgr->GetWorldSafeLoc(6419))
+                player->TeleportTo(loc->Loc);
+            return;
+        }
+
+        if (gossipListId != 0)
+            return;
+
         if (instance->GetBossState(DATA_AVATAR_OF_SETHRALISS) == NOT_STARTED)
         {
             instance->SetBossState(DATA_AVATAR_OF_SETHRALISS, IN_PROGRESS);
@@ -290,27 +332,27 @@ struct boss_avatar_of_sethraliss : public BossAI
                 }
             }
 
-            if (Creature* avatar = instance->GetCreature(NPC_AVATAR_OF_SETHRALISS))
+            Talk(SAY_INTRO);
+            _EnterCombat();
+
+            me->GetScheduler().Schedule(6s, [this] (TaskContext /*context*/)
             {
-                avatar->AI()->Talk(SAY_INTRO);
-                _EnterCombat();
+                Talk(SAY_OBJECTIVE);
+            });
 
-                avatar->GetScheduler().Schedule(6s, [this, avatar] (TaskContext /*context*/)
-                {
-                    avatar->AI()->Talk(SAY_OBJECTIVE);
-                });
+            me->GetScheduler().Schedule(8s, [this] (TaskContext /*context*/)
+            {
+                Talk(SAY_RESTORE);
+            });
 
-                avatar->GetScheduler().Schedule(8s, [this, avatar] (TaskContext /*context*/)
-                {
-                    avatar->AI()->Talk(SAY_RESTORE);                    
-                });
-            }          
+            EnterCombat(player);
         }
     }
 
 private:
     uint8 wavecount;
     uint8 encouter_done;
+    bool victoryHandled = false;
 };
 
 enum HoodooHexerSpells
@@ -347,7 +389,7 @@ struct npc_hoodoo_hexer : public ScriptedAI
 
     void EnterCombat(Unit* /*unit*/) override
     {        
-        if (IsHeroic() || IsMythic())
+        if (IsSethralissHeroicPlus(me->GetMap()))
         {
             events.ScheduleEvent(EVENT_FLAME_SHOCK, 1s);
         }
@@ -409,12 +451,13 @@ struct npc_energy_fragment : public ScriptedAI
     void Reset() override
     {
         ScriptedAI::Reset();
+        me->AddNpcFlag(UNIT_NPC_FLAG_GOSSIP);
     }
 
     void sGossipHello(Player* player) 
     { 
         CloseGossipMenuFor(player);
-        if (Creature* avatar = instance->GetCreature(NPC_AVATAR_OF_SETHRALISS))
+        if (Creature* avatar = me->FindNearestCreature(NPC_AVATAR_OF_SETHRALISS, 100.0f, true))
         {
             avatar->RemoveAura(SPELL_TAINT_DEBUFF);
             avatar->AddAura(SPELL_LIFE_FORCE);
@@ -425,10 +468,47 @@ struct npc_energy_fragment : public ScriptedAI
     }
 };
 
+// 273677 Taint Dummy: apply difficulty BasePoints as healing reduction.
+class spell_sethraliss_taint : public AuraScript
+{
+    PrepareAuraScript(spell_sethraliss_taint);
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = false;
+
+        Unit* owner = GetUnitOwner();
+        Map const* map = owner ? owner->GetMap() : nullptr;
+        Difficulty const difficulty = map ? map->GetDifficultyID() : DIFFICULTY_NONE;
+
+        int32 fallback = -20;
+        if (difficulty == DIFFICULTY_HEROIC)
+            fallback = -30;
+        else if (difficulty == DIFFICULTY_MYTHIC)
+            fallback = -50;
+
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_TAINT_CHANNEL);
+        SpellEffectInfo const* effect = info ? info->GetEffect(uint32(difficulty), EFFECT_0) : nullptr;
+        if (!effect || effect->BasePoints <= -100)
+        {
+            amount = fallback;
+            return;
+        }
+
+        amount = effect->BasePoints;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_sethraliss_taint::CalculateAmount, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
 void AddSC_boss_avatar_of_sethraliss()
 {
     RegisterCreatureAI(boss_avatar_of_sethraliss);
     RegisterCreatureAI(npc_hoodoo_hexer);
     RegisterCreatureAI(npc_plague_toad_137233);
     RegisterCreatureAI(npc_energy_fragment);
+    RegisterAuraScript(spell_sethraliss_taint);
 }

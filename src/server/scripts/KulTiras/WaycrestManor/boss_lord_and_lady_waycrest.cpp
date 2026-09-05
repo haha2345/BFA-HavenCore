@@ -64,10 +64,12 @@ struct boss_lord_and_lady_waycrest : public BossAI
 
 private:
 	uint16 transfer;
+	bool vitalityLatch;
 
 	void Reset() override
 	{		
 		BossAI::Reset();
+		vitalityLatch = false;
 		me->SetReactState(REACT_AGGRESSIVE);
 		me->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_PC);
 		me->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
@@ -97,31 +99,36 @@ private:
 	{
 		switch (me->GetEntry())
 		{
-		case NPC_LORD_WAYCREST:			
+		case NPC_LORD_WAYCREST:
+			// 31% 来自 Haven 现状，不是 DBC
 			if (me->HealthBelowPctDamaged(31, damage))
-			{	
-				this->transfer++;
-				if (me->HealthBelowPctDamaged(31, damage) && this->transfer < 4)
+			{
+				if (!vitalityLatch && this->transfer < 3)
 				{
+					vitalityLatch = true;
+					this->transfer++;
 					if (Creature* lady = me->FindNearestCreature(NPC_LADY_WAYCREST, 250.0f, true))
-					{						
+					{
 						lady->AI()->Talk(SAY_VITALITY_TRANSFER);
-						lady->AI()->DoCast(VITALITY_TRANSFER_DUMMY);		
+						lady->AI()->DoCast(VITALITY_TRANSFER_DUMMY);
 						float ladyPct = (float)(this->transfer * 30) / 100;
 						uint64 ladyHealth = (lady->GetMaxHealth() - (lady->GetMaxHealth() * ladyPct));
-						lady->SetHealth(ladyHealth);				
+						lady->SetHealth(ladyHealth);
 						me->AddAura(PUTRID_VITALITY, me);
 					}
-				}
-				if (this->transfer == 3)
-				{
-					if (Creature* lady = me->FindNearestCreature(NPC_LADY_WAYCREST, 100.0f))
+					if (this->transfer == 3)
 					{
-						lady->NearTeleportTo(-550.0f, -249.0f, 185.0f, 3.19f);
-						lady->ClearUnitState(UNIT_STATE_ROOT);
+						if (Creature* lady = me->FindNearestCreature(NPC_LADY_WAYCREST, 100.0f))
+						{
+							lady->NearTeleportTo(-550.0f, -249.0f, 185.0f, 3.19f);
+							lady->ClearUnitState(UNIT_STATE_ROOT);
+						}
 					}
 				}
 			}
+			else
+				vitalityLatch = false;
+			break;
 		}
 	}
 
@@ -169,6 +176,7 @@ private:
 			 events.ScheduleEvent(EVENT_WASTING_STRIKE, 3s);
 			 events.ScheduleEvent(EVENT_VIRULENT_PATHOGEN, 17s);
 			 this->transfer = 0;
+			 vitalityLatch = false;
 			 break;
 
 		case NPC_LADY_WAYCREST:
@@ -211,8 +219,10 @@ private:
 		}
 		case EVENT_WASTING_STRIKE:
 		{
-			if (Unit* target = SelectTarget(SELECT_TARGET_NEAREST, 0, 5.0f, true)){
+			if (Unit* target = SelectTarget(SELECT_TARGET_NEAREST, 0, 5.0f, true))
+			{
 				DoCast(target, WASTING_STRIKE);
+			}
 			events.Repeat(15s);
 			break;
 		}
@@ -221,12 +231,12 @@ private:
 			if (Creature* lord = me->FindNearestCreature(NPC_LORD_WAYCREST, 100.0f, true))
 				lord->AI()->Talk(SAY_VIRULENT_PATHOGEN);
 
-			if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true)){
+			if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+			{
 				me->AddAura(VIRULENT_PATHOGEN_AURA, target);
+			}
 			events.Repeat(20s);
 			break;
-		}
-		}
 		}
 		}
 	}
@@ -252,21 +262,26 @@ private:
 		switch (me->GetEntry())
 		{
 		case NPC_LORD_WAYCREST:
-			 _JustDied();
-			 if (me->FindNearestCreature(NPC_LADY_WAYCREST, 100.0f, false))
-			 {
-				instance->SendBossKillCredit(ENCOUNTER_ID);
-				if (auto* sfx = me->FindNearestGameObject(DOODAD_SFX_LORD_AND_LADY_WAYCREST, 100.0f))
-					sfx->RemoveFromWorld();
-			 }
+			// 活着则不要 _JustDied
+			if (me->FindNearestCreature(NPC_LADY_WAYCREST, 100.0f, true))
+			{
+				instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+				return;
+			}
+			_JustDied();
+			instance->SendBossKillCredit(ENCOUNTER_ID);
 			break;
 
 		case NPC_LADY_WAYCREST:
 			Talk(SAY_DEATH_LADY);
+			// 活着则不要 _JustDied
+			if (me->FindNearestCreature(NPC_LORD_WAYCREST, 100.0f, true))
+			{
+				instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+				return;
+			}
 			_JustDied();
-			if (me->FindNearestCreature(NPC_LORD_WAYCREST, 100.0f, false))
-				if (auto* sfx = me->FindNearestGameObject(DOODAD_SFX_LORD_AND_LADY_WAYCREST, 100.0f))
-					sfx->RemoveFromWorld();
+			instance->SendBossKillCredit(ENCOUNTER_ID);
 			break;
 		}
 	}
@@ -284,7 +299,9 @@ class bfa_spell_virulent_pathogen_aura : public AuraScript
 			if (GetTarget())
 			{
 				caster->CastSpell(GetTarget(), VIRULENT_PATHOGEN_EXP, true);
-				caster->CastSpell(GetTarget(), CONTAGIOUS_REMNANTS_MISSILE, true);
+				if (IsWaycrestHeroicPlus(caster->GetMap()))
+					caster->CastSpell(GetTarget(), CONTAGIOUS_REMNANTS_MISSILE, true);
+				// 手册/MDT 268387 未裁定 CLEU，不是本函数已有施法
 			}
 		}
 	}

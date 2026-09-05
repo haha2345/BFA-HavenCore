@@ -98,7 +98,7 @@ struct boss_gorak_tul : public BossAI
 		switch (spellInfo->Id)
 		{
 		case DREAD_ESSENCE:
-			 //CallDread();
+			 CallDread();
 			 break;
 
 		default:
@@ -133,7 +133,7 @@ struct npc_deathtouched_slaver : public ScriptedAI
 	{
 		events.ScheduleEvent(EVENT_DARK_LEAP, 3s);
 		events.ScheduleEvent(EVENT_DREAD_BOLT, 6s);
-		if (IsHeroic() || IsMythic())
+		if (IsWaycrestHeroicPlus(me->GetMap()))
 			events.ScheduleEvent(EVENT_DEATH_LENS, 9s);
 	}
 
