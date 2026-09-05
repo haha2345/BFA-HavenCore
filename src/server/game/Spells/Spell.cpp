@@ -4822,10 +4822,17 @@ void Spell::TakePower()
             continue;
         }
 
+        int32 const powerBefore = m_caster->GetPower(powerType);
         if (hit)
             m_caster->ModifyPower(powerType, -cost.Amount);
         else if (cost.Amount > 0)
             m_caster->ModifyPower(powerType, -irand(0, cost.Amount / 4));
+
+        // Keep the paid rage on this cast, before later effects can refund or
+        // generate rage. Free/triggered casts that skip TakePower have no entry.
+        if (powerType == POWER_RAGE)
+            Variables.Set("PowerSpent.Rage", Variables.GetValue<int32>("PowerSpent.Rage", 0)
+                + std::max<int32>(0, powerBefore - m_caster->GetPower(powerType)));
     }
 }
 

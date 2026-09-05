@@ -2414,7 +2414,7 @@ public:
     {
         PrepareAuraScript(spell_warr_tactician_AuraScript);
 
-        void HandleEffectProc(AuraEffect const* /*aurEff*/, ProcEventInfo& procInfo)
+        void HandleEffectProc(AuraEffect const* aurEff, ProcEventInfo& procInfo)
         {
             PreventDefaultAction();
             int32 rageSpent = 0;
@@ -2431,11 +2431,12 @@ public:
                         rageSpent = cost.Amount;
                     }
 
-                    if (roll_chance_f((rageSpent / 10) * 1.40))
+                    if (roll_chance_f((rageSpent / 10.0f) * aurEff->GetAmount() / 100.0f))
                     {
-                        caster->GetSpellHistory()->ResetCooldown(SPELL_WARRIOR_COLOSSUS_SMASH, true);
-                        caster->GetSpellHistory()->ResetCooldown(SPELL_WARRIOR_MORTAL_STRIKE, true);
-                        caster->CastSpell(caster, SPELL_WARRIOR_TACTICIAN_CD, true);
+                        // 8.3 Tactician restores Overpower, not the Legion
+                        // Colossus Smash / Mortal Strike cooldowns.
+                        if (SpellInfo const* overpower = sSpellMgr->GetSpellInfo(7384))
+                            caster->GetSpellHistory()->RestoreCharge(overpower->ChargeCategoryId);
                     }
                 }
             }
@@ -2894,9 +2895,33 @@ class anger_management : public PlayerScript
 public:
     anger_management() : PlayerScript("anger_management") { }
 
+    void OnSuccessfulSpellCast(Player* player, Spell* spell) override
+    {
+        if (player->GetSpecializationId() != TALENT_SPEC_WARRIOR_ARMS)
+            return;
+
+        AuraEffect const* anger = player->GetAuraEffect(SPELL_WARRIOR_ANGER_MANAGEMENT, EFFECT_0);
+        int32 const paidRage = spell->Variables.GetValue<int32>("PowerSpent.Rage", 0);
+        if (!anger || anger->GetAmount() <= 0 || paidRage <= 0)
+            return;
+
+        // Internal rage uses tenths. Preserve fractional seconds (30 rage
+        // with the 35662 divisor of 20 reduces cooldowns by 1500 ms).
+        int32 const reduction = int32(int64(paidRage) * 100 / anger->GetAmount());
+        player->GetSpellHistory()->ModifyCooldown(262161, -reduction); // Warbreaker
+        player->GetSpellHistory()->ModifyCooldown(46924, -reduction); // Bladestorm
+        player->GetSpellHistory()->ModifyCooldown(227847, -reduction); // Bladestorm
+        player->GetSpellHistory()->ModifyCooldown(167105, -reduction); // Colossus Smash
+    }
+
     void OnSpellCast(Player* player, Spell* spell, bool) override
     {
         if (player->getClass() != CLASS_WARRIOR)
+            return;
+
+        // Arms is handled after successful payment, above. Keep the other
+        // specializations unchanged until their own restoration pass.
+        if (player->GetSpecializationId() == TALENT_SPEC_WARRIOR_ARMS)
             return;
 
         if (player->GetAura(SPELL_WARRIOR_ANGER_MANAGEMENT))

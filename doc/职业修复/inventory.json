@@ -1,0 +1,641 @@
+[
+  {
+    "class_name": "战士",
+    "spec": "武器",
+    "resource": "怒气",
+    "source": "src\\server\\scripts\\Spells\\spell_warrior.cpp",
+    "simc": "engine\\class_modules\\sc_warrior.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_warrior.cpp:76",
+      "src/server/scripts/Spells/spell_warrior.cpp:77",
+      "src/server/scripts/Spells/spell_warrior.cpp:78"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Warrior_Arms.simc"
+    ],
+    "focus": "压制重置、怒气消耗、斩杀缩放、重伤",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "战士",
+    "spec": "狂暴",
+    "resource": "怒气",
+    "source": "src\\server\\scripts\\Spells\\spell_warrior.cpp",
+    "simc": "engine\\class_modules\\sc_warrior.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_warrior.cpp:51",
+      "src/server/scripts/Spells/spell_warrior.cpp:52",
+      "src/server/scripts/Spells/spell_warrior.cpp:53"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Warrior_Fury.simc"
+    ],
+    "focus": "暴怒多段、激怒、双持产怒、旋风斩扩散",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "战士",
+    "spec": "防护",
+    "resource": "怒气",
+    "source": "src\\server\\scripts\\Spells\\spell_warrior.cpp",
+    "simc": "engine\\class_modules\\sc_warrior.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_warrior.cpp:93",
+      "src/server/scripts/Spells/spell_warrior.cpp:131",
+      "src/server/scripts/Spells/spell_warrior.cpp:160"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Warrior_Protection.simc"
+    ],
+    "focus": "盾牌格挡充能、无视苦痛吸收、复仇",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "圣骑士",
+    "spec": "神圣",
+    "resource": "法力",
+    "source": "src\\server\\scripts\\Spells\\spell_paladin.cpp",
+    "simc": "engine\\class_modules\\paladin",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_paladin.cpp:52",
+      "src/server/scripts/Spells/spell_paladin.cpp:53",
+      "src/server/scripts/Spells/spell_paladin.cpp:54"
+    ],
+    "tier25_profiles": [],
+    "focus": "神圣震击、道标转移、黎明之光；治疗模型覆盖另核",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "圣骑士",
+    "spec": "防护",
+    "resource": "法力",
+    "source": "src\\server\\scripts\\Spells\\spell_paladin.cpp",
+    "simc": "engine\\class_modules\\paladin",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_paladin.cpp:46",
+      "src/server/scripts/Spells/spell_paladin.cpp:89",
+      "src/server/scripts/Spells/spell_paladin.cpp:128"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Paladin_Protection.simc"
+    ],
+    "focus": "正义盾击充能、复仇者之盾、守护之光",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "圣骑士",
+    "spec": "惩戒",
+    "resource": "神圣能量/法力",
+    "source": "src\\server\\scripts\\Spells\\spell_paladin.cpp",
+    "simc": "engine\\class_modules\\paladin",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_paladin.cpp:83",
+      "src/server/scripts/Spells/spell_paladin.cpp:84",
+      "src/server/scripts/Spells/spell_paladin.cpp:131"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Paladin_Retribution.simc"
+    ],
+    "focus": "神圣能量收支、裁决、神圣风暴、免费触发",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "猎人",
+    "spec": "野兽控制",
+    "resource": "集中值",
+    "source": "src\\server\\scripts\\Spells\\spell_hunter.cpp",
+    "simc": "engine\\class_modules\\sc_hunter.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_hunter.cpp:60",
+      "src/server/scripts/Spells/spell_hunter.cpp:61",
+      "src/server/scripts/Spells/spell_hunter.cpp:62"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Hunter_Beast_Mastery.simc"
+    ],
+    "focus": "宠物杀戮命令、倒刺射击、狂暴层数",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "猎人",
+    "spec": "射击",
+    "resource": "集中值",
+    "source": "src\\server\\scripts\\Spells\\spell_hunter.cpp",
+    "simc": "engine\\class_modules\\sc_hunter.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_hunter.cpp:152",
+      "src/server/scripts/Spells/spell_hunter.cpp:156",
+      "src/server/scripts/Spells/spell_hunter.cpp:157"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Hunter_Marksmanship.simc"
+    ],
+    "focus": "瞄准充能、急速射击引导、精准射击",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "猎人",
+    "spec": "生存",
+    "resource": "集中值",
+    "source": "src\\server\\scripts\\Spells\\spell_hunter.cpp",
+    "simc": "engine\\class_modules\\sc_hunter.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_hunter.cpp:52",
+      "src/server/scripts/Spells/spell_hunter.cpp:53",
+      "src/server/scripts/Spells/spell_hunter.cpp:104"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Hunter_Survival.simc"
+    ],
+    "focus": "猛禽/猫鼬替换、炸弹、宠物协作",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "潜行者",
+    "spec": "奇袭",
+    "resource": "能量/连击点",
+    "source": "src\\server\\scripts\\Spells\\spell_rogue.cpp",
+    "simc": "engine\\class_modules\\sc_rogue.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_rogue.cpp:62",
+      "src/server/scripts/Spells/spell_rogue.cpp:147",
+      "src/server/scripts/Spells/spell_rogue.cpp:148"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Rogue_Assassination.simc"
+    ],
+    "focus": "毒伤、毒液创伤、流血与能量",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "潜行者",
+    "spec": "狂徒",
+    "resource": "能量/连击点",
+    "source": "src\\server\\scripts\\Spells\\spell_rogue.cpp",
+    "simc": "engine\\class_modules\\sc_rogue.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_rogue.cpp:101",
+      "src/server/scripts/Spells/spell_rogue.cpp:109",
+      "src/server/scripts/Spells/spell_rogue.cpp:110"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Rogue_Outlaw.simc"
+    ],
+    "focus": "命运骨骰、邪恶攻击额外攻击、手枪射击",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "潜行者",
+    "spec": "敏锐",
+    "resource": "能量/连击点",
+    "source": "src\\server\\scripts\\Spells\\spell_rogue.cpp",
+    "simc": "engine\\class_modules\\sc_rogue.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_rogue.cpp:119",
+      "src/server/scripts/Spells/spell_rogue.cpp:121",
+      "src/server/scripts/Spells/spell_rogue.cpp:122"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Rogue_Subtlety.simc"
+    ],
+    "focus": "暗影之舞充能、潜行技能替换、暗影打击",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "牧师",
+    "spec": "戒律",
+    "resource": "法力",
+    "source": "src\\server\\scripts\\Spells\\spell_priest.cpp",
+    "simc": "engine\\class_modules\\priest",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_priest.cpp:49",
+      "src/server/scripts/Spells/spell_priest.cpp:50",
+      "src/server/scripts/Spells/spell_priest.cpp:51"
+    ],
+    "tier25_profiles": [],
+    "focus": "救赎伤转疗、苦修、吸收与目标归属",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "牧师",
+    "spec": "神圣",
+    "resource": "法力",
+    "source": "src\\server\\scripts\\Spells\\spell_priest.cpp",
+    "simc": "engine\\class_modules\\priest",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_priest.cpp:81",
+      "src/server/scripts/Spells/spell_priest.cpp:93",
+      "src/server/scripts/Spells/spell_priest.cpp:94"
+    ],
+    "tier25_profiles": [],
+    "focus": "圣言减冷却、愈合祷言跳转、治疗选人",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "牧师",
+    "spec": "暗影",
+    "resource": "狂乱/法力",
+    "source": "src\\server\\scripts\\Spells\\spell_priest.cpp",
+    "simc": "engine\\class_modules\\priest",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_priest.cpp:115",
+      "src/server/scripts/Spells/spell_priest.cpp:122",
+      "src/server/scripts/Spells/spell_priest.cpp:166"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Priest_Shadow.simc"
+    ],
+    "focus": "虚空形态狂乱衰减、虚空箭、持续伤害",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "死亡骑士",
+    "spec": "鲜血",
+    "resource": "符文/符能",
+    "source": "src\\server\\scripts\\Spells\\spell_dk.cpp",
+    "simc": "engine\\class_modules\\sc_death_knight.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_dk.cpp:61",
+      "src/server/scripts/Spells/spell_dk.cpp:92",
+      "src/server/scripts/Spells/spell_dk.cpp:143"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Death_Knight_Blood.simc"
+    ],
+    "focus": "灵界打击近期承伤、骨盾消耗、符文恢复",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "死亡骑士",
+    "spec": "冰霜",
+    "resource": "符文/符能",
+    "source": "src\\server\\scripts\\Spells\\spell_dk.cpp",
+    "simc": "engine\\class_modules\\sc_death_knight.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_dk.cpp:151",
+      "src/server/scripts/Spells/spell_dk.cpp:153",
+      "src/server/scripts/Spells/spell_dk.cpp:203"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Death_Knight_Frost.simc"
+    ],
+    "focus": "杀戮机器、白霜、湮灭、吐息消耗",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "死亡骑士",
+    "spec": "邪恶",
+    "resource": "符文/符能",
+    "source": "src\\server\\scripts\\Spells\\spell_dk.cpp",
+    "simc": "engine\\class_modules\\sc_death_knight.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_dk.cpp:83",
+      "src/server/scripts/Spells/spell_dk.cpp:141",
+      "src/server/scripts/Spells/spell_dk.cpp:142"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Death_Knight_Unholy.simc"
+    ],
+    "focus": "溃烂之伤、天灾打击、宠物与天启",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "萨满祭司",
+    "spec": "元素",
+    "resource": "漩涡值/法力",
+    "source": "src\\server\\scripts\\Spells\\spell_shaman.cpp",
+    "simc": "engine\\class_modules\\sc_shaman.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_shaman.cpp:73",
+      "src/server/scripts/Spells/spell_shaman.cpp:127",
+      "src/server/scripts/Spells/spell_shaman.cpp:189"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Shaman_Elemental.simc"
+    ],
+    "focus": "元素过载、熔岩爆裂、震击和漩涡值",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "萨满祭司",
+    "spec": "增强",
+    "resource": "漩涡值/法力",
+    "source": "src\\server\\scripts\\Spells\\spell_shaman.cpp",
+    "simc": "engine\\class_modules\\sc_shaman.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_shaman.cpp:160",
+      "src/server/scripts/Spells/spell_shaman.cpp:161",
+      "src/server/scripts/Spells/spell_shaman.cpp:165"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Shaman_Enhancement.simc"
+    ],
+    "focus": "风暴打击重置、石化产能、双持触发",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "萨满祭司",
+    "spec": "恢复",
+    "resource": "法力",
+    "source": "src\\server\\scripts\\Spells\\spell_shaman.cpp",
+    "simc": "engine\\class_modules\\sc_shaman.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_shaman.cpp:151",
+      "src/server/scripts/Spells/spell_shaman.cpp:167",
+      "src/server/scripts/Spells/spell_shaman.cpp:401"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Shaman_Restoration.simc"
+    ],
+    "focus": "潮汐奔涌、治疗链、图腾治疗归属",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "法师",
+    "spec": "奥术",
+    "resource": "法力/奥术充能",
+    "source": "src\\server\\scripts\\Spells\\spell_mage.cpp",
+    "simc": "engine\\class_modules\\sc_mage.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_mage.cpp:123",
+      "src/server/scripts/Spells/spell_mage.cpp:127",
+      "src/server/scripts/Spells/spell_mage.cpp:128"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Mage_Arcane.simc"
+    ],
+    "focus": "充能增耗增伤、节能施法、唤醒",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "法师",
+    "spec": "火焰",
+    "resource": "法力",
+    "source": "src\\server\\scripts\\Spells\\spell_mage.cpp",
+    "simc": "engine\\class_modules\\sc_mage.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_mage.cpp:113",
+      "src/server/scripts/Spells/spell_mage.cpp:114",
+      "src/server/scripts/Spells/spell_mage.cpp:161"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Mage_Fire.simc"
+    ],
+    "focus": "热力迸发到炽热连击、点燃、火冲充能",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "法师",
+    "spec": "冰霜",
+    "resource": "法力",
+    "source": "src\\server\\scripts\\Spells\\spell_mage.cpp",
+    "simc": "engine\\class_modules\\sc_mage.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_mage.cpp:60",
+      "src/server/scripts/Spells/spell_mage.cpp:61",
+      "src/server/scripts/Spells/spell_mage.cpp:62"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Mage_Frost.simc"
+    ],
+    "focus": "寒冰指、冰冷智慧、冰风暴与碎冰",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "术士",
+    "spec": "痛苦",
+    "resource": "灵魂碎片/法力",
+    "source": "src\\server\\scripts\\Spells\\spell_warlock.cpp",
+    "simc": "engine\\class_modules\\warlock",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_warlock.cpp:63",
+      "src/server/scripts/Spells/spell_warlock.cpp:118",
+      "src/server/scripts/Spells/spell_warlock.cpp:120"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Warlock_Affliction.simc"
+    ],
+    "focus": "痛苦无常、痛楚产片、死亡之箭",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "术士",
+    "spec": "恶魔学识",
+    "resource": "灵魂碎片/法力",
+    "source": "src\\server\\scripts\\Spells\\spell_warlock.cpp",
+    "simc": "engine\\class_modules\\warlock",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_warlock.cpp:77",
+      "src/server/scripts/Spells/spell_warlock.cpp:102",
+      "src/server/scripts/Spells/spell_warlock.cpp:135"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Warlock_Demonology.simc"
+    ],
+    "focus": "恶魔之核、野生小鬼、暴君与内爆",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "术士",
+    "spec": "毁灭",
+    "resource": "灵魂碎片/法力",
+    "source": "src\\server\\scripts\\Spells\\spell_warlock.cpp",
+    "simc": "engine\\class_modules\\warlock",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_warlock.cpp:59",
+      "src/server/scripts/Spells/spell_warlock.cpp:79",
+      "src/server/scripts/Spells/spell_warlock.cpp:124"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Warlock_Destruction.simc"
+    ],
+    "focus": "碎片小数、混乱箭、浩劫复制",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "武僧",
+    "spec": "酒仙",
+    "resource": "能量",
+    "source": "src\\server\\scripts\\Spells\\spell_monk.cpp",
+    "simc": "engine\\class_modules\\sc_monk.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_monk.cpp:86",
+      "src/server/scripts/Spells/spell_monk.cpp:97",
+      "src/server/scripts/Spells/spell_monk.cpp:101"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Monk_Brewmaster.simc"
+    ],
+    "focus": "醉拳池、清心酒、铁骨酒共享充能",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "武僧",
+    "spec": "织雾",
+    "resource": "法力",
+    "source": "src\\server\\scripts\\Spells\\spell_monk.cpp",
+    "simc": "engine\\class_modules\\sc_monk.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_monk.cpp:78",
+      "src/server/scripts/Spells/spell_monk.cpp:96",
+      "src/server/scripts/Spells/spell_monk.cpp:112"
+    ],
+    "tier25_profiles": [],
+    "focus": "抚慰引导、复苏之雾转移、活血术",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "武僧",
+    "spec": "踏风",
+    "resource": "能量/真气",
+    "source": "src\\server\\scripts\\Spells\\spell_monk.cpp",
+    "simc": "engine\\class_modules\\sc_monk.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_monk.cpp:68",
+      "src/server/scripts/Spells/spell_monk.cpp:69",
+      "src/server/scripts/Spells/spell_monk.cpp:320"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Monk_Windwalker.simc",
+      "profiles/Tier25/T25_Monk_Windwalker_Serenity.simc"
+    ],
+    "focus": "真气收支、连击精通、分身和怒雷破",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "德鲁伊",
+    "spec": "平衡",
+    "resource": "星界能量/法力",
+    "source": "src\\server\\scripts\\Spells\\spell_druid.cpp",
+    "simc": "engine\\class_modules\\sc_druid.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_druid.cpp:628",
+      "src/server/scripts/Spells/spell_druid.cpp:631",
+      "src/server/scripts/Spells/spell_druid.cpp:654"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Druid_Balance.simc"
+    ],
+    "focus": "星涌星落、赋能、星界能量",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "德鲁伊",
+    "spec": "野性",
+    "resource": "能量/连击点",
+    "source": "src\\server\\scripts\\Spells\\spell_druid.cpp",
+    "simc": "engine\\class_modules\\sc_druid.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_druid.cpp:24",
+      "src/server/scripts/Spells/spell_druid.cpp:31",
+      "src/server/scripts/Spells/spell_druid.cpp:59"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Druid_Feral.simc"
+    ],
+    "focus": "流血快照、凶猛撕咬额外耗能、猛虎之怒",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "德鲁伊",
+    "spec": "守护",
+    "resource": "怒气",
+    "source": "src\\server\\scripts\\Spells\\spell_druid.cpp",
+    "simc": "engine\\class_modules\\sc_druid.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_druid.cpp:2043",
+      "src/server/scripts/Spells/spell_druid.cpp:2045",
+      "src/server/scripts/Spells/spell_druid.cpp:2059"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Druid_Guardian.simc"
+    ],
+    "focus": "铁鬃叠加、狂暴回复、形态切换",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "德鲁伊",
+    "spec": "恢复",
+    "resource": "法力",
+    "source": "src\\server\\scripts\\Spells\\spell_druid.cpp",
+    "simc": "engine\\class_modules\\sc_druid.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_druid.cpp:55",
+      "src/server/scripts/Spells/spell_druid.cpp:519",
+      "src/server/scripts/Spells/spell_druid.cpp:521"
+    ],
+    "tier25_profiles": [],
+    "focus": "生命绽放、野性成长、精通与多目标持续治疗",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "恶魔猎手",
+    "spec": "浩劫",
+    "resource": "恶魔之怒",
+    "source": "src\\server\\scripts\\Spells\\spell_dh.cpp",
+    "simc": "engine\\class_modules\\sc_demon_hunter.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_dh.cpp:55",
+      "src/server/scripts/Spells/spell_dh.cpp:56",
+      "src/server/scripts/Spells/spell_dh.cpp:57"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Demon_Hunter_Havoc.simc"
+    ],
+    "focus": "混乱打击返还、眼棱、变身技能替换",
+    "status": "待逐项行为核对"
+  },
+  {
+    "class_name": "恶魔猎手",
+    "spec": "复仇",
+    "resource": "痛苦",
+    "source": "src\\server\\scripts\\Spells\\spell_dh.cpp",
+    "simc": "engine\\class_modules\\sc_demon_hunter.cpp",
+    "simc_exists": true,
+    "anchors": [
+      "src/server/scripts/Spells/spell_dh.cpp:95",
+      "src/server/scripts/Spells/spell_dh.cpp:100",
+      "src/server/scripts/Spells/spell_dh.cpp:141"
+    ],
+    "tier25_profiles": [
+      "profiles/Tier25/T25_Demon_Hunter_Vengeance.simc"
+    ],
+    "focus": "灵魂残片、灵魂裂劈、恶魔尖刺充能",
+    "status": "待逐项行为核对"
+  }
+]
