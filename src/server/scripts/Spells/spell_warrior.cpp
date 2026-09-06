@@ -257,6 +257,15 @@ void ApplyArmsSweepingStrikesHit(SpellScript* script)
     if (!main || hit == main)
         return;
 
+    // 8.3 描述：8 码内第二个目标。260708 的 EffectRadiusIndex 为 0，
+    // 这是非 DBC 半径列（用户拍板）。不要把战争破坏者半径索引 14 抄过来。
+    // 超过 8 码必须把额外命中打成 0；只 return 会让第二目标吃满额伤害。
+    if (hit->GetExactDist2d(main) > 8.0f)
+    {
+        script->SetHitDamage(0);
+        return;
+    }
+
     if (AuraEffect const* pct = sweeping->GetEffect(EFFECT_1))
         script->SetHitDamage(CalculatePct(script->GetHitDamage(), pct->GetAmount()));
 
@@ -274,6 +283,7 @@ void ApplyArmsSweepingStrikesHit(SpellScript* script)
 bool HasFreeArmsExecute(Unit const* caster)
 {
     return caster && (caster->HasAura(SPELL_WARRIOR_SUDDEN_DEATH_ARMS_BUFF)
+        || caster->HasAura(SPELL_WARRIOR_SUDDEN_DEATH_PROC)
         || caster->HasAura(SPELL_WARRIOR_DEADLY_CALM));
 }
 }
@@ -887,8 +897,8 @@ public:
 
         bool CheckProc(ProcEventInfo& eventInfo)
         {
-            // 8.3 Sweeping Strikes (260708) adds a second target through
-            // SPELLMOD_JUMP_TARGETS. Do not recast legacy extra-attack spells.
+            // 8.3 横扫 260708：效果 0 是 SPELLMOD_JUMP_TARGETS +1，不是旧额外攻击。
+            // 必须 return false。改回 true 会叠 12723 / 26654。
             if (GetId() == SPELL_WARRIOR_SWEEPING_STRIKES)
                 return false;
 
@@ -1138,7 +1148,9 @@ public:
             if (Player* _player = GetCaster()->ToPlayer())
                 if (Unit* target = GetHitUnit())
                 {
-                    _player->CastCustomSpell(SPELL_WARRIOR_COLOSSUS_SMASH_BUFF, SPELLVALUE_BASE_POINT0, 15.0f + _player->m_activePlayerData->Mastery, target, true);
+                    // 208086 表上效果 0 Aura 271 基点 30、效果 1 Aura 343 基点 30。
+                    // 近战 Taken 已乘 271。不要用 15+精通覆盖效果 0，也不要给 343 写 Handler。
+                    _player->CastSpell(target, SPELL_WARRIOR_COLOSSUS_SMASH_BUFF, true);
                     ApplyArmsDeepWounds(_player, target);
                     ApplyArmsSweepingStrikesHit(this);
                 }
@@ -2533,6 +2545,7 @@ public:
             {
                 if (SpellInfo const* overpower = sSpellMgr->GetSpellInfo(SPELL_WARRIOR_OVERPOWER))
                     caster->GetSpellHistory()->RestoreCharge(overpower->ChargeCategoryId);
+                caster->GetSpellHistory()->ResetCooldown(SPELL_WARRIOR_MORTAL_STRIKE, true);
             }
         }
 
@@ -2802,6 +2815,7 @@ class spell_warr_execute : public SpellScript
         if (Unit* caster = GetCaster())
         {
             caster->RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH_ARMS_BUFF);
+            caster->RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH_PROC);
             if (!IsArmsWarrior(caster))
                 caster->RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH);
         }
@@ -3152,10 +3166,21 @@ class spell_warr_sudden_death : public AuraScript
 
     void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
     {
-        uint32 buffId = GetId() == SPELL_WARRIOR_SUDDEN_DEATH_ARMS
-            ? SPELL_WARRIOR_SUDDEN_DEATH_ARMS_BUFF
-            : SPELL_WARRIOR_SUDDEN_DEATH_PROC;
-        GetTarget()->CastSpell(GetTarget(), buffId, true);
+        Unit* owner = GetTarget();
+        if (!owner)
+            return;
+
+        // 拍板：武器猝死 29725 同时上 52437 与 280776。
+        // 52437 带 SPELLMOD_COST -100；280776 只有忽略光环状态。
+        // 不要读 29725 Dummy 40 当触发率。
+        if (GetId() == SPELL_WARRIOR_SUDDEN_DEATH_ARMS)
+        {
+            owner->CastSpell(owner, SPELL_WARRIOR_SUDDEN_DEATH_ARMS_BUFF, true);
+            owner->CastSpell(owner, SPELL_WARRIOR_SUDDEN_DEATH_PROC, true);
+            return;
+        }
+
+        owner->CastSpell(owner, SPELL_WARRIOR_SUDDEN_DEATH_PROC, true);
     }
 
     void Register() override
