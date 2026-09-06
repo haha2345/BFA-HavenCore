@@ -1826,6 +1826,97 @@ HL.PACKS = {
         end,
     },
 
+    dk_blood_bone = {
+        key = "dk_blood_bone",
+        title = "鲜血-骨髓骨盾骨风暴赤色天灾",
+        order = 62,
+        hint = "骨髓加层不是 SetStackAmount。骨盾不是吸收。护甲看人物面板。骨风暴 extraMs=(internalCost/100)*ms，上限内部 1000。赤色 Dummy 30。去坦克假人。",
+        startText = "【骨盾循环】120 鲜血，坦克假人 131992 / 144078。打 195182 应叠层，不要把已有层覆盖成刚好 3。骨盾 195181 不是吸收盾。打开人物面板：护甲数值随层数变，不要只看图标。点 81136 后血液沸腾冷却应有几率重置。骨风暴 100 可见符能大约 10 秒，10 可见大约 1 秒，不要变成 11 秒。",
+        startPrint = "请打骨髓分裂、看骨盾，再测赤色天灾和骨风暴。",
+        ids = { 195182, 195181, 81136, 50842, 194844 },
+        labels = {
+            [195182] = "骨髓分裂",
+            [195181] = "白骨之盾",
+            [81136] = "赤色天灾",
+            [50842] = "血液沸腾",
+            [194844] = "白骨风暴",
+        },
+        chain = {
+            { id = 195182, role = "骨髓分裂施法", want = "cast",
+              hintFail = "没有 195182。确认专精是鲜血。" },
+            { id = 195181, role = "白骨之盾", want = "aura-self",
+              hintFail = "没有 195181。骨髓分裂应 ModStackAmount 加层。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 3 = 加 3 层。禁止 SetStackAmount(3)。不要挂 SCHOOL_ABSORB。护甲用 HandleStatModifier 旁路。禁止改 SpellAuraEffects.cpp。耗层观察窗口 2.5 秒，不要写死 2000 ms，2.5 不进 Dummy。",
+                "赤色 Dummy 30，禁止 roll_chance_i(40)，网页 25% 弃用。骨风暴只留 extraMs=(internalCost/100)*IN_MILLISECONDS，再 min(10000,max(1000,extraMs))。内部上限 1000。禁止 GetDuration()+(符能/10)。10/100/1000 都不得当 Dummy。",
+            }
+        end,
+    },
+
+    dk_blood_strike = {
+        key = "dk_blood_strike",
+        title = "鲜血-护盾吸血鬼墓石表已表达",
+        order = 63,
+        hint = "77535 = 治疗量×精通%。吸血鬼读对列。墓石不要 221699。心脏打击/符文分流不包空脚本。",
+        startText = "【鲜血护盾/吸血鬼/墓石】在坦克假人上打死亡打击，自身应出现 77535，厚度跟本次治疗走，不要最大生命×精通%。按 55233 应加治疗且加最大生命。墓石 219809 不应去查 221699。心脏打击 206930、符文分流 194679 能按出来即可，不要为它们加脚本名。",
+        startPrint = "请打死亡打击看 77535，再开吸血鬼之血和墓石。",
+        ids = { 49998, 45470, 77513, 77535, 55233, 219809, 206930, 194679 },
+        labels = {
+            [49998] = "死亡打击",
+            [45470] = "死亡打击治疗",
+            [77513] = "精通鲜血护盾",
+            [77535] = "鲜血护盾吸收",
+            [55233] = "吸血鬼之血",
+            [219809] = "墓石",
+            [206930] = "心脏打击",
+            [194679] = "符文分流",
+        },
+        chain = {
+            { id = 77535, role = "鲜血护盾", want = "aura-self",
+              hintFail = "没有 77535。HandleHeal2 必须按治疗量×精通%，且只给鲜血。" },
+            { id = 55233, role = "吸血鬼之血", want = "aura-self",
+              hintFail = "没有 55233。效果 1 与效果 3 不要都按最大生命×30%。" },
+        },
+        extraVerdict = function()
+            return {
+                "精通家留在 spell_dk.cpp，禁止搬到 spell_mastery.cpp。非鲜血不要上 77535。",
+                "心脏打击 Chain 2 出表，不包空脚本，不改 Spell.cpp。符文分流 Aura 87 −30 表已表达。鲜血镜像不加厚。",
+            }
+        end,
+    },
+
+    dk_blood_drw = {
+        key = "dk_blood_drw",
+        title = "鲜血-符文刃舞复制循环",
+        order = 64,
+        hint = "不要 2 秒转发白字。复制心脏打击/骨髓分裂/血液沸腾/死亡打击。招架 40%、8 秒出 DBC。",
+        startText = "【符文刃舞】120 鲜血，坦克假人。按 49028 后 8 秒窗口内自己打心脏打击/骨髓分裂/血液沸腾/死亡打击，假人 CLEU 应出现镜像同技能，不是无技能白字。招架光环 81256 应在。triggered 要跳过防死循环。",
+        startPrint = "请开符文刃舞 49028，再打鲜血循环技能。看镜像 CLEU。",
+        ids = { 49028, 81256, 206930, 195182, 50842, 49998 },
+        labels = {
+            [49028] = "符文刃舞",
+            [81256] = "符文刃舞招架",
+            [206930] = "心脏打击",
+            [195182] = "骨髓分裂",
+            [50842] = "血液沸腾",
+            [49998] = "死亡打击",
+        },
+        chain = {
+            { id = 49028, role = "符文刃舞施法", want = "cast",
+              hintFail = "没有 49028。确认专精是鲜血。" },
+            { id = 81256, role = "招架光环", want = "aura-self",
+              hintFail = "没有 81256。招架 40% 与 8 秒出 DBC，不要写进脚本常数。" },
+        },
+        extraVerdict = function()
+            return {
+                "禁止 GetDamageOverLastSeconds(2)+DealDamage 当循环。复制 206930/195182/50842/49998。不要给心脏打击加 spell_script_names。",
+                "creature_template 27893 已是 npc_dk_dancing_rune_weapon。本波没有独立 SQL 文件。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
