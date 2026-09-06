@@ -2405,6 +2405,119 @@ HL.PACKS = {
         end,
     },
 
+    pal_ret_ashes = {
+        key = "pal_ret_ashes",
+        title = "惩戒-灰烬觉醒255937",
+        order = 81,
+        hint = "255937 无 Dummy。卸 205290。减速 5 秒非 DBC。过滤器是学派伤害。",
+        startText = "【灰烬觉醒】先导入 2026_09_07_03。120 惩戒对一排假人按 255937。CLEU 必须是 255937 直伤并回 5 圣能。目标减速大约 5 秒。不要出现 205290。不要把 5/9/12 当 Dummy。不要把 198034 当循环。",
+        startPrint = "请按灰烬觉醒 255937。看 CLEU 技能号与减速。",
+        ids = { 255937, 255941, 205290, 198034 },
+        labels = {
+            [255937] = "灰烬觉醒",
+            [255941] = "灰烬昏迷(恶魔亡灵)",
+            [205290] = "军团昏迷号(不应再绑)",
+            [198034] = "神圣之锤(不是8.3循环)",
+        },
+        chain = {
+            { id = 255937, role = "灰烬觉醒施法", want = "cast",
+              hintFail = "没有 255937。先导入 _03，不要只绑 205290。" },
+        },
+        extraVerdict = function()
+            return {
+                "EFFECT_0 必须是 SPELL_EFFECT_SCHOOL_DAMAGE。EFFECT_1 必须是 SPELL_EFFECT_APPLY_AURA 再 SetDuration(5000)。",
+                "CLEU 出现 205290 = 回归。DurationIndex 835 缺行。5 秒是观察窗口。",
+            }
+        end,
+    },
+
+    pal_ret_storm_purpose = {
+        key = "pal_ret_storm_purpose",
+        title = "惩戒-神圣风暴双计与神圣意志15",
+        order = 82,
+        hint = "53385 不要再打 224239。223817 Dummy 15。184662 Dummy 30。删 TV/风暴/荣耀圣言写死 -7.5 与裁决之怒写死 -10。",
+        startText = "【风暴/神圣意志/复仇之盾】对一排假人按 53385。CLEU 不要同一跳全额 53385 再加全额 224239。点 223817 后花圣能，223819 按 Dummy 15，不要按 20。正义之拳惩戒每圣能约 −2 秒，不要再叠 −7.5 或裁决之怒 −10。开 184662：吸收应按攻击强度 × Dummy 30，禁止 ap*20。",
+        startPrint = "请打神圣风暴 53385，再点神圣意志花圣能。",
+        ids = { 53385, 224239, 223817, 223819, 85256, 224266, 234299, 853, 184662 },
+        labels = {
+            [53385] = "神圣风暴",
+            [224239] = "风暴子技能(不应再打)",
+            [223817] = "神圣意志(惩戒)",
+            [223819] = "神圣意志免费",
+            [85256] = "圣殿骑士的裁决",
+            [224266] = "裁决伤害",
+            [234299] = "正义之拳(惩戒)",
+            [853] = "制裁之锤",
+            [184662] = "复仇之盾",
+        },
+        chain = {
+            { id = 53385, role = "神圣风暴", want = "cast",
+              hintFail = "没有 53385。" },
+            { id = 85256, role = "圣殿骑士的裁决", want = "cast",
+              hintFail = "没有 85256。真伤应是 224266。" },
+        },
+        extraVerdict = function()
+            return {
+                "HandleDummy 再 CastSpell(224239) 必须已删。wiki 20% 触发率弃用。",
+                "justicars -10 与 word_of_glory -7.5 必须已删，只留 fist_of_justice PlayerScript。",
+                "184662 CalculateAmount 读 Dummy 30，禁止 ap * 20。",
+            }
+        end,
+    },
+
+    pal_ret_sentence_crusade = {
+        key = "pal_ret_sentence_crusade",
+        title = "惩戒-处决宣判与征伐",
+        order = 83,
+        hint = "267798 直伤+267799。231895 基点 30÷10 观察窗口，不是 Dummy。",
+        startText = "【处决/征伐】按 267798，目标应立刻受伤并有 267799 约 12 秒，不要等爆炸。开 231895 覆盖 31884，花圣能叠层，每层大约 3%。冷却按 2 分钟观察，不要把 20 秒 RecoveryTime 写成 Dummy。",
+        startPrint = "请打处决宣判 267798，再开征伐 231895。",
+        ids = { 267798, 267799, 231895, 31884, 84963 },
+        labels = {
+            [267798] = "处决宣判",
+            [267799] = "处决易伤",
+            [231895] = "征伐",
+            [31884] = "复仇之怒(被覆盖)",
+            [84963] = "审讯",
+        },
+        chain = {
+            { id = 267798, role = "处决宣判", want = "cast",
+              hintFail = "没有 267798。先导入 _03。" },
+            { id = 267799, role = "处决易伤", want = "aura-target",
+              hintFail = "没有 267799。形态不是到期爆炸。" },
+            { id = 231895, role = "征伐", want = "aura-self",
+              hintFail = "没有 231895。应覆盖 31884。" },
+        },
+        extraVerdict = function()
+            return {
+                "amount/=10 不是 Dummy。不要包 198034。不要把 24275 20% 写进 Dummy。",
+            }
+        end,
+    },
+
+    pal_ret_greater_kings = {
+        key = "pal_ret_greater_kings",
+        title = "惩戒-大于王者祝福8.3仍活",
+        order = 84,
+        hint = "203538 SpellName 有行。PAL-C 不验收。吸收 2.7f*SP 非 Dummy。",
+        startText = "【大于王者】120 惩戒给自己或友方挂 203538，光环应在。不要按 Talent 无行拆接线。PAL-C 包即使看见这条也不能勾 PAL-C 完成。wiki 约 44 级弃用。",
+        startPrint = "请按大于王者祝福 203538。",
+        ids = { 203538, 203539 },
+        labels = {
+            [203538] = "大于王者祝福",
+            [203539] = "大于智慧祝福",
+        },
+        chain = {
+            { id = 203538, role = "大于王者祝福", want = "aura-self",
+              hintFail = "没有 203538。禁止 DELETE dump 行。" },
+        },
+        extraVerdict = function()
+            return {
+                "2.7f*SP 非 Dummy。Dummy 1 不要拿来改吸收公式。本波不改吸收脚本。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
