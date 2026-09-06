@@ -1216,6 +1216,105 @@ HL.PACKS = {
         end,
     },
 
+    war_c_charge = {
+        key = "war_c_charge",
+        title = "战士共用-冲锋",
+        order = 40,
+        hint = "120 战士冲向满级假人。不要点腐蚀测试。",
+        startText = "【冲锋】选中满级伤害假人，按冲锋 100。插件只观测，不会给你套腐蚀光环。",
+        startPrint = "请对假人按冲锋 100。看 CLEU 的 100 与定身 105771。",
+        ids = { 100, 105771, 218104, 198337 },
+        labels = {
+            [100] = "冲锋",
+            [105771] = "冲锋定身",
+            [218104] = "冲锋效果",
+            [198337] = "燃烧轨迹冲锋效果",
+        },
+        chain = {
+            { id = 100, role = "冲锋施法", want = "cast",
+              hintFail = "没有 100。动作条没有冲锋，或选错目标。" },
+            { id = 105771, role = "定身", want = "aura-target",
+              hintFail = "冲锋打了但目标没有 105771。不要为此改 Spell.cpp。" },
+        },
+        extraVerdict = function()
+            return {
+                "冲锋 Energize 200 出 SpellEffect，显示为 20 点怒气。不要把 0.5 秒公共冷却写进脚本。",
+                "枚举 SPELL_WARRIOR_CHARGE=34846 不是冲锋 100。",
+            }
+        end,
+    },
+
+    war_c_rally = {
+        key = "war_c_rally",
+        title = "战士共用-集结呐喊",
+        order = 41,
+        hint = "按 97462。不要找命令怒吼。",
+        startText = "【集结呐喊】按 97462。自己或队友应出现 97463（约 10 秒、生命 +15%）。8.3 没有独立命令怒吼。",
+        startPrint = "请按集结呐喊 97462。看 97463。不要测命令怒吼。",
+        ids = { 97462, 97463 },
+        labels = {
+            [97462] = "集结呐喊",
+            [97463] = "集结生命光环",
+        },
+        chain = {
+            { id = 97462, role = "集结施法", want = "cast",
+              hintFail = "没有 97462。运行库若仍把 97462 绑成 commanding_shout，先导入 2026_09_05_60。" },
+            { id = 97463, role = "生命光环", want = "aura-self",
+              hintFail = "没有 97463。Dummy 15 应由脚本读 GetEffectValue，不要写成现役 10%。" },
+        },
+        extraVerdict = function()
+            return {
+                "8.0.1 命令怒吼已改名为集结呐喊。不要再测第三条怒吼。",
+                "40 码 / 10 秒 / 180 秒冷却出 DBC，不是 Dummy。",
+            }
+        end,
+    },
+
+    war_c_pummel = {
+        key = "war_c_pummel",
+        title = "战士共用-拳击",
+        order = 42,
+        hint = "打断看 SPELL_INTERRUPT。木桩不读条不算脚本坏了。",
+        startText = "【拳击】对正在读条的敌对生物按 6552。木桩通常不读条。不要给 6552 写战士脚本。",
+        startPrint = "请对读条目标按拳击 6552。无脚本不算失败。",
+        ids = { 6552 },
+        labels = {
+            [6552] = "拳击",
+        },
+        chain = {
+            { id = 6552, role = "拳击施法", want = "cast",
+              hintFail = "没有 6552 施法。先确认动作条有拳击。" },
+        },
+        extraVerdict = function()
+            return {
+                "6552 在 SpellEffect 上就是打断（Effect=68），本表无 Dummy。无 spell_warr_pummel 不算失败。",
+                "人测看 CLEU 的 SPELL_INTERRUPT。4 秒 / 15 秒出 DBC。",
+            }
+        end,
+    },
+
+    war_c_battle_shout = {
+        key = "war_c_battle_shout",
+        title = "战士共用-战斗怒吼",
+        order = 43,
+        hint = "6673 是攻强团队增益。不要改名成命令怒吼。",
+        startText = "【战斗怒吼】按 6673。自身应有攻强光环。不要把它当成命令怒吼。",
+        startPrint = "请按战斗怒吼 6673。",
+        ids = { 6673 },
+        labels = {
+            [6673] = "战斗怒吼",
+        },
+        chain = {
+            { id = 6673, role = "战斗怒吼", want = "aura-self",
+              hintFail = "没有 6673。这是数据表光环，不要为此写空脚本。" },
+        },
+        extraVerdict = function()
+            return {
+                "6673 近战/远程攻强各 +10%，本表无 Dummy。1 小时 / 100 码出 DBC。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",

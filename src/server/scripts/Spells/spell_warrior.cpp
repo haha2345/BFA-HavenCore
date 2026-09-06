@@ -3376,7 +3376,7 @@ void AddSC_warrior_spell_scripts()
     RegisterSpellAndAuraScriptPair(spell_warr_ignore_pain, aura_warr_ignore_pain);
     RegisterSpellScript(spell_warr_impending_victory);
     new spell_warr_intercept();
-    new spell_warr_intimidating_shout();
+    RegisterSpellScript(spell_warr_intimidating_shout);
     new spell_warr_last_stand();
     new spell_warr_massacre();
     new spell_warr_meat_cleaver();
