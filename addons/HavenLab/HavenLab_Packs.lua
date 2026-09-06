@@ -2314,6 +2314,97 @@ HL.PACKS = {
         end,
     },
 
+    pal_prot_sotr = {
+        key = "pal_prot_sotr",
+        title = "防护-正义盾击护甲Aura268",
+        order = 78,
+        hint = "132403 Aura 268 基点 150。不是吸收。站奉献不再加强。",
+        startText = "【正义盾击】120 防护去坦克假人 131992。按 53600 后人物面板护甲应上升，身上有 132403。不要再看到自制减伤百分比。站不站奉献都应挂同一条护甲。打开人物面板看护甲数字，不要只看图标。",
+        startPrint = "请按正义盾击 53600。看护甲与 132403。",
+        ids = { 53600, 132403, 204074, 31884 },
+        labels = {
+            [53600] = "正义盾击",
+            [132403] = "盾击护甲",
+            [204074] = "正义保护者",
+            [31884] = "复仇之怒",
+        },
+        chain = {
+            { id = 53600, role = "正义盾击施法", want = "cast",
+              hintFail = "没有 53600。" },
+            { id = 132403, role = "盾击护甲光环", want = "aura-self",
+              hintFail = "没有 132403。禁止 CastCustomSpell 自制减伤%。先导入 _02。" },
+        },
+        extraVerdict = function()
+            return {
+                "Aura 268 禁止改 SpellAuraEffects.cpp。护甲走 HandleStatModifier。奉献 +20% 必须已删。",
+                "正义保护者对 31884 必须 ModifyCooldown，不要 ReduceChargeCooldown。",
+            }
+        end,
+    },
+
+    pal_prot_ardent_lotp = {
+        key = "pal_prot_ardent_lotp",
+        title = "防护-炽热防御者与守护之光公式",
+        order = 79,
+        hint = "31850 Dummy 20 致死，Aura 87 不是吸收。184092 Dummy 200 用基础×(1+缺口%×Dummy/100)。",
+        startText = "【炽热/守护之光】坦克假人必须会还手。开 31850 应少吃伤害，不是吸收盾。把生命打到致死应出 66235 并摘 31850。残血按 184092：治疗大约最高是基础的三倍。满血接近基础。不要站奉献再 +20%。Icy Veins 12% 与旧 30% 缺口弃用。",
+        startPrint = "请开炽热防御者再挨打，残血按守护之光。",
+        ids = { 31850, 66235, 184092, 213652 },
+        labels = {
+            [31850] = "炽热防御者",
+            [66235] = "炽热致死治疗",
+            [184092] = "守护之光",
+            [213652] = "守护者之手",
+        },
+        chain = {
+            { id = 31850, role = "炽热防御者", want = "aura-self",
+              hintFail = "没有 31850。" },
+            { id = 184092, role = "守护之光施法", want = "cast",
+              hintFail = "没有 184092。残血再按。" },
+        },
+        extraVerdict = function()
+            return {
+                "Register 禁止 SPELL_AURA_SCHOOL_ABSORB。Dummy 200 不要改。奉献 +20% 本波不另造。",
+            }
+        end,
+    },
+
+    pal_prot_grand_judgment = {
+        key = "pal_prot_grand_judgment",
+        title = "防护-大十字军与审判Dummy2",
+        order = 80,
+        hint = "85043 Dummy 0。几率不进 C++。203791 Dummy 8/3。275779 + 231657 Dummy 2。203776 Dummy 50 只打首跳。",
+        startText = "【大十字军/审判/最后的防御者】坦克假人还手。多次躲闪或招架后复仇者之盾 31935 冷却应有时重置，不要一次必中。身上可有 85416。锤 AfterCast 不要再单独掷骰，脚本里不要 chance=15 或 roll_chance_i(15)。审判 CLEU 是 275779，盾击充能约 −2 秒。点 203791：附近敌人变多则减伤大约按 Dummy 3% 一档加，不要对 SimC 指数公式。点 203776：对一排假人按 31935，第一个跳弹伤害应按 Dummy 50 加百分，后续跳弹不加；再按一次 31935，新的第一跳仍应加百分，不要整场战斗只第一发吃加成。责难 96231 防护可以验收打断。祝福之锤 Dummy 12 与圣光护盾吸收本波不验收。",
+        startPrint = "请挨打看大十字军，再按审判 275779。",
+        ids = { 85043, 85416, 31935, 275779, 231657, 53600, 96231, 203776, 203791 },
+        labels = {
+            [85043] = "大十字军被动",
+            [85416] = "大十字军触发",
+            [31935] = "复仇者之盾",
+            [275779] = "防护审判",
+            [231657] = "审判2级Dummy2",
+            [53600] = "正义盾击",
+            [96231] = "责难",
+            [203776] = "首席复仇者",
+            [203791] = "最后的防御者",
+        },
+        chain = {
+            { id = 275779, role = "防护审判", want = "cast",
+              hintFail = "没有 275779。先导入 _00。" },
+            { id = 31935, role = "复仇者之盾", want = "cast",
+              hintFail = "没有 31935。多次躲闪招架后应有时能立刻再按，不要一次必中。" },
+            { id = 203791, role = "最后的防御者", want = "aura-self",
+              hintFail = "没有 203791。点 T100 第 0 列。读 Dummy 8/3，不要抄 SimC 公式。" },
+        },
+        extraVerdict = function()
+            return {
+                "15 不得进 Dummy 0，也不得进 C++（禁止 chance=15 / roll_chance_i(15)）。1000 ms 不得进 Dummy 2。不要 CastSpell 204241。",
+                "禁止 chance += 10。首席复仇者 Dummy 50 只打复仇者之盾第一个跳弹，后续跳弹不加。每次施法 OnCast 重置 _firstTarget，禁止整场战斗只第一发吃加成。不是大十字军几率。",
+                "203791 读 Dummy 8/3 线性人数。禁止 SimC 2-(1-p)^n。祝福之锤 Dummy 12 与圣光护盾吸收基点 0 本波不包。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
