@@ -34,6 +34,7 @@
 #include "Containers.h"
 #include "Log.h"
 #include "Spell.h"
+#include "SpellInfo.h"
 
 enum DeathKnightSpells
 {
@@ -59,6 +60,8 @@ enum DeathKnightSpells
     SPELL_DK_DEATH_GRIP_VISUAL                  = 55719,
     SPELL_DK_DEATH_GRIP_TAUNT                   = 57603,
     SPELL_DK_DEATH_STRIKE_HEAL                  = 45470,
+    SPELL_DK_DEATH_GATE                         = 50977,
+    SPELL_DK_DEATH_GATE_CLICK                   = 52751,
     SPELL_DK_DECOMPOSING_AURA                   = 199720,
     SPELL_DK_DECOMPOSING_AURA_DAMAGE            = 199721,
     SPELL_DK_ENHANCED_DEATH_COIL                = 157343,
@@ -198,6 +201,8 @@ enum DeathKnightSpells
     SPELL_DK_INEXORABLE_ASSAULT_STACK = 253595,
     SPELL_DK_INEXORABLE_ASSAULT_DAMAGE = 253597,
     SPELL_DK_FROSTSCYTHE = 207230,
+    SPELL_DK_FROSTWYRMS_FURY = 279302,
+    SPELL_DK_FROSTWYRMS_FURY_DAMAGE = 279303,
     SPELL_DK_AVALANCHE = 207142,
     SPELL_DK_AVALANCHE_DAMAGE = 207150,
     SPELL_DK_RIME = 59057,
@@ -206,9 +211,17 @@ enum DeathKnightSpells
     SPELL_DK_ARMY_OF_THE_DAMNED = 276837,
     SPELL_DK_RUNIC_CORRUPTION_MOD_RUNES = 51460,
     SPELL_DK_ARMY_OF_THE_DEAD = 42650,
+    SPELL_DK_ARMY_GHOUL = 42651,
     SPELL_DK_APOCALYPSE = 275699,
+    SPELL_DK_APOCALYPSE_SUMMON = 221180,
     SPELL_DK_DARK_TRANSFORMATION = 63560,
-    SPELL_DK_SOUL_REAPER_MOD_HASTE = 69410,
+    SPELL_DK_SOUL_REAPER_MOD_HASTE = 215711,
+    SPELL_DK_DANCING_RUNE_WEAPON = 49028,
+    SPELL_DK_DANCING_RUNE_WEAPON_PARRY = 81256,
+    SPELL_DK_BLOOD_BOIL = 50842,
+    SPELL_DK_MARROWREND = 195182,
+    SPELL_DK_TOMBSTONE = 219809,
+    NPC_DK_DANCING_RUNE_WEAPON = 27893,
 };
 
 //81136
@@ -222,11 +235,15 @@ public:
         PrepareAuraScript(spell_dk_crimsom_scourge_AuraScript);
 
 
-        bool CheckProc(ProcEventInfo& /*eventInfo*/)
+        bool CheckProc(ProcEventInfo& eventInfo)
         {
-            Unit* target = GetTarget();
-            target->HasAura(SPELL_DK_BLOOD_PLAGUE);
-            return true;
+            // 血疫 55078 在敌人身上。GetTarget() 是死亡骑士自己，不能用来查 55078。
+            Unit* enemy = eventInfo.GetActionTarget();
+            if (!enemy)
+                enemy = eventInfo.GetProcTarget();
+            if (!enemy)
+                return false;
+            return enemy->HasAura(SPELL_DK_BLOOD_PLAGUE);
         }
 
         void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
@@ -234,11 +251,11 @@ public:
             Unit* caster = GetCaster();
             if (!caster)
                 return;
-
-            if (roll_chance_i(40)) {
-                    caster->CastSpell(caster, 81141, true);
-            }
-           
+            int32 chance = 0;
+            if (AuraEffect const* dummy = GetEffect(EFFECT_0))
+                chance = dummy->GetAmount(); // Dummy 30。禁止 roll_chance_i(40)。网页 25% 弃用。
+            if (chance > 0 && roll_chance_i(chance))
+                caster->CastSpell(caster, 81141, true);
         }
 
         void Register() override
@@ -370,29 +387,28 @@ class spell_dk_anti_magic_shell : public SpellScriptLoader
 
             void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
             {
-                amount = maxHealth;
-
-                /// todo, check if AMS has basepoints for EFFECT_2. in that case, this function should be rewritten.
-                if (!GetUnitOwner()->HasAura(SPELL_DK_GLYPH_OF_ABSORB_MAGIC))
-                    amount /= 2;
+                // 效果 1 Aura 267 基点 30 = 吸收上限（最大生命百分比）。禁止 40/50。30 不是 Dummy 列。
+                int32 capPct = 0;
+                if (SpellEffectInfo const* cap = GetSpellInfo()->GetEffect(EFFECT_1))
+                    capPct = cap->BasePoints;
+                amount = GetUnitOwner()->CountPctFromMaxHealth(capPct);
             }
 
-            void Absorb(AuraEffect* /*aurEff*/, DamageInfo& dmgInfo, uint32& absorbAmount)
+            void Absorb(AuraEffect* /*aurEff*/, DamageInfo& /*dmgInfo*/, uint32& /*absorbAmount*/)
             {
-                // we may only absorb a certain percentage of incoming damage.
-                absorbAmount = dmgInfo.GetDamage() * uint32(absorbPct) / 100;
+                // 容量已在 CalculateAmount。不要用效果 0 基点 0 当吸收百分比。
             }
 
             void Trigger(AuraEffect* aurEff, DamageInfo& /*dmgInfo*/, uint32& absorbAmount)
             {
                 absorbedAmount += absorbAmount;
+                if (!maxHealth)
+                    return;
 
-                if (!GetTarget()->HasAura(SPELL_DK_GLYPH_OF_ABSORB_MAGIC))
-                {
-                    // Patch 6.0.2 (October 14, 2014): Anti-Magic Shell now restores 2 Runic Power per 1% of max health absorbed.
-                    int32 bp = 2 * absorbAmount * 100 / maxHealth;
-                    GetTarget()->CastCustomSpell(SPELL_DK_RUNIC_POWER_ENERGIZE, SPELLVALUE_BASE_POINT0, bp, GetTarget(), true, nullptr, aurEff);
-                }
+                // 6.0.2：每吸收最大生命 1% 回玩家可见 2 点。内部能量 ×10 → 20。不要写 SimC 的 1。不要把 2 写进 Dummy。
+                int32 internalRp = int32(int64(absorbAmount) * 100 * 20 / maxHealth);
+                if (internalRp > 0)
+                    GetTarget()->CastCustomSpell(SPELL_DK_RUNIC_POWER_ENERGIZE, SPELLVALUE_BASE_POINT0, internalRp, GetTarget(), true, nullptr, aurEff);
             }
 
             void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -694,8 +710,13 @@ class spell_dk_death_pact : public SpellScriptLoader
 
             void HandleCalcAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
             {
-                if (Unit* caster = GetCaster())
-                    amount = int32(caster->CountPctFromMaxHealth(amount));
+                Unit* caster = GetCaster();
+                if (!caster)
+                    return;
+                int32 dummy = 0;
+                if (SpellEffectInfo const* eff = GetSpellInfo()->GetEffect(EFFECT_2))
+                    dummy = eff->BasePoints; // Dummy 30
+                amount = int32(caster->CountPctFromMaxHealth(dummy));
             }
 
             void Register() override
@@ -776,23 +797,27 @@ public:
         void HandleHeal(SpellEffIndex /*effIndex*/)
         {
             Unit* caster = GetCaster();
-            Unit* unit = GetHitUnit();
-            if (!caster || !unit)
+            if (!caster)
                 return;
 
-            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(77535);
-            if (!spellInfo)
-                return;
-            SpellEffectInfo const* effectInfo = spellInfo->GetEffect(EFFECT_0);
-            if (!effectInfo)
+            SpellInfo const* deathStrike = sSpellMgr->GetSpellInfo(49998);
+            if (!deathStrike)
                 return;
 
+            SpellEffectInfo const* pctTaken = deathStrike->GetEffect(EFFECT_1);  // Dummy 25
+            SpellEffectInfo const* pctMin   = deathStrike->GetEffect(EFFECT_2);  // Dummy 7
+            SpellEffectInfo const* window   = deathStrike->GetEffect(EFFECT_3);  // Dummy 5
 
-            int32 damage = (float)caster->GetTotalAttackPowerValue(BASE_ATTACK) * 7.00f;
-            damage = caster->SpellDamageBonusDone(unit, spellInfo, damage, HEAL, effectInfo);
-            damage = unit->SpellDamageBonusTaken(caster, spellInfo, damage, HEAL, effectInfo);
+            int32 takenPct = pctTaken ? pctTaken->BasePoints : 0;
+            int32 minPct   = pctMin   ? pctMin->BasePoints   : 0;
+            int32 seconds  = window   ? window->BasePoints   : 0;
+            if (seconds <= 0)
+                seconds = 5;
 
-            SetHitHeal(damage);
+            // Dummy 25/7/5：近窗口承伤的 25%、至少最大生命 7%。禁止 AP*7。禁止把 25 当效果 0。
+            int32 fromTaken = int32(CalculatePct(caster->GetDamageOverLastSeconds(uint32(seconds)), takenPct));
+            int32 fromHealth = int32(caster->CountPctFromMaxHealth(minPct));
+            SetHitHeal(std::max(fromTaken, fromHealth));
         }
        void HandleHeal2(SpellEffIndex /*effIndex*/){
 
@@ -807,12 +832,20 @@ public:
             if (caster->HasAura(eSpells::ScentOfBloodAura))
                 caster->RemoveAura(eSpells::ScentOfBloodAura);
 
-            if (Aura* aur = caster->GetAura(77513)) // Mastery: Blood Shield
-            {
-                int32 bp0 = float(caster->GetMaxHealth() * float(aur->GetEffect(EFFECT_0)->GetAmount() / 100.0f));
+            if (Player* player = caster->ToPlayer())
+                if (player->GetSpecializationId() != TALENT_SPEC_DEATHKNIGHT_BLOOD)
+                    return;
 
-                if (Aura* aurShield = caster->GetAura(77535))
-                    bp0 += aurShield->GetEffect(0)->GetAmount();
+            if (Aura* aur = caster->GetAura(SPELL_DK_BLOOD_SHIELD_MASTERY))
+            {
+                int32 heal = GetHitHeal(); // HandleHeal 已经 SetHitHeal
+                int32 masteryPct = 0;
+                if (AuraEffect const* m = aur->GetEffect(EFFECT_0))
+                    masteryPct = m->GetAmount();
+                int32 bp0 = int32(float(heal) * float(masteryPct) / 100.0f);
+
+                if (Aura* aurShield = caster->GetAura(SPELL_DK_BLOOD_SHIELD_ABSORB))
+                    bp0 += aurShield->GetEffect(EFFECT_0)->GetAmount();
 
                 if (bp0 > int32(caster->GetMaxHealth()))
                     bp0 = int32(caster->GetMaxHealth());
@@ -820,8 +853,7 @@ public:
                 if (caster->HasAura(192567)) // Unending Thirst
                     caster->CastSpell(caster, 216019, true);
 
-                caster->CastCustomSpell(caster, 77535, &bp0, nullptr, nullptr, true);
-
+                caster->CastCustomSpell(caster, SPELL_DK_BLOOD_SHIELD_ABSORB, &bp0, nullptr, nullptr, true);
             }
         }
 
@@ -959,9 +991,7 @@ public:
             if (!caster || !target)
                 return;
 
-            int32 pct = GetSpellInfo()->GetEffect(EFFECT_0)->BasePoints;
-            SetHitDamage(GetHitDamage() + target->CountPctFromMaxHealth(pct));
-
+            // 效果 0 是 AP 伤害，不是 Dummy 25。不要 CountPctFromMaxHealth。
             if (caster->HasAura(SPELL_DK_VORACIOUS))
                 if (!caster->HasAura(SPELL_DK_VORACIOUS_MOD_LEECH))
                     caster->AddAura(SPELL_DK_VORACIOUS_MOD_LEECH);
@@ -1060,27 +1090,91 @@ class spell_dk_festering_strike : public SpellScript
     {
         Unit* caster = GetCaster();
         Unit* target = GetHitUnit();
+        if (!caster || !target)
+            return;
 
-        uint32 Stacks = urand(0, 1);
-
-        switch (Stacks)
-        {
-        case 0:
+        float dummy = 0.0f;
+        if (SpellEffectInfo const* eff = GetSpellInfo()->GetEffect(EFFECT_1))
+            dummy = float(eff->BasePoints); // Dummy 2.5
+        int32 stacks = int32(dummy);
+        if (roll_chance_f((dummy - float(stacks)) * 100.0f))
+            ++stacks;
+        if (stacks < 1)
+            stacks = 1;
+        for (int32 i = 0; i < stacks; ++i)
             caster->CastSpell(target, SPELL_DK_FESTERING_WOUND, true);
-            caster->CastSpell(target, SPELL_DK_FESTERING_WOUND, true);
-            break;
-
-        case 1:
-            caster->CastSpell(target, SPELL_DK_FESTERING_WOUND, true);
-            caster->CastSpell(target, SPELL_DK_FESTERING_WOUND, true);
-            caster->CastSpell(target, SPELL_DK_FESTERING_WOUND, true);
-            break;
-        }
     }
 
     void Register() override
     {
         OnHit += SpellHitFn(spell_dk_festering_strike::HandleOnHit);
+    }
+};
+
+// 275699 — 天启。现文件没有这个类。Dummy 4。尸鬼伤害 → PET，本波只召 ID。
+class spell_dk_apocalypse : public SpellScript
+{
+    PrepareSpellScript(spell_dk_apocalypse);
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        // 效果 1 Dummy Tgt0=0，HANDLE_HIT 时 GetHitUnit() 为空，用显式目标。
+        Unit* target = GetHitUnit();
+        if (!target)
+            target = GetExplTargetUnit();
+        if (!caster || !target)
+            return;
+
+        int32 maxBurst = 0;
+        if (SpellEffectInfo const* dummy = GetSpellInfo()->GetEffect(EFFECT_1))
+            maxBurst = dummy->BasePoints; // Dummy 4
+        if (maxBurst <= 0)
+            return;
+
+        Aura* wounds = target->GetAura(SPELL_DK_FESTERING_WOUND, caster->GetGUID());
+        int32 burst = 0;
+        if (wounds)
+            burst = std::min(maxBurst, int32(wounds->GetStackAmount()));
+
+        for (int32 i = 0; i < burst; ++i)
+        {
+            caster->CastSpell(target, SPELL_DK_FESTERING_WOUND_DAMAGE, true);
+            if (wounds)
+                wounds->ModStackAmount(-1);
+            caster->CastSpell(caster, SPELL_DK_APOCALYPSE_SUMMON, true);
+        }
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_dk_apocalypse::HandleDummy, EFFECT_1, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// 42651 — 亡者大军单只。效果 0 Dummy、效果 1 SUMMON 生物 24207。人数观察窗口 8，不是 Dummy。
+class spell_dk_army_ghoul : public SpellScript
+{
+    PrepareSpellScript(spell_dk_army_ghoul);
+
+    void CheckCap(SpellEffIndex effIndex)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        Unit* owner = caster->GetOwner() ? caster->GetOwner() : caster;
+        uint32 count = 0;
+        for (Unit* u : owner->m_Controlled)
+            if (u && u->GetEntry() == 24207)
+                ++count;
+        // 观察窗口 8 只，不是 Dummy 4，也不是天启 Dummy 4。
+        if (count >= 8)
+            PreventHitDefaultEffect(effIndex);
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_dk_army_ghoul::CheckCap, EFFECT_1, SPELL_EFFECT_SUMMON);
     }
 };
 
@@ -1350,22 +1444,13 @@ class spell_dk_death_grip_initial : public SpellScript
                                     SPELL_DK_DEATH_GRIP_TAUNT });
     }
 
-    SpellCastResult CheckCast()
-    {
-        Unit* caster = GetCaster();
-
-        // Death Grip should not be castable while jumping/falling
-        if (caster->HasUnitState(UNIT_STATE_JUMPING) || caster->HasUnitMovementFlag(MOVEMENTFLAG_FALLING))
-            return SPELL_FAILED_MOVING;
-
-        // Patch 3.3.3 (2010-03-23): Minimum range has been changed to 8 yards in PvP.
-        Unit* target = GetExplTargetUnit();
-        if (target && target->IsPlayer())
-            if (caster->GetDistance(target) < 8.f)
-                return SPELL_FAILED_TOO_CLOSE;
-
-        return SPELL_CAST_OK;
-    }
+        SpellCastResult CheckCast()
+        {
+            Unit* caster = GetCaster();
+            if (caster->HasUnitState(UNIT_STATE_JUMPING) || caster->HasUnitMovementFlag(MOVEMENTFLAG_FALLING))
+                return SPELL_FAILED_MOVING;
+            return SPELL_CAST_OK;
+        }
 
     void HandleOnCast()
     {
@@ -1478,13 +1563,9 @@ class spell_dk_howling_blast : public SpellScript
         if (!caster || !target || !tar)
             return;
 
-        if (target->GetGUID() != tar)
-            if (const SpellInfo* info = GetSpellInfo())
-                SetHitDamage(int32(GetHitDamage()*info->GetEffect(EFFECT_0)->BasePoints / 100));
-
         caster->CastSpell(target, SPELL_DK_FROST_FEVER, true);
 
-        if (!caster->HasAura(SPELL_DK_NORTHREND_WINDS))
+        if (target->GetGUID() == tar)
             caster->CastSpell(target, SPELL_DK_HOWLING_BLAST_AOE, true);
 
         if (caster->HasAura(SPELL_DK_AVALANCHE))
@@ -1587,6 +1668,36 @@ public:
     AuraScript* GetAuraScript() const override
     {
         return new spell_dk_pillar_of_frost_AuraScript();
+    }
+};
+
+// 51271 — 冰霜之柱期间每消耗符文叠力量%。Dummy 在效果 1，禁止写死 +1。
+class spell_dk_pillar_of_frost_runes : public PlayerScript
+{
+public:
+    spell_dk_pillar_of_frost_runes() : PlayerScript("spell_dk_pillar_of_frost_runes") { }
+
+    void OnSuccessfulSpellCast(Player* player, Spell* spell) override
+    {
+        if (!player || !spell || spell->IsTriggered())
+            return;
+
+        SpellPowerCost const* runeCost = spell->GetPowerCost(POWER_RUNES);
+        if (!runeCost || runeCost->Amount <= 0)
+            return;
+
+        Aura* pillar = player->GetAura(SPELL_DK_PILLAR_OF_FROST);
+        if (!pillar)
+            return;
+
+        int32 perRune = 0;
+        if (AuraEffect const* dummy = pillar->GetEffect(EFFECT_1))
+            perRune = dummy->GetAmount(); // Dummy 1
+        if (perRune <= 0)
+            return;
+
+        if (AuraEffect* str = pillar->GetEffect(EFFECT_0))
+            str->ChangeAmount(str->GetAmount() + perRune);
     }
 };
 
@@ -1716,11 +1827,6 @@ class spell_dk_chilblains : public SpellScript
 
     void HandleOnHit()
     {
-        if (Player* player = GetCaster()->ToPlayer())
-            if (Unit* target = GetHitUnit())
-                if (player->HasAura(SPELL_DK_CHILBLAINS))
-                    player->CastSpell(target, SPELL_DK_CHAINS_OF_ICE_ROOT, true);
-
         if (GetCaster()->HasAura(SPELL_DK_COLD_HEART_CHARGE))
             if (Aura* coldHeartCharge = GetCaster()->GetAura(SPELL_DK_COLD_HEART_CHARGE))
             {      
@@ -1764,12 +1870,10 @@ class aura_dk_outbreak_periodic : public AuraScript
     {
         if (Unit* caster = GetCaster())
         {
-            std::list<Unit*> friendlyUnits;
-            GetTarget()->GetFriendlyUnitListInRange(friendlyUnits, 10.f);
-
-            for (Unit* unit : friendlyUnits)
-                if (!unit->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC) && unit->IsInCombatWith(caster))
-                    caster->CastSpell(unit, SPELL_DK_VIRULENT_PLAGUE, true);
+            std::list<Unit*> enemies;
+            GetTarget()->GetAttackableUnitListInRange(enemies, 8.0f); // 8 码出 196780 半径观察，不是 Dummy。禁止继续 GetFriendlyUnitListInRange。
+            for (Unit* unit : enemies)
+                caster->CastSpell(unit, SPELL_DK_VIRULENT_PLAGUE, true);
         }
     }
 
@@ -2062,14 +2166,7 @@ public:
 
         void HandleOnHit()
         {
-            Unit* caster = GetCaster();
-            if (Unit* target = GetHitUnit())
-            {
-                if (caster->HasAura(152281))
-                    caster->CastSpell(target, 155159, true);
-                else
-                    caster->CastSpell(target, 55095, true);
-            }
+            // Dummy 0 不是上疫病。不要再 CastSpell(SPELL_DK_FROST_FEVER)。寒心入口在 chilblains（Task 4）。
         }
 
         void Register() override
@@ -2165,11 +2262,11 @@ public:
             if (l_Player == nullptr)
                 return;
 
-            l_Caster->ModifyPower(POWER_RUNIC_POWER, -130);
+            l_Caster->ModifyPower(POWER_RUNIC_POWER, -160); // 玩家可见 16 点。Dummy 10 不覆盖。禁止 -130。
             /*if (l_Caster->ToPlayer())
                 l_Caster->ToPlayer()->SendPowerUpdate(POWER_RUNIC_POWER, l_Caster->GetPower(POWER_RUNIC_POWER));*/
 
-            if (l_Caster->GetPower(POWER_RUNIC_POWER) <= 130)
+            if (l_Caster->GetPower(POWER_RUNIC_POWER) <= 160)
                 l_Caster->RemoveAura(SPELL_DK_BREATH_OF_SINDRAGOSA);
 
         }
@@ -2227,11 +2324,6 @@ class spell_dk_runic_empowerment : public PlayerScript
 public:
     spell_dk_runic_empowerment() : PlayerScript("spell_dk_runic_empowerment") {}
 
-    enum eSpells
-    {
-        RunicEmpowerment = 81229,
-    };
-
     void OnModifyPower(Player * p_Player, Powers p_Power, int32 p_OldValue, int32& p_NewValue, bool p_Regen, bool p_After)
     {
         if (p_After)
@@ -2240,29 +2332,26 @@ public:
         if (p_Player->getClass() != CLASS_DEATH_KNIGHT || p_Power != POWER_RUNIC_POWER || p_Regen || p_NewValue > p_OldValue)
             return;
 
-        if (AuraEffect* l_RunicEmpowerment = p_Player->GetAuraEffect(eSpells::RunicEmpowerment, EFFECT_0))
+        if (AuraEffect* runic = p_Player->GetAuraEffect(SPELL_DK_RUNIC_EMPOWERMENT, EFFECT_0))
         {
-            /// 1.00% chance per Runic Power spent
-            float l_Chance = (l_RunicEmpowerment->GetAmount() / 100.0f);
+            int32 spentVisible = (p_OldValue - p_NewValue) / 10; // 内部格 → 可见点。只在消耗时走进来。
+            if (spentVisible <= 0)
+                return;
 
-            if (roll_chance_f(l_Chance))
-            {
-                std::list<uint8> l_LstRunesUsed;
+            // Dummy 20 → 每点可见符能 2%。禁止 GetAmount()/100，禁止写死 2.0f。
+            float chance = float(spentVisible) * (float(runic->GetAmount()) / 10.0f);
+            if (!roll_chance_f(chance))
+                return;
 
-                for (uint8 i = 0; i < MAX_RUNES; ++i)
-                {
-                    if (p_Player->GetRuneCooldown(i))
-                        l_LstRunesUsed.push_back(i);
-                }
+            std::list<uint8> used;
+            for (uint8 i = 0; i < MAX_RUNES; ++i)
+                if (p_Player->GetRuneCooldown(i))
+                    used.push_back(i);
+            if (used.empty())
+                return;
 
-                if (l_LstRunesUsed.empty())
-                    return;
-
-                uint8 l_RuneRandom = Trinity::Containers::SelectRandomContainerElement(l_LstRunesUsed);
-
-                p_Player->SetRuneCooldown(l_RuneRandom, 0);
-                p_Player->ResyncRunes();
-            }
+            p_Player->SetRuneCooldown(Trinity::Containers::SelectRandomContainerElement(used), 0);
+            p_Player->ResyncRunes();
         }
     }
 };
@@ -2332,16 +2421,21 @@ class spell_dk_vampiric_blood : public AuraScript
 {
     PrepareAuraScript(spell_dk_vampiric_blood);
 
-    void CalcAmount(AuraEffect const* aurEff, int32& amount, bool& /*canBeRecalculated*/)
+    void CalcAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
-        if (Unit* caster = GetCaster())
-        amount = int32((caster->GetMaxHealth()*30.0f) / 100.0f);
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        int32 dummy = 0;
+        if (SpellEffectInfo const* eff = GetSpellInfo()->GetEffect(EFFECT_3))
+            dummy = eff->BasePoints; // Dummy 30
+        amount = int32(caster->CountPctFromMaxHealth(dummy));
     }
 
     void Register() override
     {
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dk_vampiric_blood::CalcAmount, EFFECT_1, SPELL_AURA_MOD_INCREASE_HEALTH);
-        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dk_vampiric_blood::CalcAmount, EFFECT_3, SPELL_AURA_DUMMY);
+        // 不要再给 EFFECT_3 SPELL_AURA_DUMMY 挂 CalcAmount。
     }
 };
 
@@ -2356,89 +2450,92 @@ public:
         PrepareAuraScript(spell_dk_bone_shield_AuraScript);
 
         int32 procDelay = 0;
+        int32 _appliedArmor = 0;
 
-        void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
-        {
-            amount = -1;
-        }
-     
-        void Absorb(AuraEffect* aurEff, DamageInfo& dmgInfo, uint32& absorbAmount)
-        {
-            absorbAmount = 0;
-            Unit* target = GetTarget();
-            if (!target)
-                return;
-
-            int32 absorbPerc = GetSpellInfo()->GetEffect(EFFECT_4)->CalcValue(target);
-            int32 absorbStack = 1;
-            if (AuraEffect* aurEff = target->GetAuraEffect(211078, EFFECT_0)) // Spectral Deflection
-            {
-                if (target->CountPctFromMaxHealth(aurEff->GetAmount()) < dmgInfo.GetDamage())
-                {
-                    absorbPerc *= 2;
-                    absorbStack *= 2;
-                    ModStackAmount(-1);
-                }
-            }
-            if (AuraEffect* aurEff = target->GetAuraEffect(192558, EFFECT_0)) // Skeletal Shattering
-            {
-                if (Player const* thisPlayer = target->ToPlayer())
-                    if (roll_chance_f(thisPlayer->m_activePlayerData->SpellCritPercentage))
-                        absorbPerc += aurEff->GetAmount();
-            }
-            absorbAmount = CalculatePct(dmgInfo.GetDamage(), absorbPerc);
-
-            if (Player* _player = target->ToPlayer())
-            {
-                if ((dmgInfo.GetSchoolMask() & SPELL_SCHOOL_MASK_NORMAL) && !procDelay)
-                {
-                    if (AuraEffect const* aurEff = _player->GetAuraEffect(251876, EFFECT_0)) // Item - Death Knight T21 Blood 2P Bonus
-                        _player->GetSpellHistory()->ModifyCooldown(49028, aurEff->GetAmount() * absorbStack);
-
-                    if (_player->HasSpell(221699)) // Blood Tap
-                        if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(221699))
-                            _player->GetSpellHistory()->ModifyCooldown(221699, 1000 * spellInfo->GetEffect(EFFECT_1)->CalcValue(target) * absorbStack);
-
-                    ModStackAmount(-1);
-                    procDelay = 2000;
-                }
-            }
-        }
-
-        void OnStackChange(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+        void RecalcArmor()
         {
             Unit* target = GetTarget();
             if (!target)
                 return;
 
-            if (AuraEffect* aurEff = target->GetAuraEffect(219786, EFFECT_0)) // Ossuary
+            if (_appliedArmor != 0)
+                target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(_appliedArmor), false);
+
+            int32 pct = 40;
+            if (SpellEffectInfo const* eff0 = GetSpellInfo()->GetEffect(EFFECT_0))
+                pct = eff0->BasePoints; // 效果 0 基点 40。不是 Dummy 列。
+
+            int32 armor = int32(CalculatePct(target->GetStat(STAT_STRENGTH), pct)) * int32(GetStackAmount());
+            if (armor != 0)
+                target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(armor), true);
+            _appliedArmor = armor;
+        }
+
+        void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+        {
+            RecalcArmor();
+        }
+
+        void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+        {
+            Unit* target = GetTarget();
+            if (target && _appliedArmor != 0)
+                target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(_appliedArmor), false);
+            _appliedArmor = 0;
+        }
+
+        void OnStackChange(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+        {
+            RecalcArmor();
+
+            Unit* target = GetTarget();
+            if (!target)
+                return;
+            if (AuraEffect* ossuary = target->GetAuraEffect(SPELL_DK_OSSUARY_MOD_MAX_POWER, EFFECT_0))
             {
-                if (GetStackAmount() >= aurEff->GetAmount())
+                if (GetStackAmount() >= ossuary->GetAmount())
                 {
-                    if (!target->HasAura(219788))
-                        target->CastSpell(target, 219788, true);
+                    if (!target->HasAura(SPELL_DK_OSSUARY_MOD_POWER_COST))
+                        target->CastSpell(target, SPELL_DK_OSSUARY_MOD_POWER_COST, true);
                 }
                 else
-                    target->RemoveAurasDueToSpell(219788);
+                    target->RemoveAurasDueToSpell(SPELL_DK_OSSUARY_MOD_POWER_COST);
             }
+        }
+
+        void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+        {
+            if (procDelay > 0)
+                return;
+            DamageInfo* dmg = eventInfo.GetDamageInfo();
+            if (!dmg || !(dmg->GetSchoolMask() & SPELL_SCHOOL_MASK_NORMAL))
+                return;
+
+            // 观察窗口 2.5 秒。效果 4 Dummy 基点 0，不要把 2.5 写进 Dummy，也不要写死 2000。
+            ModStackAmount(-1);
+            procDelay = 2500;
+            RecalcArmor();
+
+            // 不要 HasSpell(221699)。221699 不在 8.3 鲜血天赋树。
         }
 
         void OnUpdate(uint32 diff)
         {
-            if (!procDelay)
-                return;
-
-            procDelay -= diff;
-
-            if (procDelay <= 0)
-                procDelay = 0;
+            // 只倒数 HandleProc 的 2500 ms 间隔。不要在这里再掉层（与 Proc 双耗）。
+            if (procDelay > 0)
+            {
+                procDelay -= diff;
+                if (procDelay <= 0)
+                    procDelay = 0;
+            }
         }
 
         void Register() override
         {
-            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dk_bone_shield_AuraScript::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
-            OnEffectAbsorb += AuraEffectAbsorbFn(spell_dk_bone_shield_AuraScript::Absorb, EFFECT_0);
-            OnEffectApply += AuraEffectApplyFn(spell_dk_bone_shield_AuraScript::OnStackChange, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+            OnEffectApply += AuraEffectApplyFn(spell_dk_bone_shield_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL);
+            OnEffectRemove += AuraEffectRemoveFn(spell_dk_bone_shield_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL);
+            OnEffectApply += AuraEffectApplyFn(spell_dk_bone_shield_AuraScript::OnStackChange, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+            OnEffectProc += AuraEffectProcFn(spell_dk_bone_shield_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_268);
             OnAuraUpdate += AuraUpdateFn(spell_dk_bone_shield_AuraScript::OnUpdate);
         }
     };
@@ -2474,12 +2571,8 @@ public:
                     amount = caster->CountPctFromMaxHealth(GetSpellInfo()->GetEffect(EFFECT_3)->CalcValue(caster)) * stack;
                     if (Player* _player = caster->ToPlayer())
                     {
-                        if (_player->HasSpell(221699)) // Blood Tap
-                            if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(221699))
-                                _player->CastSpell(221699, 1000 * spellInfo->GetEffect(EFFECT_1)->CalcValue(caster) * stack);
-
                         if (AuraEffect const* aurEff = caster->GetAuraEffect(251876, EFFECT_0)) // Item - Death Knight T21 Blood 2P Bonus
-                            _player->CastSpell(49028, aurEff->GetAmount() * stack);
+                            _player->CastSpell(SPELL_DK_DANCING_RUNE_WEAPON, aurEff->GetAmount() * stack);
 
                         aura->ModStackAmount(-1 * stack, AURA_REMOVE_BY_ENEMY_SPELL);
                     }
@@ -2506,12 +2599,28 @@ class spell_dk_marrowrend : public SpellScript
 
     void HandleOnCast()
     {
-        if (Unit* caster = GetCaster())
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        int32 dummy3 = 0;
+        if (SpellEffectInfo const* dummy = GetSpellInfo()->GetEffect(EFFECT_2))
+            dummy3 = dummy->BasePoints; // Dummy 3 = 加层。不要写死 3。
+
+        Aura* boneShield = caster->GetAura(SPELL_DK_BONE_SHIELD);
+        if (boneShield)
         {
-            caster->CastSpell(nullptr, SPELL_DK_BONE_SHIELD, true);
-            if (Aura* boneShield = caster->GetAura(SPELL_DK_BONE_SHIELD))
-                boneShield->SetStackAmount(3);
+            if (dummy3 > 0)
+                boneShield->ModStackAmount(dummy3);
+            return;
         }
+
+        caster->CastSpell(nullptr, SPELL_DK_BONE_SHIELD, true);
+        boneShield = caster->GetAura(SPELL_DK_BONE_SHIELD);
+        if (!boneShield || dummy3 <= 0)
+            return;
+        // 仅首次：引擎上盾是 1 层，立刻改成 Dummy 3。禁止每次覆盖成 3，也禁止 1+3=4。
+        boneShield->SetStackAmount(uint8(dummy3));
     }
 
     void Register() override
@@ -2629,17 +2738,19 @@ public:
             if (!caster)
                 return false;
 
-            int availablePower = std::min(caster->GetPower(POWER_RUNIC_POWER), 90);
-
-            //Round down to nearest multiple of 10
-            m_ExtraSpellCost = availablePower - (availablePower % 10);
+            // 内部格上限 1000 = 玩家可见 100 点。不要写成 90 或 900。
+            int availablePower = std::min(caster->GetPower(POWER_RUNIC_POWER), 1000);
+            m_ExtraSpellCost = availablePower - (availablePower % 100); // 向下取整到 10 点可见 = 内部 100
             return true;
         }
 
         void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
-            int32 m_newDuration = GetDuration() + (m_ExtraSpellCost / 10);
-            SetDuration(m_newDuration);
+            // Dummy 3/2/5 继续给周期伤读表。
+            // extraMs = (internalCost / 100) * IN_MILLISECONDS。
+            // 可见 100 → 内部 1000 → extraMs 10000。底 1000 ms 是下限，不是再加 1 秒。
+            int32 extraMs = (m_ExtraSpellCost / 100) * IN_MILLISECONDS;
+            SetDuration(std::min(10000, std::max(1000, extraMs)));
 
             if (Unit* caster = GetCaster())
             {
@@ -2647,8 +2758,6 @@ public:
                 if (m_newPower < 0)
                     m_newPower = 0;
                 caster->SetPower(POWER_RUNIC_POWER, m_newPower);
-                /*if (Player* player = caster->ToPlayer())
-                    player->SendPowerUpdate(POWER_RUNIC_POWER, m_newPower);*/
             }
         }
 
@@ -2706,6 +2815,31 @@ class spell_dk_glacial_advance : public SpellScript
     }
 };
 
+// 279302 — 冰霜巨龙之怒。现文件没有这个类。面前 40 码，AT 14881。40 不是 Dummy。
+class spell_dk_frostwyrms_fury : public SpellScript
+{
+    PrepareSpellScript(spell_dk_frostwyrms_fury);
+
+    void Register() override
+    {
+    }
+};
+
+struct at_dk_frostwyrms_fury : AreaTriggerAI
+{
+    at_dk_frostwyrms_fury(AreaTrigger* areatrigger) : AreaTriggerAI(areatrigger) { }
+
+    void OnUnitEnter(Unit* unit) override
+    {
+        Unit* caster = at->GetCaster();
+        if (!caster || !unit || !caster->IsValidAttackTarget(unit))
+            return;
+        if (!caster->isInFront(unit))
+            return;
+        caster->CastSpell(unit, SPELL_DK_FROSTWYRMS_FURY_DAMAGE, true);
+    }
+};
+
 // 49020 - Obliterate
 class spell_dk_obliterate : public SpellScript
 {
@@ -2715,15 +2849,19 @@ class spell_dk_obliterate : public SpellScript
     {
         GetCaster()->RemoveAurasDueToSpell(SPELL_DK_KILLING_MACHINE);
 
-        if (GetCaster()->HasAura(SPELL_DK_ICECAP))
-            if (GetCaster()->GetSpellHistory()->HasCooldown(SPELL_DK_PILLAR_OF_FROST))
-                GetCaster()->GetSpellHistory()->ModifyCooldown(SPELL_DK_PILLAR_OF_FROST, -3000);
+        if (AuraEffect const* icecap = GetCaster()->GetAuraEffect(SPELL_DK_ICECAP, EFFECT_0))
+        {
+            int32 dummy = icecap->GetAmount(); // Dummy 30。3 秒是 ÷10 观察窗口，不要把 3 写进 Dummy。
+            if (dummy > 0 && GetCaster()->GetSpellHistory()->HasCooldown(SPELL_DK_PILLAR_OF_FROST))
+                GetCaster()->GetSpellHistory()->ModifyCooldown(SPELL_DK_PILLAR_OF_FROST, -int32(dummy) * IN_MILLISECONDS / 10);
+        }
 
         if (GetCaster()->HasAura(SPELL_DK_INEXORABLE_ASSAULT_STACK))
             GetCaster()->CastSpell(GetHitUnit(), SPELL_DK_INEXORABLE_ASSAULT_DAMAGE, true);
 
-        if (GetCaster()->HasAura(SPELL_DK_RIME) && roll_chance_f(45))
-            GetCaster()->CastSpell(nullptr, SPELL_DK_RIME_BUFF, true);
+        if (AuraEffect const* rime = GetCaster()->GetAuraEffect(SPELL_DK_RIME, EFFECT_1))
+            if (rime->GetAmount() > 0 && roll_chance_f(float(rime->GetAmount())))
+                GetCaster()->CastSpell(nullptr, SPELL_DK_RIME_BUFF, true);
     }
 
     void Register() override
@@ -2743,7 +2881,6 @@ class spell_dk_epidemic : public SpellScript
         {
             if (Aura* aura = target->GetAura(SPELL_DK_VIRULENT_PLAGUE, GetCaster()->GetGUID()))
             {
-                target->RemoveAura(aura);
                 GetCaster()->CastSpell(target, SPELL_DK_EPIDEMIC_DAMAGE_SINGLE, true);
                 GetCaster()->CastSpell(target, SPELL_DK_EPIDEMIC_DAMAGE_AOE, true);
             }
@@ -2957,7 +3094,6 @@ public:
     struct npc_dk_dancing_rune_weapon_AI : public PetAI
     {
         uint32 Timer;
-        uint32 Damage;
 
         npc_dk_dancing_rune_weapon_AI(Creature* creature) : PetAI(creature)
         {
@@ -2977,31 +3113,15 @@ public:
                 {
                     if (Unit* target = owner->GetVictim())
                     {
-                        Damage = owner->GetDamageOverLastSeconds(2);
                         me->SetCanFly(true);
                         me->SetFaction(owner->getFaction());
                         me->SetLevel(owner->getLevel());
 
-                        // play animation and deal damage if damage is over 0
-                        if (Damage>0)
-                        {
-                            // turn to target
-                            me->SetTarget(owner->GetTarget());
+                        // 挥砍表情保留。禁止再 GetDamageOverLastSeconds(2) + DealDamage。
+                        me->SetTarget(owner->GetTarget());
+                        me->HandleEmoteCommand(EMOTE_ONESHOT_NONE);
+                        me->HandleEmoteCommand(EMOTE_ONESHOT_ATTACK2HTIGHT);
 
-                            // reset animation
-                            me->HandleEmoteCommand(EMOTE_ONESHOT_NONE);
-
-                            // attack animation
-                            me->HandleEmoteCommand(EMOTE_ONESHOT_ATTACK2HTIGHT);
-
-                            // deal damage (almost same as player hits)
-                            me->DealDamage(target, Damage, nullptr, SPELL_DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, nullptr, false);
-                        }
-
-                        // just for debugging the spell damage.
-                        //TC_LOG_ERROR("server.worldserver", "Dancing Rune Weapon - Damage dealt: %s", Damage);
-
-                        //repeat about 9 times (spell duration is 8 seconds, so it is almost correct)
                         Timer = 1500;
                     }
                 }
@@ -3009,6 +3129,39 @@ public:
             else Timer -= diff;
         }
     };
+};
+
+class spell_dk_dancing_rune_weapon_copy : public PlayerScript
+{
+public:
+    spell_dk_dancing_rune_weapon_copy() : PlayerScript("spell_dk_dancing_rune_weapon_copy") { }
+
+    void OnSuccessfulSpellCast(Player* player, Spell* spell) override
+    {
+        if (!player || !spell || !spell->GetSpellInfo())
+            return;
+        if (spell->IsTriggered())
+            return;
+
+        uint32 id = spell->GetSpellInfo()->Id;
+        if (id != SPELL_DK_HEART_STRIKE && id != SPELL_DK_MARROWREND
+            && id != SPELL_DK_BLOOD_BOIL && id != 49998)
+            return;
+
+        Unit* target = spell->m_targets.GetUnitTarget();
+
+        for (Unit* controlled : player->m_Controlled)
+        {
+            if (!controlled || controlled->GetEntry() != NPC_DK_DANCING_RUNE_WEAPON)
+                continue;
+
+            // 50842 是自身范围。GetUnitTarget() 为空时不要 return 掉整次复制。
+            if (id == SPELL_DK_BLOOD_BOIL)
+                controlled->CastSpell(controlled, SPELL_DK_BLOOD_BOIL, true);
+            else if (target)
+                controlled->CastSpell(target, id, true);
+        }
+    }
 };
 
 //207311
@@ -3019,12 +3172,15 @@ class spell_dk_clawing_shadows : public SpellScript
     void HandleOnHit()
     {
         Unit* caster = GetCaster();
-        Unit* target = caster->ToPlayer()->GetSelectedUnit();
-
+        Unit* target = GetHitUnit();
         if (!caster || !target)
             return;
 
-        caster->CastSpell(target, SPELL_DK_FESTERING_WOUND_DAMAGE, true);
+        if (Aura* festeringWoundAura = target->GetAura(SPELL_DK_FESTERING_WOUND, caster->GetGUID()))
+        {
+            caster->CastSpell(target, SPELL_DK_FESTERING_WOUND_DAMAGE, true);
+            festeringWoundAura->ModStackAmount(-1);
+        }
     }
 
     void Register() override
@@ -3074,9 +3230,9 @@ struct at_dk_death_and_decay : AreaTriggerAI
     void OnUnitEnter(Unit* unit) override
     {
         if (Unit* caster = at->GetCaster())
-            if (caster->HasAura(SPELL_DK_PESTILENCE))
-                if (roll_chance_f(10))
-                    at->GetCaster()->CastSpell(unit, SPELL_DK_FESTERING_WOUND_DAMAGE, true);
+            if (AuraEffect const* pest = caster->GetAuraEffect(SPELL_DK_PESTILENCE, EFFECT_0))
+                if (pest->GetAmount() > 0 && roll_chance_f(float(pest->GetAmount())))
+                    caster->CastSpell(unit, SPELL_DK_FESTERING_WOUND, true); // 194310。禁止 194311。禁止写死 10。
 
         if (Unit* caster = at->GetCaster())
         {
@@ -3186,9 +3342,12 @@ class spell_dk_frost_strike : public SpellScript
         if (!caster || !target)
             return;
 
-        if (caster->HasAura(SPELL_DK_ICECAP))
-            if (caster->GetSpellHistory()->HasCooldown(SPELL_DK_PILLAR_OF_FROST))
-                caster->GetSpellHistory()->ModifyCooldown(SPELL_DK_PILLAR_OF_FROST, -3000);
+        if (AuraEffect const* icecap = caster->GetAuraEffect(SPELL_DK_ICECAP, EFFECT_0))
+        {
+            int32 dummy = icecap->GetAmount(); // Dummy 30。3 秒是 ÷10 观察窗口，不要把 3 写进 Dummy。
+            if (dummy > 0 && caster->GetSpellHistory()->HasCooldown(SPELL_DK_PILLAR_OF_FROST))
+                caster->GetSpellHistory()->ModifyCooldown(SPELL_DK_PILLAR_OF_FROST, -int32(dummy) * IN_MILLISECONDS / 10);
+        }
 
         if (caster->HasAura(SPELL_DK_OBLITERATION) && caster->HasAura(SPELL_DK_PILLAR_OF_FROST))
             caster->CastSpell(nullptr, SPELL_DK_KILLING_MACHINE, true);
@@ -3247,14 +3406,43 @@ class spell_dk_frostscythe : public SpellScript
 
         if (GetCaster()->HasAura(SPELL_DK_KILLING_MACHINE))
         {
-            GetCaster()->RemoveAura(SPELL_DK_KILLING_MACHINE);
-            SetHitDamage(GetHitDamage() * 4);
+            int32 mul = 0;
+            if (SpellEffectInfo const* dummy = GetSpellInfo()->GetEffect(EFFECT_2))
+                if (dummy->BasePoints > 0)
+                    mul = dummy->BasePoints; // Dummy 4
+            if (mul > 0)
+                SetHitDamage(GetHitDamage() * mul);
+        }
+    }
+
+    void HandleAfterCast()
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        if (caster->HasAura(SPELL_DK_KILLING_MACHINE))
+            caster->RemoveAura(SPELL_DK_KILLING_MACHINE);
+
+        if (AuraEffect const* rime = caster->GetAuraEffect(SPELL_DK_RIME, EFFECT_1))
+        {
+            int32 chance = rime->GetAmount() / 2; // 描述：巨镰白霜几率是湮灭一半。不是第二条 Dummy。
+            if (chance > 0 && roll_chance_f(float(chance)))
+                caster->CastSpell(nullptr, SPELL_DK_RIME_BUFF, true);
+        }
+
+        if (AuraEffect const* icecap = caster->GetAuraEffect(SPELL_DK_ICECAP, EFFECT_0))
+        {
+            int32 dummy = icecap->GetAmount(); // Dummy 30。3 秒是 ÷10 观察窗口，不要把 3 写进 Dummy。
+            if (dummy > 0 && caster->GetSpellHistory()->HasCooldown(SPELL_DK_PILLAR_OF_FROST))
+                caster->GetSpellHistory()->ModifyCooldown(SPELL_DK_PILLAR_OF_FROST, -int32(dummy) * IN_MILLISECONDS / 10);
         }
     }
 
     void Register() override
     {
-        OnEffectHit += SpellEffectFn(spell_dk_frostscythe::HandleHit, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnEffectHitTarget += SpellEffectFn(spell_dk_frostscythe::HandleHit, EFFECT_1, SPELL_EFFECT_SCHOOL_DAMAGE);
+        AfterCast += SpellCastFn(spell_dk_frostscythe::HandleAfterCast);
     }
 };
 
@@ -3271,11 +3459,11 @@ class spell_dk_ghoul_claw : public SpellScript
         if (!caster || !target)
             return;
 
-        if (Unit* owner = caster->GetOwner()->ToPlayer())
+        if (Unit* owner = caster->GetOwner())
         {
-            if (owner->HasAura(SPELL_DK_INFECTED_CLAWS))
-                if (roll_chance_f(30))
-                    caster->CastSpell(target, SPELL_DK_FESTERING_WOUND_DAMAGE, true);
+            if (AuraEffect const* infected = owner->GetAuraEffect(SPELL_DK_INFECTED_CLAWS, EFFECT_0))
+                if (infected->GetAmount() > 0 && roll_chance_f(float(infected->GetAmount())))
+                    owner->CastSpell(target, SPELL_DK_FESTERING_WOUND, true); // 194310，不是 194311
         }
     }
 
@@ -3307,37 +3495,26 @@ class spell_dk_unholy_frenzy : public AuraScript
 {
     PrepareAuraScript(spell_dk_unholy_frenzy);
 
-    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
     {
-        Unit* target = GetTarget();
         Unit* caster = GetCaster();
-        if (!target || !caster)
+        Unit* target = eventInfo.GetProcTarget();
+        if (!caster || !target)
             return;
-
-        caster->GetScheduler().Schedule(100ms, [caster, target](TaskContext context)
-        {
-            if (!target || !caster)
-                return;
-
-            if (target->HasAura(156004))
-                caster->CastSpell(target, SPELL_DK_FESTERING_WOUND_DAMAGE, true);
-
-            if (caster->HasAura(156004))
-                context.Repeat(2s);
-            else
-                context.CancelAll();
-        });
+        // 8.3：12 秒 20% 急速（表已表达）+ 自动攻击上 194310。禁止绑 156004。禁止 Unholy Assault。
+        caster->CastSpell(target, SPELL_DK_FESTERING_WOUND, true);
     }
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_dk_unholy_frenzy::HandleApply, EFFECT_0, SPELL_AURA_MELEE_SLOW, AURA_EFFECT_HANDLE_REAL);
+        OnEffectProc += AuraEffectProcFn(spell_dk_unholy_frenzy::HandleProc, EFFECT_0, SPELL_AURA_MELEE_SLOW);
     }
 };
 
 void AddSC_deathknight_spell_scripts()
 {
     new npc_dk_dancing_rune_weapon();
+    RegisterPlayerScript(spell_dk_dancing_rune_weapon_copy);
     new spell_dk_advantage_t10_4p();
     new spell_dk_anti_magic_barrier();
     new spell_dk_anti_magic_shell();
@@ -3363,6 +3540,8 @@ void AddSC_deathknight_spell_scripts()
     new spell_dk_desecrated_ground();
     new spell_dk_empower_rune_weapon();
     RegisterSpellScript(spell_dk_festering_strike);
+    RegisterSpellScript(spell_dk_apocalypse);
+    RegisterSpellScript(spell_dk_army_ghoul);
     new spell_dk_frozen_pulse();
     RegisterSpellScript(spell_dk_ghoul_explode);
     new spell_dk_gorefiends_grasp();
@@ -3376,6 +3555,7 @@ void AddSC_deathknight_spell_scripts()
     new spell_dk_pet_geist_transform();
     new spell_dk_pet_skeleton_transform();
     new spell_dk_pillar_of_frost();
+    RegisterPlayerScript(spell_dk_pillar_of_frost_runes);
     new spell_dk_plague_leech();
     new spell_dk_blood_shield();
     new spell_dk_presence();
@@ -3385,13 +3565,15 @@ void AddSC_deathknight_spell_scripts()
     new spell_dk_item_t17_frost_4p_driver_periodic();
     new spell_dk_raise_dead();
     RegisterSpellScript(spell_dk_remorseless_winter_damage);
-    new spell_dk_runic_empowerment(); //NOT WORKING - Need implementation on PlayerScript :)
+    new spell_dk_runic_empowerment(); // Dummy 20 → 每点可见符能 GetAmount()/10 %
     RegisterAuraScript(spell_dk_soul_reaper);
     RegisterAuraScript(spell_dk_unholy_blight);
     RegisterAuraScript(spell_dk_vampiric_blood);
     new spell_dk_tombstone();
     RegisterAuraScript(spell_dk_will_of_the_necropolis);
     RegisterSpellScript(spell_dk_glacial_advance);
+    RegisterSpellScript(spell_dk_frostwyrms_fury);
+    RegisterAreaTriggerAI(at_dk_frostwyrms_fury);
     RegisterSpellScript(spell_dk_obliterate);
     RegisterSpellScript(spell_dk_epidemic);
     RegisterSpellScript(spell_dk_epidemic_aoe);
