@@ -2103,6 +2103,93 @@ HL.PACKS = {
         end,
     },
 
+    pal_c_judgment = {
+        key = "pal_c_judgment",
+        title = "圣骑共用-审判三技能号与正义之拳",
+        order = 71,
+        hint = "20271 惩戒 / 275773 神圣 / 275779 防护。Dummy 10/6/20。防护盾击 CDR 读 231657 Dummy 2。",
+        startText = "【审判】先导入 2026_09_07_00。120 神圣 CLEU 必须是 275773，防护必须是 275779，惩戒仍是 20271。点正义之拳后：神圣审判约 −10 秒制裁之锤，防护约 −6 秒。惩戒档不要用裁决/风暴验收：先让 853 进冷却，再执行 .modify power holy_power 3，接着 .modify power holy_power 2（cs_modify.cpp 的 HandleModifyPowerCommand，不是 cs_misc.cpp；PowerType 标签 HOLY_POWER），应约 −2 秒。防护审判后盾击充能约 −2 秒，不是 1 秒。不要用玩家仍按 20271 验收神圣/防护。",
+        startPrint = "请按三个专精各打一次审判。看 CLEU 技能号与制裁之锤冷却。",
+        ids = { 20271, 275773, 275779, 197277, 214222, 231657, 198054, 234299, 853, 53600 },
+        labels = {
+            [20271] = "审判(惩戒)",
+            [275773] = "审判(神圣)",
+            [275779] = "审判(防护)",
+            [197277] = "惩戒审判易伤",
+            [214222] = "神圣审判减益",
+            [231657] = "审判2级Dummy2",
+            [198054] = "正义之拳(神圣防护)",
+            [234299] = "正义之拳(惩戒)",
+            [853] = "制裁之锤",
+            [53600] = "正义盾击",
+        },
+        chain = {
+            { id = 275773, role = "神圣审判", want = "cast",
+              hintFail = "没有 275773。先导入 _00，不要只绑 20271。" },
+            { id = 275779, role = "防护审判", want = "cast",
+              hintFail = "没有 275779。防护公开技能不是 20271。" },
+            { id = 20271, role = "惩戒审判", want = "cast",
+              hintFail = "没有 20271。惩戒仍用这个号。" },
+        },
+        extraVerdict = function()
+            return {
+                "三号均无 Dummy。1000 ms 禁止冒充 Dummy 2。网页 2.5 秒弃用。",
+                "35395 Energize 基点 0。回 1 圣能出 137027，禁止写成 35395 Dummy。",
+                "20271 回能读 220637 Energize 基点 1，禁止魔法数 1。",
+            }
+        end,
+    },
+
+    pal_c_sacrifice = {
+        key = "pal_c_sacrifice",
+        title = "圣骑共用-牺牲祝福Dummy20",
+        order = 72,
+        hint = "Dummy 20 是生命下限。分摊 30% 是 Aura 81，不是 Dummy。",
+        startText = "【牺牲祝福】给友方挂 6940。转移伤害应在施法者接近 20% 生命时停，并摘光环。不要等到吃满最大生命才停。分摊百分比不要改 Dummy 20。",
+        startPrint = "请给友方按牺牲祝福 6940，再让假人打友方。看 20% 生命下限。",
+        ids = { 6940 },
+        labels = {
+            [6940] = "牺牲祝福",
+        },
+        chain = {
+            { id = 6940, role = "牺牲祝福", want = "aura-target",
+              hintFail = "没有 6940。确认动作条有牺牲祝福。" },
+        },
+        extraVerdict = function()
+            return {
+                "remainingAmount 禁止 GetMaxHealth()。Dummy 20 ≠ 分摊 30%。",
+            }
+        end,
+    },
+
+    pal_c_cleanse_rebuke = {
+        key = "pal_c_cleanse_rebuke",
+        title = "圣骑共用-清洁术死脚本与责难学会范围",
+        order = 73,
+        hint = "清洁术只有神圣。责难只有防护/惩戒。4987 不 INSERT 脚本。",
+        startText = "【清洁/责难】120 神圣对带魔法或疾病的友方按 4987，驱散应成功，不要依赖 spell_pal_cleanse。防护/惩戒用 213644，不要按 4987 验收。责难 96231 只有防护/惩戒打断；神圣本包不验收责难。圣盾 642、制裁之锤 853 表已表达，无脚本不算失败。不要用 203538 勾 PAL-C。",
+        startPrint = "请神圣按 4987，防护或惩戒按 213644 和 96231。",
+        ids = { 4987, 213644, 96231, 642, 853, 203538 },
+        labels = {
+            [4987] = "清洁术(仅神圣)",
+            [213644] = "清洁毒素",
+            [96231] = "责难(防护惩戒)",
+            [642] = "圣盾",
+            [853] = "制裁之锤",
+            [203538] = "大于王者(PAL-C不验收)",
+        },
+        chain = {
+            { id = 4987, role = "清洁术", want = "cast",
+              hintFail = "没有 4987。用 120 神圣。不要启用死脚本才驱散。" },
+        },
+        extraVerdict = function()
+            return {
+                "AddSC 里 spell_pal_cleanse 必须仍注释。dump 不要 INSERT 4987。",
+                "203538 出现在 CLEU 不能当 PAL-C 完成。PAL-Ret 包才验收它还活。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
