@@ -46,6 +46,7 @@ enum WarriorSpells
 {
     SPELL_WARRIOR_ALLOW_RAGING_BLOW                 = 131116,
     SPELL_WARRIOR_ANGER_MANAGEMENT                  = 152278,
+    SPELL_WARRIOR_AVATAR                            = 107574,
     SPELL_WARRIOR_BERZERKER_RAGE_EFFECT             = 23691,
     SPELL_WARRIOR_BLADESTORM_PERIODIC_WHIRLWIND     = 50622,
     SPELL_WARRIOR_BLOODTHIRST                       = 23885,
@@ -55,6 +56,7 @@ enum WarriorSpells
     SPELL_WARRIOR_BOUNDING_STRIDE                   = 202163,
     SPELL_WARRIOR_BOUNDING_STRIDE_SPEED             = 202164,
     SPELL_WARRIOR_CHARGE                            = 34846,
+    SPELL_WARRIOR_CHARGE_PLAYER                     = 100,
     SPELL_WARRIOR_CHARGE_EFFECT                     = 218104,
     SPELL_WARRIOR_CHARGE_EFFECT_BLAZING_TRAIL       = 198337,
     SPELL_WARRIOR_CHARGE_PAUSE_RAGE_DECAY           = 109128,
@@ -82,6 +84,7 @@ enum WarriorSpells
     SPELL_WARRIOR_OVERPOWER                         = 7384,
     SPELL_WARRIOR_CLEAVE                            = 845,
     SPELL_WARRIOR_SKULLSPLITTER                     = 260643,
+    SPELL_WARRIOR_DEMORALIZING_SHOUT                = 1160,
     SPELL_WARRIOR_DEVASTATE                         = 20243,
     SPELL_WARRIOR_DOUBLE_TIME                       = 103827,
     SPELL_WARRIOR_DRAGON_ROAR_KNOCK_BACK            = 118895,
@@ -101,6 +104,7 @@ enum WarriorSpells
     SPELL_WARRIOR_GLYPH_OF_HINDERING_STRIKES        = 58366,
     SPELL_WARRIOR_GLYPH_OF_MORTAL_STRIKE            = 58368,
     SPELL_WARRIOR_HEAVY_REPERCUSSIONS               = 203177,
+    SPELL_WARRIOR_HEROIC_LEAP                       = 6544,
     SPELL_WARRIOR_HEROIC_LEAP_DAMAGE                = 52174,
     SPELL_WARRIOR_HEROIC_LEAP_JUMP                  = 94954,
     SPELL_WARRIOR_HEROIC_LEAP_SPEED                 = 133278,
@@ -135,6 +139,7 @@ enum WarriorSpells
     SPELL_WARRIOR_RAVAGER_ENERGIZE                  = 248439,
     SPELL_WARRIOR_RAVAGER_PARRY                     = 227744,
     SPELL_WARRIOR_RAVAGER_SUMMON                    = 227876,
+    SPELL_WARRIOR_RECKLESSNESS                      = 1719,
     SPELL_WARRIOR_REND                              = 94009,
     SPELL_WARRIOR_RENEWED_FURY                      = 202288,
     SPELL_WARRIOR_RENEWED_FURY_EFFECT               = 202289,
@@ -144,6 +149,7 @@ enum WarriorSpells
     SPELL_WARRIOR_SECOND_WIND_HEAL                  = 202147,
     SPELL_WARRIOR_SHIELD_BLOCKC_TRIGGERED           = 132404,
     SPELL_WARRIOR_SHIELD_SLAM                       = 23922,
+    SPELL_WARRIOR_SHIELD_WALL                       = 871,
     SPELL_WARRIOR_SHOCKWAVE                         = 46968,
     SPELL_WARRIOR_SHOCKWAVE_STUN                    = 132168,
     SPELL_WARRIOR_SLAM                              = 23922,
@@ -203,6 +209,9 @@ enum WarriorSpells
     SPELL_WARRIOR_FURIOUS_CHARGE_BUFF = 202225,
     SPELL_WARRIOR_FRESH_MEAT = 215568,
     SPELL_WARRIOR_MEAT_CLEAVER = 280392,
+    SPELL_WARRIOR_RAGING_BLOW = 85288,
+    SPELL_WARRIOR_SIEGEBREAKER = 280772,
+    SPELL_WARRIOR_SIEGEBREAKER_DEBUFF = 280773,
     SPELL_WARRIOR_THIRST_FOR_BATTLE = 199202,
     SPELL_WARRIOR_THIRST_FOR_BATTLE_BUFF = 199203,
     SPELL_WARRIOR_BARBARIAN = 280745,
@@ -397,6 +406,14 @@ class spell_warr_whirlwind : public SpellScript
 {
     PrepareSpellScript(spell_warr_whirlwind);
 
+    uint32 _meatCleaverHits = 0;
+
+    void HandleOnHit()
+    {
+        if (GetHitUnit())
+            ++_meatCleaverHits;
+    }
+
     void HandleAfterCast()
     {
         Unit* caster = GetCaster();
@@ -407,9 +424,25 @@ class spell_warr_whirlwind : public SpellScript
         if (caster->HasAura(SPELL_WARRIOR_WRECKING_BALL_EFFECT))
             caster->RemoveAura(SPELL_WARRIOR_WRECKING_BALL_EFFECT);
 
-        if (caster->HasAura(SPELL_WARRIOR_MEAT_CLEAVER))
-            if (roll_chance_f(10))
+        if (Aura* meat = caster->GetAura(SPELL_WARRIOR_MEAT_CLEAVER))
+        {
+            // EFFECT_0 Dummy 1 = 每目标额外怒气；EFFECT_1 Dummy 3 = 上限；EFFECT_2 Dummy 10 = 激怒几率%。
+            // 不要写死 10。不要做成 9.0「接下来 4 次」。
+            int32 chance = 0, perTarget = 0, cap = 0;
+            if (AuraEffect const* e2 = meat->GetEffect(EFFECT_2))
+                chance = e2->GetAmount();
+            if (AuraEffect const* e0 = meat->GetEffect(EFFECT_0))
+                perTarget = e0->GetAmount();
+            if (AuraEffect const* e1 = meat->GetEffect(EFFECT_1))
+                cap = e1->GetAmount();
+
+            if (chance > 0 && roll_chance_f(float(chance)))
                 caster->CastSpell(nullptr, SPELL_WARRIOR_ENRAGE_AURA, true);
+
+            int32 extraRage = std::min(int32(_meatCleaverHits) * perTarget, cap > 0 ? cap : perTarget);
+            if (extraRage > 0)
+                caster->ModifyPower(POWER_RAGE, extraRage * 10); // 内部怒气十分之一格
+        }
 
         if (caster->HasAura(SPELL_WARRIOR_THIRST_FOR_BATTLE))
         {
@@ -418,11 +451,12 @@ class spell_warr_whirlwind : public SpellScript
                 thirst->GetAmount();
         }
 
-        caster->AddAura(85739);
+        caster->AddAura(SPELL_WARRIOR_WHIRLWIND_PASSIVE);
     }
 
     void Register() override
     {        
+        OnHit += SpellHitFn(spell_warr_whirlwind::HandleOnHit);
         AfterCast += SpellCastFn(spell_warr_whirlwind::HandleAfterCast);
     }
 };
@@ -567,8 +601,17 @@ class spell_warr_bloodthirst : public SpellScript
         if (target != ObjectAccessor::GetUnit(*caster, caster->GetTarget()))
             SetHitDamage(GetHitDamage() / 2);
 
-        if (caster->HasAura(SPELL_WARRIOR_FRESH_MEAT))
-            if (roll_chance_f(15))
+        if (caster->HasAura(SPELL_WARRIOR_ENRAGE_AURA))
+        {
+            // Dummy 25 = 对已激怒目标的伤害加成百分比（经验落地，常见私服）。
+            // 不要用开服 30% 覆盖表。不要用 25 替换 117313 的 5% 治疗。
+            if (SpellEffectInfo const* dummy = GetSpellInfo()->GetEffect(EFFECT_2))
+                if (dummy->BasePoints > 0)
+                    SetHitDamage(GetHitDamage() + CalculatePct(GetHitDamage(), dummy->BasePoints));
+        }
+
+        if (AuraEffect const* freshMeat = caster->GetAuraEffect(SPELL_WARRIOR_FRESH_MEAT, EFFECT_0))
+            if (roll_chance_f(float(freshMeat->GetAmount())))
                 caster->CastSpell(nullptr, SPELL_WARRIOR_ENRAGE_AURA, true);
 
         if (caster->HasAura(SPELL_WARRIOR_THIRST_FOR_BATTLE))
@@ -1274,8 +1317,9 @@ private:
             }
         }
 
-        if (roll_chance_f(20))
-            GetCaster()->GetSpellHistory()->ResetCooldown(85288, true);
+        if (SpellEffectInfo const* dummy = GetSpellInfo()->GetEffect(EFFECT_0))
+            if (dummy->BasePoints > 0 && roll_chance_f(float(dummy->BasePoints)))
+                GetCaster()->GetSpellHistory()->ResetCooldown(SPELL_WARRIOR_RAGING_BLOW, true);
 
         if (Aura* whirlWind = GetCaster()->GetAura(SPELL_WARRIOR_WHIRLWIND_PASSIVE))
             whirlWind->ModStackAmount(-1, AuraRemoveMode::AURA_REMOVE_BY_DEFAULT, false, false);
@@ -2816,8 +2860,7 @@ class spell_warr_execute : public SpellScript
         {
             caster->RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH_ARMS_BUFF);
             caster->RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH_PROC);
-            if (!IsArmsWarrior(caster))
-                caster->RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH);
+            // 不要卸 280721。即便非武器角色误走到这里，也不许拆狂怒天赋被动。
         }
     }
 
@@ -2826,6 +2869,24 @@ class spell_warr_execute : public SpellScript
         OnCheckCast += SpellCheckCastFn(spell_warr_execute::CheckCast);
         OnTakePower += SpellOnTakePowerFn(spell_warr_execute::HandleTakePower);
         AfterCast += SpellCastFn(spell_warr_execute::HandleAfterCast);
+    }
+};
+
+// 5308 — 狂怒斩杀。禁止绑到 spell_warr_execute（那是武器耗怒斩杀 163201）。
+class spell_warr_execute_fury : public SpellScript
+{
+    PrepareSpellScript(spell_warr_execute_fury);
+
+    void HandleAfterCast()
+    {
+        if (Unit* caster = GetCaster())
+            caster->RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH_PROC);
+        // 只摘 280776。不要 RemoveAurasDueToSpell(SPELL_WARRIOR_SUDDEN_DEATH)。
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_warr_execute_fury::HandleAfterCast);
     }
 };
 
@@ -3094,7 +3155,7 @@ public:
 
     void OnSuccessfulSpellCast(Player* player, Spell* spell) override
     {
-        if (player->GetSpecializationId() != TALENT_SPEC_WARRIOR_ARMS)
+        if (player->getClass() != CLASS_WARRIOR)
             return;
 
         if (spell->IsTriggered() || spell->HasOnceFlag(Spell::CAST_ONCE_SWEEPING_COPY)
@@ -3116,45 +3177,40 @@ public:
         player->GetSpellHistory()->ModifyCooldown(46924, -reduction); // Bladestorm
         player->GetSpellHistory()->ModifyCooldown(227847, -reduction); // Bladestorm
         player->GetSpellHistory()->ModifyCooldown(167105, -reduction); // Colossus Smash
-    }
 
-    void OnSpellCast(Player* player, Spell* spell, bool) override
-    {
-        if (player->getClass() != CLASS_WARRIOR)
-            return;
-
-        // Arms is handled after successful payment, above. Keep the other
-        // specializations unchanged until their own restoration pass.
-        if (player->GetSpecializationId() == TALENT_SPEC_WARRIOR_ARMS)
-            return;
-
-        if (player->GetAura(SPELL_WARRIOR_ANGER_MANAGEMENT))
+        // 152278 Dummy 20/10/20 当除数。蓝贴 25 弃用。禁止 -1000ms。
+        // 内部怒气是十分之一格，公式与武器 P0 相同：paidRage * 100 / Dummy。
+        if (AuraEffect const* angerCharge = player->GetAuraEffect(SPELL_WARRIOR_ANGER_MANAGEMENT, EFFECT_0))
         {
-            TalentSpecialization spec = player->GetSpecializationId();
-
-            if (spell->GetPowerCost(POWER_RAGE))
+            if (angerCharge->GetAmount() > 0 && paidRage > 0)
             {
-                //int32 mod = powerCost->Amount * 100 / anger->GetEffect(EFFECT_0)->GetAmount();
-                //int32 mod = std::max(powerCost->Amount * 100, anger->GetEffect(EFFECT_0)->GetAmount()) / 2;
-                if (spec == TALENT_SPEC_WARRIOR_ARMS)
-                {
-                    player->GetSpellHistory()->ModifyCooldown(262161, -1000); // Warbreaker
-                    player->GetSpellHistory()->ModifyCooldown(46924, -1000); // Bladestorm
-                    player->GetSpellHistory()->ModifyCooldown(227847, -1000); // Bladestorm
-                    player->GetSpellHistory()->ModifyCooldown(167105, -1000); // Colossus Smash
-                }
-                else if (spec == TALENT_SPEC_WARRIOR_FURY)
-                {
-                    player->GetSpellHistory()->ModifyCooldown(1719, -1000); // Recklessness
-                }
-                else if (spec == TALENT_SPEC_WARRIOR_PROTECTION)
-                {
-                    player->GetSpellHistory()->ModifyCooldown(107574, -1000); // Avatar
-                    player->GetSpellHistory()->ModifyCooldown(12975, -1000); // Last Stand
-                    player->GetSpellHistory()->ModifyCooldown(871, -1000); // Shield Wall
-                    player->GetSpellHistory()->ModifyCooldown(1160, -1000); // Demoralizing Shout
-                }
+                int32 const red = int32(int64(paidRage) * 100 / angerCharge->GetAmount());
+                player->GetSpellHistory()->ModifyCooldown(SPELL_WARRIOR_CHARGE_PLAYER, -red);
+                player->GetSpellHistory()->ModifyCooldown(SPELL_WARRIOR_HEROIC_LEAP, -red);
             }
+        }
+
+        if (player->GetSpecializationId() == TALENT_SPEC_WARRIOR_FURY)
+        {
+            if (AuraEffect const* angerReck = player->GetAuraEffect(SPELL_WARRIOR_ANGER_MANAGEMENT, EFFECT_1))
+                if (angerReck->GetAmount() > 0 && paidRage > 0)
+                    player->GetSpellHistory()->ModifyCooldown(SPELL_WARRIOR_RECKLESSNESS,
+                        -int32(int64(paidRage) * 100 / angerReck->GetAmount()));
+        }
+        else if (player->GetSpecializationId() == TALENT_SPEC_WARRIOR_PROTECTION)
+        {
+            if (AuraEffect const* angerAvatar = player->GetAuraEffect(SPELL_WARRIOR_ANGER_MANAGEMENT, EFFECT_1))
+                if (angerAvatar->GetAmount() > 0 && paidRage > 0)
+                    player->GetSpellHistory()->ModifyCooldown(SPELL_WARRIOR_AVATAR,
+                        -int32(int64(paidRage) * 100 / angerAvatar->GetAmount()));
+            if (AuraEffect const* angerDef = player->GetAuraEffect(SPELL_WARRIOR_ANGER_MANAGEMENT, EFFECT_2))
+                if (angerDef->GetAmount() > 0 && paidRage > 0)
+                {
+                    int32 const red = int32(int64(paidRage) * 100 / angerDef->GetAmount());
+                    player->GetSpellHistory()->ModifyCooldown(SPELL_WARRIOR_LAST_STAND, -red);
+                    player->GetSpellHistory()->ModifyCooldown(SPELL_WARRIOR_SHIELD_WALL, -red);
+                    player->GetSpellHistory()->ModifyCooldown(SPELL_WARRIOR_DEMORALIZING_SHOUT, -red);
+                }
         }
     }
 };
@@ -3219,8 +3275,14 @@ class spell_warr_siegebreaker : public SpellScript
     
     void HandleOnHit()
     {
-        Unit* caster = GetCaster();       
-        caster->CastSpell(nullptr, 280773, true);
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+        if (!caster || !target)
+            return;
+
+        // 280772 本表无 Dummy，易伤在 280773 基点 15/15（不是 Dummy）。
+        // 目标列单体。不要对 nullptr 施放，不要做成范围技。
+        caster->CastSpell(target, SPELL_WARRIOR_SIEGEBREAKER_DEBUFF, true);
     }
 
     void Register() override
@@ -3441,6 +3503,7 @@ void AddSC_warrior_spell_scripts()
     RegisterSpellAndAuraScriptPair(spell_warr_ravager, aura_warr_ravager);
     RegisterSpellScript(spell_warr_ravager_damage);
     RegisterSpellScript(spell_warr_execute);
+    RegisterSpellScript(spell_warr_execute_fury);
     RegisterSpellScript(spell_warr_execute_damages);
     RegisterAuraScript(aura_warr_war_machine);
     RegisterSpellScript(spell_warr_wirlwind_dmg);
