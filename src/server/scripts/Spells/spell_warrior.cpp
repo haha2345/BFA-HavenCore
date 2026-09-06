@@ -86,6 +86,8 @@ enum WarriorSpells
     SPELL_WARRIOR_SKULLSPLITTER                     = 260643,
     SPELL_WARRIOR_DEMORALIZING_SHOUT                = 1160,
     SPELL_WARRIOR_DEVASTATE                         = 20243,
+    SPELL_WARRIOR_DEVASTATOR                        = 236279,
+    SPELL_WARRIOR_DEVASTATOR_DAMAGE                 = 236282,
     SPELL_WARRIOR_DOUBLE_TIME                       = 103827,
     SPELL_WARRIOR_DRAGON_ROAR_KNOCK_BACK            = 118895,
     SPELL_WARRIOR_ENRAGE                            = 184361,
@@ -147,8 +149,10 @@ enum WarriorSpells
     SPELL_WARRIOR_SEASONED_SOLDIER                  = 279423,
     SPELL_WARRIOR_SECOND_WIND_DAMAGED               = 202149,
     SPELL_WARRIOR_SECOND_WIND_HEAL                  = 202147,
+    SPELL_WARRIOR_SHIELD_BLOCK                      = 2565,
     SPELL_WARRIOR_SHIELD_BLOCKC_TRIGGERED           = 132404,
     SPELL_WARRIOR_SHIELD_SLAM                       = 23922,
+    SPELL_WARRIOR_SHIELD_SLAM_PASSIVE               = 231834,
     SPELL_WARRIOR_SHIELD_WALL                       = 871,
     SPELL_WARRIOR_SHOCKWAVE                         = 46968,
     SPELL_WARRIOR_SHOCKWAVE_STUN                    = 132168,
@@ -1376,8 +1380,6 @@ public:
             {
                 if (Unit* target = GetHitUnit())
                 {
-                    _player->CastSpell(target, SPELL_WARRIOR_WEAKENED_BLOWS, true);
-
                     if (_player->HasAura(SPELL_WARRIOR_THUNDERSTRUCK))
                         _player->CastSpell(target, SPELL_WARRIOR_THUNDERSTRUCK_STUN, true);
                 }
@@ -2018,24 +2020,47 @@ class aura_warr_ignore_pain : public AuraScript
     bool Load() override
     {
         Unit* caster = GetCaster();
-        // In this phase the initial 20 Rage cost is removed already
-        // We just check for bonus.
-        m_ExtraSpellCost = std::min(caster->GetPower(POWER_RAGE), 400);
+        if (!caster)
+            return false;
+
+        // Dummy 50 = 可额外倾泻的怒气上限（玩家可见点数）。内部怒气 ×10。
+        // 不要写死 400，那是旧的 40 点上限残留。
+        int32 capDisplay = 0;
+        if (SpellEffectInfo const* dummy = GetSpellInfo()->GetEffect(EFFECT_1))
+            capDisplay = dummy->BasePoints;
+        int32 capInternal = std::max(capDisplay, 0) * 10;
+        m_ExtraSpellCost = capInternal > 0
+            ? std::min(caster->GetPower(POWER_RAGE), capInternal)
+            : 0;
         return true;
     }
 
     void CalcAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
-        if (Unit* caster = GetCaster())
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        SpellEffectInfo const* absorbEff = GetSpellInfo()->GetEffect(EFFECT_0);
+        SpellEffectInfo const* dummyEff = GetSpellInfo()->GetEffect(EFFECT_1);
+        float apCoeff = absorbEff ? absorbEff->BonusCoefficientFromAP : 0.0f;
+        int32 dummyCap = dummyEff ? dummyEff->BasePoints : 0;
+
+        // 35662：效果 0 AP 系数 3.5，效果 1 Dummy 50。没有任何一列写出 22.3。
+        float const ap = caster->GetTotalAttackPowerValue(BASE_ATTACK);
+        int32 const baseAbsorb = int32(ap * apCoeff);
+        int32 extraAbsorb = 0;
+        if (dummyCap > 0)
         {
-            amount = (float)(22.3f * caster->GetTotalAttackPowerValue(BASE_ATTACK)) * (float(m_ExtraSpellCost+200) / 600.0f);
-            int32 m_newRage = caster->GetPower(POWER_RAGE) - m_ExtraSpellCost;
-            if (m_newRage < 0)
-                m_newRage = 0;
-            caster->SetPower(POWER_RAGE, m_newRage);
-            /*if (Player* player = caster->ToPlayer())
-                player->SendPowerUpdate(POWER_RAGE, m_newRage);*/
+            int32 extraDisplay = m_ExtraSpellCost / 10;
+            extraAbsorb = int32(float(extraDisplay) / float(dummyCap) * float(baseAbsorb));
         }
+        amount = baseAbsorb + extraAbsorb;
+
+        int32 m_newRage = caster->GetPower(POWER_RAGE) - m_ExtraSpellCost;
+        if (m_newRage < 0)
+            m_newRage = 0;
+        caster->SetPower(POWER_RAGE, m_newRage);
     }
 
     void OnAbsorb(AuraEffect * /*aurEff*/, DamageInfo& dmgInfo, uint32& /*absorbAmount*/)
@@ -2208,16 +2233,30 @@ public:
     {
         PrepareSpellScript(spell_warr_devastate_SpellScript);
 
-        void HandleOnHit(SpellEffIndex effIndex)
+        void HandleOnHit(SpellEffIndex /*effIndex*/)
         {
             Unit* caster = GetCaster();
             if (!caster)
                 return;
 
-            if (roll_chance_i(sSpellMgr->GetSpellInfo(SPELL_WARRIOR_DEVASTATE)->GetEffect(effIndex)->BasePoints))
-                if (Player* player = caster->ToPlayer())
-                    player->GetSpellHistory()->ModifyCooldown(SPELL_WARRIOR_SHIELD_SLAM, -40 * IN_MILLISECONDS);
+            Player* player = caster->ToPlayer();
+            if (!player)
+                return;
 
+            auto resetSlam = [player]()
+            {
+                player->GetSpellHistory()->ResetCooldown(SPELL_WARRIOR_SHIELD_SLAM, true);
+            };
+
+            // 20243 效果 2 Dummy 30 与 231834 Dummy 30 两边都读，不删边。
+            // 命中则 ResetCooldown，禁止发明 -40 秒。
+            if (SpellEffectInfo const* devastateDummy = GetSpellInfo()->GetEffect(EFFECT_2))
+                if (devastateDummy->BasePoints > 0 && roll_chance_i(devastateDummy->BasePoints))
+                    resetSlam();
+
+            if (AuraEffect const* slamPassive = caster->GetAuraEffect(SPELL_WARRIOR_SHIELD_SLAM_PASSIVE, EFFECT_0))
+                if (slamPassive->GetAmount() > 0 && roll_chance_i(slamPassive->GetAmount()))
+                    resetSlam();
         }
 
         void Register() override
@@ -2229,6 +2268,31 @@ public:
     SpellScript* GetSpellScript() const override
     {
         return new spell_warr_devastate_SpellScript();
+    }
+};
+
+// 236279 — 毁灭者。现文件没有这个类。不要改 spell_warr_devastate（那是 20243 毁灭）。
+class spell_warr_devastator : public AuraScript
+{
+    PrepareAuraScript(spell_warr_devastator);
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
+    {
+        Unit* owner = GetTarget();
+        if (!owner)
+            return;
+
+        // 效果 0 = Aura 42 Trigger 236282（核心自动打出触发伤，不要 CastCustomSpell）。
+        // 效果 1 = SPELL_EFFECT_DUMMY 基点 20，EffectAura=0，不是 SPELL_AURA_DUMMY。
+        // Dummy 20 = 自动攻击重置盾猛几率。现役 25% 弃用。禁止 aurEff->GetAmount() 当 Dummy（挂钩在效果 0 上，金额不是 20）。
+        SpellEffectInfo const* dummy = GetSpellInfo()->GetEffect(EFFECT_1);
+        if (dummy && dummy->BasePoints > 0 && roll_chance_i(dummy->BasePoints))
+            owner->GetSpellHistory()->ResetCooldown(SPELL_WARRIOR_SHIELD_SLAM, true);
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_warr_devastator::HandleProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
     }
 };
 
@@ -3452,6 +3516,7 @@ void AddSC_warrior_spell_scripts()
     new spell_warr_colossus_smash();
     new spell_warr_defensive_stance();
     new spell_warr_devastate();
+    RegisterAuraScript(spell_warr_devastator);
     new spell_warr_dragon_roar();
     new spell_warr_enrage();
     RegisterAuraScript(spell_warr_enrage_aura);

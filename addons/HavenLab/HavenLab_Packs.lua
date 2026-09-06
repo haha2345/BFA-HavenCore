@@ -1589,6 +1589,141 @@ HL.PACKS = {
         end,
     },
 
+    war_prot_anger = {
+        key = "war_prot_anger",
+        title = "防护-怒气掌控除数",
+        order = 53,
+        hint = "EFFECT_1 Dummy 10 减化身。EFFECT_2 Dummy 20 减最后一搏/盾墙/挫志。禁止 -1000ms。",
+        startText = "【怒气掌控-防护】点 152278。把化身 107574、最后一搏 12975、盾墙 871、挫志 1160 打上冷却，再打耗怒技能。冷却随耗怒跳，不是每次 1 秒。",
+        startPrint = "请点怒气掌控，打上防护大技能冷却后再耗怒。",
+        ids = { 152278, 107574, 12975, 871, 1160 },
+        labels = {
+            [152278] = "怒气掌控",
+            [107574] = "化身",
+            [12975] = "最后一搏",
+            [871] = "盾墙",
+            [1160] = "挫志怒吼",
+        },
+        chain = {
+            { id = 152278, role = "怒气掌控被动", want = "aura-self",
+              hintFail = "没有 152278。天赋怒气掌控未点。" },
+            { id = 107574, role = "化身施法", want = "cast",
+              hintFail = "没有 107574。先把化身打上冷却再耗怒。" },
+        },
+        extraVerdict = function()
+            return {
+                "公式与武器 P0 相同：paidRage*100/该列 Dummy。禁止写死 -1000ms。蓝贴 25 弃用。",
+            }
+        end,
+    },
+
+    war_prot_ignore = {
+        key = "war_prot_ignore",
+        title = "防护-无视苦痛吸收",
+        order = 54,
+        hint = "删掉 22.3。基础 AP×3.5，Dummy 50 是额外倾泻上限。去坦克假人。",
+        startText = "【无视苦痛】在会还手的坦克假人上按 190456。低怒气一层盾，满怒倾泻应更厚。不要用现役 35 怒气 / 55% / 生命% 封顶。",
+        startPrint = "请对坦克假人按无视苦痛 190456。",
+        ids = { 190456 },
+        labels = {
+            [190456] = "无视苦痛",
+        },
+        chain = {
+            { id = 190456, role = "无视苦痛光环", want = "aura-self",
+              hintFail = "没有 190456。确认专精是防护。" },
+        },
+        extraVerdict = function()
+            return {
+                "22.3 不在 35662。读 BonusCoefficientFromAP 与 Dummy 50。0.9 自伤本波不改。",
+                "StartRecoveryTime=0 出表。人测：倾泻后盾更厚即可，不要用论坛系数对绝对值。",
+            }
+        end,
+    },
+
+    war_prot_slam = {
+        key = "war_prot_slam",
+        title = "防护-毁灭重置盾猛",
+        order = 55,
+        hint = "两处 Dummy 30 都掷骰。ResetCooldown。禁止 -40 秒。",
+        startText = "【毁灭重置】不点毁灭者。先把 23922 打上冷却，再打 20243。盾猛冷却应被拉回（几率，可重复）。不要出现只减 40 秒。",
+        startPrint = "请把盾猛打上冷却，再打毁灭。",
+        ids = { 20243, 23922, 231834 },
+        labels = {
+            [20243] = "毁灭",
+            [23922] = "盾牌猛击",
+            [231834] = "盾猛被动",
+        },
+        chain = {
+            { id = 20243, role = "毁灭施法", want = "cast",
+              hintFail = "没有 20243。先不要点毁灭者。" },
+            { id = 23922, role = "盾猛施法", want = "cast",
+              hintFail = "没有 23922。先打出盾猛好记下冷却。" },
+        },
+        extraVerdict = function()
+            return {
+                "20243 Dummy 30 与 231834 Dummy 30 两边都读。补篇已知表第 7 行弃用。",
+                "现役毁灭者 25% 弃用。本包不测 236279（见下一包）。",
+            }
+        end,
+    },
+
+    war_prot_devastator = {
+        key = "war_prot_devastator",
+        title = "防护-毁灭者自动触发",
+        order = 56,
+        hint = "点 236279 后不再按 20243。自动攻击应打出 236282，Dummy 20 重置盾猛。",
+        startText = "【毁灭者】学 236279。自动攻击看 236282。盾猛冷却可被自动攻击拉回。先导入 2026_09_06_02。",
+        startPrint = "请点毁灭者，站桩自动攻击。",
+        ids = { 236279, 236282, 23922 },
+        labels = {
+            [236279] = "毁灭者",
+            [236282] = "毁灭者触发伤",
+            [23922] = "盾牌猛击",
+        },
+        chain = {
+            { id = 236279, role = "毁灭者被动", want = "aura-self",
+              hintFail = "没有 236279。天赋第 5 层第 2 列，先导入 _02。" },
+            { id = 236282, role = "触发伤", want = "damage",
+              hintFail = "没有 236282。不要脚本 CastCustomSpell 改基点，Trigger 走 Aura 42。" },
+        },
+        extraVerdict = function()
+            return {
+                "覆盖 20243 后不要再按毁灭键。Dummy 20 读表，不是 25%。",
+            }
+        end,
+    },
+
+    war_prot_thunder = {
+        key = "war_prot_thunder",
+        title = "防护-雷霆一击与格挡",
+        order = 57,
+        hint = "6343 不应再上 115798。2565 上 132404。不要把 16 秒写进脚本。",
+        startText = "【雷霆/格挡】打 6343，目标不应有 115798。按 2565 自身应有 132404。充能间隔只记录，不改 C++。拦截对盟友走 147833。站姿用 71。",
+        startPrint = "请打雷霆一击和盾牌格挡。",
+        ids = { 6343, 115798, 2565, 132404, 198304, 147833, 71 },
+        labels = {
+            [6343] = "雷霆一击",
+            [115798] = "削弱打击(不应出现)",
+            [2565] = "盾牌格挡",
+            [132404] = "格挡光环",
+            [198304] = "拦截",
+            [147833] = "拦截盟友",
+            [71] = "防御姿态",
+        },
+        chain = {
+            { id = 6343, role = "雷霆一击", want = "damage",
+              hintFail = "没有 6343 伤害。确认动作条有雷霆一击。" },
+            { id = 132404, role = "格挡光环", want = "aura-self",
+              hintFail = "没有 132404。2565 脚本应 CastSpell 这条。" },
+        },
+        extraVerdict = function()
+            return {
+                "35662 SpellName 无 115798，本波删掉这次 CastSpell。CLEU 出现 115798 = 回归。",
+                "不要把 16 秒写进脚本。不要给 6572 / 275336 / 204488 加厚。站姿用 71。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
