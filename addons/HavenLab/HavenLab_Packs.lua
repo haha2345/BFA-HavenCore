@@ -2622,6 +2622,211 @@ HL.PACKS = {
         end,
     },
 
+    dh_havoc_chaos_strike = {
+        key = "dh_havoc_chaos_strike",
+        title = "浩劫-混沌打击40%退还",
+        order = 89,
+        hint = "162794 Dummy 30 是施法壳。40% 是观察窗口，非 Dummy。",
+        startText = "【混沌打击】先导入 2026_09_07_05。120 浩劫对 131989 打 162794。193840 应有时出现，不要施法前必退。毁灭 201427 不要 AP+28.7，不要单独 20%。退还量走 193840 Energize 20。",
+        startPrint = "请多次按混沌打击，看 193840 是否有时出现。",
+        ids = { 162794, 197125, 193840, 199547, 222031, 201427, 201428 },
+        labels = {
+            [162794] = "混沌打击",
+            [197125] = "退还隐藏光环",
+            [193840] = "退还20怒气",
+            [199547] = "混沌打击主手",
+            [222031] = "混沌打击副手",
+            [201427] = "毁灭",
+            [201428] = "毁灭主手",
+        },
+        chain = {
+            { id = 162794, role = "混沌打击", want = "cast",
+              hintFail = "没有 162794。确认浩劫动作条。" },
+        },
+        extraVerdict = function()
+            return {
+                "禁止把 40 写进 Dummy 30。禁止施法前必打 193840。",
+            }
+        end,
+    },
+
+    dh_havoc_eye_beam_demonic = {
+        key = "dh_havoc_eye_beam_demonic",
+        title = "浩劫-眼棱恶魔8秒与盲目之怒Dummy200",
+        order = 90,
+        hint = "213410 Dummy 0。8 秒观察窗口。203550 Dummy 200。198013 Dummy 50 不是回复。",
+        startText = "【恶魔/盲目之怒】点 213410 放完 198013，162264 大约 8 秒，不要 10 秒。点 203550 后引导回怒气读 Dummy 200，不要用眼棱 Dummy 50 当 /50。",
+        startPrint = "请点恶魔与盲目之怒后放眼棱。",
+        ids = { 198013, 198030, 213410, 162264, 203550 },
+        labels = {
+            [198013] = "眼棱",
+            [198030] = "眼棱伤害",
+            [213410] = "恶魔",
+            [162264] = "浩劫变形光环",
+            [203550] = "盲目之怒",
+        },
+        chain = {
+            { id = 198013, role = "眼棱", want = "cast",
+              hintFail = "没有 198013。" },
+        },
+        extraVerdict = function()
+            return {
+                "8 与 Dummy 0 不是同一列。禁止 *2/50 抄眼棱 Dummy。",
+            }
+        end,
+    },
+
+    dh_havoc_fel_rush = {
+        key = "dh_havoc_fel_rush",
+        title = "浩劫-邪能冲刺伤害192611",
+        order = 91,
+        hint = "195072 Dummy 25/25 是冲刺壳。伤害号 192611。25.3 非 Dummy。",
+        startText = "【邪能冲刺】CLEU 伤害必须是 192611，不要 223107。不要 25.3 公式。半径约 23 码是观察窗口。",
+        startPrint = "请对 131989 放邪能冲刺，看 CLEU 技能号。",
+        ids = { 195072, 192611, 197922, 197923 },
+        labels = {
+            [195072] = "邪能冲刺",
+            [192611] = "邪能冲刺伤害",
+            [197922] = "地面冲刺",
+            [197923] = "空中冲刺",
+        },
+        chain = {
+            { id = 192611, role = "冲刺伤害", want = "damage",
+              hintFail = "没有 192611。先导入 _05，不要再打 223107。" },
+        },
+        extraVerdict = function()
+            return {
+                "223107 是军团残留。25.3 禁止写回。",
+            }
+        end,
+    },
+
+    dh_havoc_first_blood = {
+        key = "dh_havoc_first_blood",
+        title = "浩劫-第一滴血Dummy135",
+        order = 92,
+        hint = "Dummy 135。dump 绑 199552/200685/210153/210155。210152 接刃舞主脚本。",
+        startText = "【第一滴血】点 206416 放刃舞，主目标应按 Dummy 135 加伤。变形窗死亡扫描 210152 也应记下主目标。8 码是观察窗口。",
+        startPrint = "请点第一滴血后对一排桩放刃舞。",
+        ids = { 206416, 188499, 199552, 200685, 210152, 210153, 210155 },
+        labels = {
+            [206416] = "第一滴血",
+            [188499] = "刃舞",
+            [199552] = "刃舞伤害A",
+            [200685] = "刃舞伤害B",
+            [210152] = "死亡扫描",
+            [210153] = "扫描伤害A",
+            [210155] = "扫描伤害B",
+        },
+        chain = {
+            { id = 188499, role = "刃舞", want = "cast",
+              hintFail = "没有 188499。" },
+        },
+        extraVerdict = function()
+            return {
+                "不要再把脚本绑在 206416 被动号上。135 不得改。",
+            }
+        end,
+    },
+
+    dh_havoc_immolation = {
+        key = "dh_havoc_immolation",
+        title = "浩劫-献祭光环258920",
+        order = 93,
+        hint = "无 Dummy。Energize 10 + 258922 每跳 7。不要用 80 造 Dummy。",
+        startText = "【献祭】点天赋后 CLEU 必须是 258920，不要 178740。施放 +10 怒气，随后每跳 +7。跳数立即或延迟都算过，不要选边。复仇仍用 178740，本包不要拿复仇键勾完成。",
+        startPrint = "请点献祭光环天赋后对木桩按 258920。",
+        ids = { 258920, 258921, 258922, 178740 },
+        labels = {
+            [258920] = "浩劫献祭光环",
+            [258921] = "浩劫献祭初爆",
+            [258922] = "浩劫献祭跳",
+            [178740] = "复仇献祭(不要当浩劫键)",
+        },
+        chain = {
+            { id = 258920, role = "浩劫献祭", want = "aura-self",
+              hintFail = "没有 258920。先导入 _05，不要只绑 178740。" },
+        },
+        extraVerdict = function()
+            return {
+                "禁止 ModifyPower 写死 80 或 10。跳数两边留。",
+            }
+        end,
+    },
+
+    dh_havoc_fel_barrage = {
+        key = "dh_havoc_fel_barrage",
+        title = "浩劫-邪能弹幕258925",
+        order = 94,
+        hint = "无 Dummy。表周期 Trigger 258926。不要接到军团 211053。",
+        startText = "【邪能弹幕】点天赋后引导约 3 秒，CLEU 258925/258926。不要 211053，不要吞充能。3 秒/8 码是观察窗口。",
+        startPrint = "请点邪能弹幕后对木桩引导。",
+        ids = { 258925, 258926, 211053 },
+        labels = {
+            [258925] = "邪能弹幕",
+            [258926] = "弹幕跳伤",
+            [211053] = "军团弹幕(不应出现)",
+        },
+        chain = {
+            { id = 258925, role = "邪能弹幕", want = "cast",
+              hintFail = "没有 258925。不要再跑 211053 脚本。" },
+        },
+        extraVerdict = function()
+            return {
+                "禁止 INSERT 258925 到 spell_dh_fel_barrage。",
+            }
+        end,
+    },
+
+    dh_havoc_cycle_hunger = {
+        key = "dh_havoc_cycle_hunger",
+        title = "浩劫-仇恨循环Dummy3与无餍饥饿Dummy10",
+        order = 95,
+        hint = "258887 Dummy 3 减 191427。258876 Dummy 10 加在 162243 上。",
+        startText = "【仇恨循环/无餍饥饿】点 258887 后，只有混沌打击真正打出 193840 才约 −3 秒恶魔变形冷却，不要减眼棱。点 258876 打 162243，应额外 +10 怒气。162243 Dummy 是 0。",
+        startPrint = "请点仇恨循环与无餍饥饿后打木桩。",
+        ids = { 258887, 191427, 193840, 258876, 162243 },
+        labels = {
+            [258887] = "仇恨循环",
+            [191427] = "浩劫恶魔变形",
+            [193840] = "退还怒气",
+            [258876] = "无餍饥饿",
+            [162243] = "恶魔之咬",
+        },
+        chain = {
+            { id = 162243, role = "恶魔之咬", want = "cast",
+              hintFail = "没有 162243。无餍饥饿脚本应绑在这个号。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 3 不是减眼棱。不要 INSERT 258887 空类。",
+            }
+        end,
+    },
+
+    dh_havoc_darkness = {
+        key = "dh_havoc_darkness",
+        title = "浩劫-黑暗196718基线",
+        order = 96,
+        hint = "Dummy 0。不进 DH-C。家 at_dh_darkness。",
+        startText = "【黑暗】120 浩劫放 196718，友方进圈应有 209426。Talent 无行因为是基线。DH-C 包看见这条也不能勾 DH-C 完成。不当木桩循环硬门槛，但浩劫收口必须看见。",
+        startPrint = "请按黑暗 196718，让友方走进圈。",
+        ids = { 196718, 209426 },
+        labels = {
+            [196718] = "黑暗",
+            [209426] = "黑暗吸收",
+        },
+        chain = {
+            { id = 196718, role = "黑暗", want = "cast",
+              hintFail = "没有 196718。这是浩劫基线，不是 DH-C。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 不得改。不要把 196718 INSERT 进 DH-C 脚本名。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
