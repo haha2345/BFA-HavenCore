@@ -3554,6 +3554,121 @@ HL.PACKS = {
         end,
     },
 
+    rog_assa_mutilate = {
+        key = "rog_assa_mutilate",
+        title = "奇袭-毁伤产2不-3",
+        order = 124,
+        hint = "1329 Dummy 0。Energize 2 不是 Dummy。删 ModifyPower(-3)。5374/27576 不是施法者光环。",
+        startText = "【毁伤】120 奇袭打 1329。应产 2 连击，不要 −3。CLEU 双手伤 5374/27576 打在木桩上。不要把 5374 当自己光环。",
+        startPrint = "请对木桩按毁伤 1329。",
+        ids = { 1329, 5374, 27576 },
+        labels = {
+            [1329] = "毁伤Dummy0",
+            [5374] = "主手伤",
+            [27576] = "副手伤",
+        },
+        chain = {
+            { id = 1329, role = "毁伤", want = "cast",
+              hintFail = "没有 1329。不要用 1752。" },
+        },
+        extraVerdict = function()
+            return {
+                "必须产 2 连击。−3 不是 Dummy。",
+            }
+        end,
+    },
+
+    rog_assa_poisons_dots = {
+        key = "rog_assa_poisons_dots",
+        title = "奇袭-毒药自身光环与毒伤割裂锁喉",
+        order = 125,
+        hint = "2823 Dummy 1 自身光环。2818 无 5 层。32645 Dummy 0。1943 Dummy 1。703 Dummy 50 不是 3 秒。",
+        startText = "【毒药/DoT】上 2823 后攻击应有 2818，无需武器附魔。毒伤时长 (1+CP) 秒、直伤 *=CP 保留不要双乘。割裂 4+4×CP 秒。潜行锁喉有 1330 约 3 秒，不要把 Dummy 50 当沉默秒数。刀扇 10 码 1 连击。",
+        startPrint = "请上致命药膏，再打毒伤/割裂/锁喉/刀扇。",
+        ids = { 2823, 2818, 113780, 32645, 1943, 703, 1330, 51723 },
+        labels = {
+            [2823] = "致命药膏Dummy1",
+            [2818] = "致命跳",
+            [113780] = "刷新直伤",
+            [32645] = "毒伤Dummy0",
+            [1943] = "割裂Dummy1",
+            [703] = "锁喉Dummy50",
+            [1330] = "潜行沉默3秒",
+            [51723] = "刀扇Dummy1",
+        },
+        chain = {
+            { id = 2823, role = "致命药膏", want = "cast",
+              hintFail = "没有 2823。8.3 是自身光环不是武器附魔。" },
+        },
+        extraVerdict = function()
+            return {
+                "不要 5 层。不要 GetCastItem。Dummy 50 不是 3 秒。AP 0.16 不是 Dummy。",
+            }
+        end,
+    },
+
+    rog_assa_envenom_hidden = {
+        key = "rog_assa_envenom_hidden",
+        title = "奇袭-毒药炸弹Dummy40/4与隐秘消费层",
+        order = 126,
+        hint = "255544 Dummy 40/4。禁止 /10*CP。270070 最大 20 出 AuraOptions。刀扇消费层。79140 不写 Energize。",
+        startText = "【炸弹/隐秘/宿敌】点毒药炸弹后多次毒伤，CLEU 应有时出现 255546 约 4 跳，不要按 CP/10。隐秘叠层后刀扇应清 270070。开宿敌不要一瞬间 +100 能量。",
+        startPrint = "请点毒药炸弹与隐秘刀刃，打毒伤和刀扇，再开宿敌。",
+        ids = { 32645, 255544, 255545, 255546, 270061, 270070, 51723, 79140, 256495 },
+        labels = {
+            [32645] = "毒伤Dummy0",
+            [255544] = "毒药炸弹Dummy40/4",
+            [255545] = "炸弹AT",
+            [255546] = "炸弹跳",
+            [270061] = "隐秘刀刃Dummy0",
+            [270070] = "隐秘层",
+            [51723] = "刀扇",
+            [79140] = "宿敌",
+            [256495] = "宿敌Aura85(不是瞬间100)",
+        },
+        chain = {
+            { id = 32645, role = "毒伤", want = "cast",
+              hintFail = "没有毒伤。炸弹挂在毒伤脚本上，不要给 255544 INSERT 空类。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 40 是触发%。Dummy 4 是脉冲。禁止 /10*CP。不要瞬间 +100。",
+            }
+        end,
+    },
+
+    rog_assa_talents = {
+        key = "rog_assa_talents",
+        title = "奇袭-刺客大师280716疾毒盲目侧击淬毒放血",
+        order = 127,
+        hint = "255989 Dummy 3 不读成秒。256735 潜行−1、出潜行 3000ms。280716 Dummy 0。152152 Dummy 5 加 VW。111240 Dummy 0/35/25。245388 Dummy 1 是壳。200806 Dummy 100。",
+        startText = "【天赋】先潜行再开本包。刺客大师：潜行中有 256735，出潜行约 3 秒仍在，Dummy 3 不是秒、不要与铁丝 Dummy 3 混。280716：2818 跳时自身回血，不要 108211。疾毒加 VW Dummy 5，不要再给毁伤加。盲目侧击血量门 Dummy 35、毁伤触发 Dummy 25。淬毒之刃上 245389。放血后流血剩余约减半。",
+        startPrint = "请点刺客大师、吸血毒药、疾毒、盲目侧击、淬毒之刃、放血各测一次。",
+        ids = { 255989, 256735, 196861, 280716, 108211, 152152, 111240, 121153, 245388, 245389, 200806 },
+        labels = {
+            [255989] = "刺客大师Dummy3",
+            [256735] = "刺客大师buff",
+            [196861] = "铁丝Dummy3(不要混号)",
+            [280716] = "吸血毒药Dummy0",
+            [108211] = "旧吸血(不应当8.3天赋)",
+            [152152] = "疾毒Dummy5",
+            [111240] = "盲目侧击Dummy0/35/25",
+            [121153] = "盲目侧击免费窗",
+            [245388] = "淬毒之刃Dummy1",
+            [245389] = "自然易伤",
+            [200806] = "放血Dummy100",
+        },
+        chain = {
+            { id = 256735, role = "刺客大师buff", want = "aura-self",
+              hintFail = "没有 256735。潜行期间应一直在。Dummy 3 不是秒。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 3 不读成秒。3000ms 是观察窗口。不要 108211。疾毒只加 VW。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
