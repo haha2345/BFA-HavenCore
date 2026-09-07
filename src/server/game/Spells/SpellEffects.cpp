@@ -6084,13 +6084,7 @@ SpellCastResult Spell::CheckChangeItemBonusesTarget(Item const* item, SpellEffec
         return SPELL_FAILED_BAD_TARGETS;
 
     uint32 const itemId = proto->GetId();
-    // 2020-05-20 hotfix excludes azerite engineering goggles and alchemist-stone trinkets;
-    // AzeriteEmpoweredItem / Heart of Azeroth / INVTYPE_TRINKET already cover those.
-    if (sDB2Manager.GetAzeriteEmpoweredItem(itemId) || sDB2Manager.IsAzeriteItem(itemId))
-        return SPELL_FAILED_BAD_TARGETS;
-    if (proto->GetInventoryType() == INVTYPE_TRINKET)
-        return SPELL_FAILED_BAD_TARGETS;
-    if (itemId == ITEM_ASHJRAKAMAS)
+    if (!sDB2Manager.ItemIsEligibleForRandomCorruption(itemId))
         return SPELL_FAILED_BAD_TARGETS;
 
     for (int32 listId : *item->m_itemData->BonusListIDs)
@@ -6129,6 +6123,8 @@ void Spell::EffectChangeItemBonuses(SpellEffIndex /*effIndex*/)
     std::vector<int32> add;
     if (effectInfo && effectInfo->MiscValueB > 0)
         sDB2Manager.CollectBonusListIdsFromTree(uint32(effectInfo->MiscValueB), add);
+
+    sDB2Manager.RemapAvoidantShopCorruptionPointLists(add);
 
     bool const equipped = item->IsEquipped();
     if (equipped)

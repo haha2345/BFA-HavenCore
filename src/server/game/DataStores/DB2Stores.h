@@ -354,9 +354,11 @@ public:
     std::set<uint32> GetDefaultItemBonusTree(uint32 itemId, ItemContext itemContext) const;
     void LogCorruptionItemBonusDump() const;
     void CollectBonusListIdsFromTree(uint32 bonusTreeId, std::vector<int32>& out) const;
+    void RemapAvoidantShopCorruptionPointLists(std::vector<int32>& bonusListIDs) const;
     bool BonusListIsCorruption(uint32 listId) const;
     bool IsNyAlothaUniqueWeaponBonus(uint32 listId) const;
     void LogMotherContaminantDump() const;
+    bool ItemIsEligibleForRandomCorruption(uint32 itemId) const;
     void AppendCorruptionLootBonuses(uint32 itemId, ItemContext context, std::vector<int32>& bonusListIDs) const;
     static uint32 GetNyAlothaFixedCorruptionBonus(uint32 itemId);
     bool HasItemContext(uint32 itemId) const;

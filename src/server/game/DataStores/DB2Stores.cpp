@@ -2414,6 +2414,9 @@ constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_STRIKETHROUGH_1 = 6437;
 constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_STRIKETHROUGH_2 = 6438;
 constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_STRIKETHROUGH_3 = 6439;
 
+constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_POINTS_8 = 6453;   // DBC shop tree; do not rewrite ItemBonus row
+constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_POINTS_12 = 6457;
+constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_POINTS_16 = 6461;
 constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_POINTS_10 = 6455;
 constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_POINTS_15 = 6462;
 constexpr uint32 ITEM_BONUS_LIST_CORRUPTION_POINTS_20 = 6470;
@@ -2591,6 +2594,67 @@ void DB2Manager::CollectBonusListIdsFromTree(uint32 bonusTreeId, std::vector<int
     });
 }
 
+void DB2Manager::RemapAvoidantShopCorruptionPointLists(std::vector<int32>& bonusListIDs) const
+{
+    for (int32& listId : bonusListIDs)
+    {
+        if (listId == int32(ITEM_BONUS_LIST_CORRUPTION_POINTS_8))
+            listId = int32(ITEM_BONUS_LIST_CORRUPTION_POINTS_10);
+        else if (listId == int32(ITEM_BONUS_LIST_CORRUPTION_POINTS_12))
+            listId = int32(ITEM_BONUS_LIST_CORRUPTION_POINTS_15);
+        else if (listId == int32(ITEM_BONUS_LIST_CORRUPTION_POINTS_16))
+            listId = int32(ITEM_BONUS_LIST_CORRUPTION_POINTS_20);
+    }
+}
+
+bool DB2Manager::ItemIsEligibleForRandomCorruption(uint32 itemId) const
+{
+    if (!itemId || itemId == ITEM_ASHJRAKAMAS)
+        return false;
+    if (GetAzeriteEmpoweredItem(itemId) || IsAzeriteItem(itemId))
+        return false;
+
+    ItemSparseEntry const* sparse = sItemSparseStore.LookupEntry(itemId);
+    if (!sparse)
+        return false;
+
+    switch (sparse->InventoryType)
+    {
+        case INVTYPE_HEAD:
+        case INVTYPE_NECK:
+        case INVTYPE_SHOULDERS:
+        case INVTYPE_CHEST:
+        case INVTYPE_WAIST:
+        case INVTYPE_LEGS:
+        case INVTYPE_FEET:
+        case INVTYPE_WRISTS:
+        case INVTYPE_HANDS:
+        case INVTYPE_FINGER:
+        case INVTYPE_WEAPON:
+        case INVTYPE_SHIELD:
+        case INVTYPE_RANGED:
+        case INVTYPE_CLOAK:          // legal slot; 169223 already rejected by item id
+        case INVTYPE_2HWEAPON:
+        case INVTYPE_ROBE:
+        case INVTYPE_WEAPONMAINHAND:
+        case INVTYPE_WEAPONOFFHAND:  // 22: do not refuse the whole class
+        case INVTYPE_HOLDABLE:
+        case INVTYPE_RANGEDRIGHT:
+            break;
+        default:
+            // 0 NON_EQUIP (potions/reagents/quest items), 12 TRINKET, shirt/bag/tabard/ammo/...
+            return false;
+    }
+
+    ItemEntry const* item = sItemStore.LookupEntry(itemId);
+    if (!item)
+        return false;
+    if (item->ClassID != ITEM_CLASS_WEAPON && item->ClassID != ITEM_CLASS_ARMOR)
+        return false;
+
+    return true;
+}
+
 void DB2Manager::AppendCorruptionLootBonuses(uint32 itemId, ItemContext /*context*/, std::vector<int32>& bonusListIDs) const
 {
     if (uint32 fixed = GetNyAlothaFixedCorruptionBonus(itemId))
@@ -2600,13 +2664,7 @@ void DB2Manager::AppendCorruptionLootBonuses(uint32 itemId, ItemContext /*contex
         return;
     }
 
-    ItemSparseEntry const* sparse = sItemSparseStore.LookupEntry(itemId);
-    if (!sparse)
-        return;
-    // IsAzeriteItem is Heart of Azeroth only; empowered armor is AzeriteEmpoweredItem.db2.
-    if (GetAzeriteEmpoweredItem(itemId) || IsAzeriteItem(itemId))
-        return;
-    if (sparse->InventoryType == INVTYPE_TRINKET)
+    if (!ItemIsEligibleForRandomCorruption(itemId))
         return;
 
     if (ItemAlreadyHasCorruptionEffect(bonusListIDs))
