@@ -2827,6 +2827,139 @@ HL.PACKS = {
         end,
     },
 
+    dh_veng_soul_cleave = {
+        key = "dh_veng_soul_cleave",
+        title = "复仇-灵魂裂劈Dummy25与2",
+        order = 97,
+        hint = "Dummy 25 码 / Dummy 2 个残片。禁止伤害 *2。",
+        startText = "【灵魂裂劈】坦克假人 131992。25 码内多于 2 个残片时只吃 2 个。伤害不要大约翻倍。178740 仍是复仇献祭键。",
+        startPrint = "请先产残片再按灵魂裂劈 228477。",
+        ids = { 228477, 228478, 178740 },
+        labels = {
+            [228477] = "灵魂裂劈",
+            [228478] = "裂劈伤害",
+            [178740] = "复仇献祭光环",
+        },
+        chain = {
+            { id = 228477, role = "灵魂裂劈", want = "cast",
+              hintFail = "没有 228477。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 2 是人数上限。*2 不是 Dummy。",
+            }
+        end,
+    },
+
+    dh_veng_fiery_brand = {
+        key = "dh_veng_fiery_brand",
+        title = "复仇-烈火烙印Aura269不是吸收",
+        order = 98,
+        hint = "Dummy 40 保持。207744/207771 Aura 269 −40。卸 204022 吸收。",
+        startText = "【烈火烙印】必须用会还手的 131992。目标应有 207744 或 207771。CLEU 不要 204022 吸收。不要吸收叠加 Aura 269。12.0 给自己上烙印弃用。",
+        startPrint = "请对坦克假人按烈火烙印，再让假人打你。",
+        ids = { 204021, 204022, 207744, 207771, 207739 },
+        labels = {
+            [204021] = "烈火烙印",
+            [204022] = "玩家侧光环(不应吸收)",
+            [207744] = "烙印减伤",
+            [207771] = "活体烈焰烙印",
+            [207739] = "活体烈焰",
+        },
+        chain = {
+            { id = 204021, role = "烈火烙印", want = "cast",
+              hintFail = "没有 204021。减伤看 207744；点了活体烈焰看 207771。不要对吸收。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 40 不是吸收百分比。AddSC 已注释 absorb 类。",
+            }
+        end,
+    },
+
+    dh_veng_fracture = {
+        key = "dh_veng_fracture",
+        title = "复仇-裂伤263642Dummy2",
+        order = 99,
+        hint = "Dummy 2。卸 209795。Energize 250 不是 Dummy。",
+        startText = "【裂伤】CLEU 必须是 263642，不要 209795。每次丢 Dummy 2 个残片并产痛苦，不要花 30 痛苦。覆盖剪切。",
+        startPrint = "请点裂伤天赋后对假人按 263642。",
+        ids = { 263642, 209795, 203782 },
+        labels = {
+            [263642] = "裂伤",
+            [209795] = "军团裂伤(不应出现)",
+            [203782] = "剪切",
+        },
+        chain = {
+            { id = 263642, role = "裂伤", want = "cast",
+              hintFail = "没有 263642。先导入 _06。" },
+        },
+        extraVerdict = function()
+            return {
+                "30 痛苦费用弃用。Dummy 只钉 2。",
+            }
+        end,
+    },
+
+    dh_veng_spirit_bomb = {
+        key = "dh_veng_spirit_bomb",
+        title = "复仇-灵魂炸弹247455",
+        order = 100,
+        hint = "Dummy 25/5。伤号 247455。涂 224509。",
+        startText = "【灵魂炸弹】先攒至少 2 个残片。CLEU 必须是 247455，不要 218677。最多吃 5 个残片。目标应有脆弱 224509。",
+        startPrint = "请点灵魂炸弹天赋，攒残片后按 247454。",
+        ids = { 247454, 247455, 224509, 227255, 218677 },
+        labels = {
+            [247454] = "灵魂炸弹",
+            [247455] = "灵魂炸弹伤害",
+            [224509] = "脆弱",
+            [227255] = "脆弱治疗",
+            [218677] = "军团伤号(不应出现)",
+        },
+        chain = {
+            { id = 247455, role = "炸弹伤害", want = "damage",
+              hintFail = "没有 247455。枚举必须改掉 218677。" },
+        },
+        extraVerdict = function()
+            return {
+                "不要 INSERT 247455 到 spell_script_names。过滤器是 SPELL_EFFECT_APPLY_AURA，不是 Aura Dummy。",
+            }
+        end,
+    },
+
+    dh_veng_shear_souls = {
+        key = "dh_veng_shear_souls",
+        title = "复仇-剪切Dummy8与残片进屋治疗",
+        order = 101,
+        hint = "203783 Dummy 8 在效果 1。进屋复仇 210042，必须是残片施法者。击杀 Dummy 15 两处都改。喂食 Dummy 5→500ms。最后的手段 PlayerScript OnDamage。",
+        startText = "【剪切/残片】剪切产残片按 Dummy 8（效果 1，效果 0 基点 0），不要 15%。自己走进自己的残片应打 210042，别人走进去不要拆残片。击杀残片几率 Dummy 15，恶魔与非恶魔两处都不要 30%。喂食尖刺 CDR 500 ms。点最后的手段 209258，致死应救：治疗约 Dummy 30% 最大生命，上 209261，摘 209258；活路径是 PlayerScript OnDamage，不要吸收、不要 OnEffectNameAbsorb。恶魔卫士 203513 −15% 表已表达，不要挂 278386。精通 203747 不搬家。",
+        startPrint = "请用剪切产残片，再走进残片。",
+        ids = { 203782, 203783, 210042, 178963, 178940, 204254, 218612, 203513, 278386, 203747, 209258, 209261 },
+        labels = {
+            [203782] = "剪切",
+            [203783] = "剪切被动Dummy8",
+            [210042] = "复仇残片治疗",
+            [178963] = "浩劫残片治疗",
+            [178940] = "浩劫破碎灵魂Dummy15",
+            [204254] = "复仇破碎灵魂Dummy15",
+            [218612] = "喂食恶魔Dummy5",
+            [203513] = "恶魔卫士复仇",
+            [278386] = "恶魔卫士浩劫弱版",
+            [203747] = "精通邪能之血",
+            [209258] = "最后的手段",
+            [209261] = "最后的手段减益",
+        },
+        chain = {
+            { id = 210042, role = "复仇残片治疗", want = "heal",
+              hintFail = "没有 210042。进屋不要只给浩劫 178963。" },
+        },
+        extraVerdict = function()
+            return {
+                "禁止 procChance=15。禁止只改一处 roll_chance_f(30)。进屋必须是残片施法者。最后的手段走 PlayerScript OnDamage，禁止 SCHOOL_ABSORB / OnEffectNameAbsorb。精通不搬家。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
