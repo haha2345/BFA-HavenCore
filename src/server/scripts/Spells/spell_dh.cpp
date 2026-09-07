@@ -45,13 +45,14 @@
 #include "CombatAI.h"
 #include "GridNotifiers.h"
 #include <G3D/Vector3.h>
+#include <algorithm>
 
 enum ProjectDemonHunterSpells
 {
     SPELL_DH_FEL_RUSH_DASH                  = 197922,
     SPELL_DH_FEL_RUSH_AIR                   = 197923,
     SPELL_DH_FEL_RUSH                       = 195072,
-    SPELL_DH_FEL_RUSH_DAMAGE                = 223107,
+    SPELL_DH_FEL_RUSH_DAMAGE                = 192611,
     SPELL_DH_EYE_BEAM                       = 198013,
     SPELL_DH_EYE_BEAM_VISUAL                = 194326,
     SPELL_DH_EYE_BEAM_DAMAGE                = 198030,
@@ -63,13 +64,17 @@ enum ProjectDemonHunterSpells
     SPELL_DH_FEL_ERUPTION                   = 211881,
     SPELL_DH_FEL_ERUPTION_DAMAGE            = 225102,
     SPELL_DH_THROW_GLAIVE                   = 185123,
+    SPELL_DH_THROW_GLAIVE_VENGEANCE         = 204157, // 校验用；不要写进 CheckProc
+    SPELL_DH_LAST_RESORT                    = 209258,
     SPELL_DH_LAST_RESORT_DEBUFF             = 209261,
     SPELL_DH_METAMORPHOSIS_VENGEANCE        = 187827,
     SPELL_DH_METAMORPHOSIS_HAVOC            = 162264,
+    SPELL_DH_METAMORPHOSIS_HAVOC_CAST       = 191427,
     SPELL_DH_METAMORPHOSIS_JUMP             = 191428,
     SPELL_DH_METAMORPHOSIS_STUN             = 200166,
     SPELL_DH_GLIDE_KNOCKBACK                = 196353,
     SPELL_DH_GLIDE                          = 131347,
+    SPELL_DH_SHAMAN_HEX                     = 51514,
     SPELL_DH_FEL_MASTERY_FURY               = 234244,
     SPELL_DH_FEL_MASTERY                    = 192939,
     SPELL_DH_PREPARED                       = 203551,
@@ -86,13 +91,15 @@ enum ProjectDemonHunterSpells
     SPELL_DH_DEMON_REBORN                   = 193897,
     SPELL_DH_BLUR                           = 198589,
     SPELL_DH_CHAOS_NOVA                     = 179057,
-    SPELL_DH_FEL_BARRAGE                    = 211053,
-    SPELL_DH_FEL_BARRAGE_TRIGGER            = 211052,
+    SPELL_DH_FEL_BARRAGE                    = 258925,
+    SPELL_DH_FEL_BARRAGE_TRIGGER            = 258926,
     SPELL_DH_INFERNAL_STRIKE_JUMP           = 189111,
     SPELL_DH_INFERNAL_STRIKE_DAMAGE         = 189112,
     SPELL_DH_INFERNAL_STRIKE_VISUAL         = 208461,
     SPELL_DH_INFERNAL_STRIKE                = 189110,
+    SPELL_DH_SOUL_CLEAVE                    = 228477,
     SPELL_DH_SOUL_CLEAVE_DAMAGE             = 228478,
+    SPELL_DH_FRACTURE                       = 263642,
     SPELL_DH_FIERY_BRAND_DOT                = 207771,
     SPELL_DH_FIERY_BRAND_MARKER             = 207744,
     SPELL_DH_BURNING_ALIVE                  = 207739,
@@ -113,6 +120,9 @@ enum ProjectDemonHunterSpells
     SPELL_DH_EYE_OF_LEOTHERAS_DAMAGE        = 206650,
     SPELL_DH_CLEANSED_BY_FLAME              = 205625,
     SPELL_DH_CLEANSED_BY_FLAME_DISPEL       = 208770,
+    SPELL_DH_IMMOLATION_AURA_HAVOC          = 258920,
+    SPELL_DH_IMMOLATION_AURA_TICK           = 258922,
+    SPELL_DH_IMMOLATION_AURA_BURST          = 258921,
     SPELL_DH_RAIN_OF_CHAOS                  = 205628,
     SPELL_DH_RAIN_OF_CHAOS_SLOW             = 232538,
     SPELL_DH_JAGGED_SPIKES                  = 205627,
@@ -128,6 +138,7 @@ enum ProjectDemonHunterSpells
     SPELL_DH_SIGIL_OF_FLAME_EXPLOSION       = 208710,
     SPELL_DH_SIGIL_OF_SILENCE_TRIGGER       = 204490,
     SPELL_DH_SIGIL_OF_SILENCE_EXPLOSION     = 208709,
+    SPELL_DH_DARKNESS                       = 196718,
     SPELL_DH_DARKNESS_ABSORB                = 209426,
     SPELL_DH_BLIND_FURY                     = 203550,
     SPELL_DH_DEMONIC_APPETITE               = 206478,
@@ -146,7 +157,7 @@ enum ProjectDemonHunterSpells
     SPELL_DH_FEL_DEVASTATION_HEAL           = 212106,
     SPELL_DH_FRAILTY                        = 224509,
     SPELL_DH_FRAILTY_HEAL                   = 227255,
-    SPELL_DH_SPIRIT_BOMB_DAMAGE             = 218677,
+    SPELL_DH_SPIRIT_BOMB_DAMAGE             = 247455,
     SPELL_DH_FURY_OF_THE_ILLIDARI_MAINHAND  = 201628,
     SPELL_DH_FURY_OF_THE_ILLIDARI_OFFHAND   = 201789,
     SPELL_DH_INNER_DEMONS_DAMAGE            = 202388,
@@ -167,6 +178,8 @@ enum ProjectDemonHunterSpells
     SPELL_DH_MANA_BREAK                     = 203704,
     SPELL_DH_BLADE_DANCE                    = 188499,
     SPELL_DH_TRAIL_OF_RUIN_TALENT           = 258881,
+    SPELL_DH_CYCLE_OF_HATRED                = 258887,
+    SPELL_DH_UNENDING_HUNGER                = 258876,
 };
 
 enum ShatteredSoulsSpells
@@ -336,7 +349,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_dh_first_blood_SpellScript::HandleHit, EFFECT_0, SPELL_AURA_DUMMY);
+            OnEffectHitTarget += SpellEffectFn(spell_dh_first_blood_SpellScript::HandleHit, EFFECT_1, SPELL_EFFECT_SCHOOL_DAMAGE);
         }
     };
 
@@ -405,7 +418,7 @@ public:
     }
 };
 
-// Fel Rush Damage - 223107
+// Fel Rush Damage - 192611
 class spell_dh_fel_rush_damage : public SpellScript
 {
     PrepareSpellScript(spell_dh_fel_rush_damage);
@@ -425,7 +438,10 @@ class spell_dh_fel_rush_damage : public SpellScript
 
         targets.clear();
         std::list<Unit*> units;
-        caster->GetAttackableUnitListInRange(units, 25.f);
+        float radius = GetSpellInfo()->GetEffect(EFFECT_0)->CalcRadius(caster);
+        if (radius <= 0.0f)
+            radius = 23.0f; // SpellRadius 索引 63，观察窗口，非 Dummy
+        caster->GetAttackableUnitListInRange(units, radius);
         units.remove_if([caster](Unit* unit)
         {
             return !caster->HasInLine(unit, 6.f, caster->GetObjectScale());
@@ -444,21 +460,11 @@ class spell_dh_fel_rush_damage : public SpellScript
                 caster->CastSpell(caster, SPELL_DH_FEL_MASTERY_FURY, true);
     }
 
-    void HandleOnHit()
-    {
-        if (GetCaster() && GetHitUnit())
-        {
-            int32 attackPower = GetCaster()->m_unitData->AttackPower / 100 * 25.3f;
-            SetHitDamage(attackPower);        
-        }
-    }
-
     void Register() override
     {
         OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_dh_fel_rush_damage::FilterTargets, EFFECT_0, TARGET_UNIT_CONE_ENTRY_129);
         OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_dh_fel_rush_damage::CountTargets, EFFECT_0, TARGET_UNIT_CONE_ENTRY_129);
         OnCast += SpellCastFn(spell_dh_fel_rush_damage::HandleCast);
-        OnHit += SpellHitFn(spell_dh_fel_rush_damage::HandleOnHit);
     }
 };
 
@@ -732,15 +738,21 @@ public:
             return true;
         }
 
-        void HandlePeriodic(AuraEffect const* /*aurEff*/)
+        void HandlePeriodic(AuraEffect const* aurEff)
         {
             if (Unit* caster = GetCaster())
             {
                 if (!firstTick)
                 {
                     caster->CastSpell(caster, SPELL_DH_EYE_BEAM_DAMAGE, true);
-                    if (int32 energize = caster->GetAuraEffectAmount(SPELL_DH_BLIND_FURY, EFFECT_2))
-                        caster->ModifyPower(POWER_FURY, energize * 2.f / 50.f);
+                    if (AuraEffect const* blind = caster->GetAuraEffect(SPELL_DH_BLIND_FURY, EFFECT_2))
+                    {
+                        int32 dummy200 = blind->GetAmount();
+                        int32 periodMs = aurEff->GetPeriod();
+                        if (periodMs <= 0)
+                            periodMs = 200;
+                        caster->ModifyPower(POWER_FURY, dummy200 * periodMs / IN_MILLISECONDS / 5);
+                    }
                 }
             }
 
@@ -762,10 +774,11 @@ public:
 
                 if (caster->HasAura(SPELL_DH_DEMONIC))
                 {
+                    // 8 秒 = 公开句观察窗口，非 Dummy。213410 Dummy 是 0。禁止 10 秒分支。
                     if (Aura* aur = caster->GetAura(SPELL_DH_METAMORPHOSIS_HAVOC))
                         aur->ModDuration(8 * IN_MILLISECONDS);
                     else if (Aura* aur = caster->AddAura(SPELL_DH_METAMORPHOSIS_HAVOC, caster))
-                        aur->SetDuration(10 * IN_MILLISECONDS);
+                        aur->SetDuration(8 * IN_MILLISECONDS);
                 }
             }
         }
@@ -844,10 +857,15 @@ public:
         void HandleEffectProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
         {
             PreventDefaultAction();
-
-            if (Unit* caster = GetCaster())
-                if (Player* player = caster->ToPlayer())
-                    player->CastSpell(player, SPELL_DH_CHAOS_STRIKE_PROC, true);
+            Player* player = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+            if (!player)
+                return;
+            // 40 = Wowhead 8.0 / 常见私服观察窗口，非 Dummy。162794 Dummy 30 是施法壳。
+            if (!roll_chance_i(40))
+                return;
+            player->CastSpell(player, SPELL_DH_CHAOS_STRIKE_PROC, true);
+            if (AuraEffect const* cycle = player->GetAuraEffect(SPELL_DH_CYCLE_OF_HATRED, EFFECT_0))
+                player->GetSpellHistory()->ModifyCooldown(SPELL_DH_METAMORPHOSIS_HAVOC_CAST, -cycle->GetAmount() * IN_MILLISECONDS);
         }
 
         bool CheckProc(ProcEventInfo& eventInfo)
@@ -890,6 +908,9 @@ public:
 
             if (!GetCaster()->IsFalling())
                 return SPELL_FAILED_NOT_ON_GROUND;
+
+            if (GetCaster()->HasAura(SPELL_DH_SHAMAN_HEX))
+                return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
 
             return SPELL_CAST_OK;
         }
@@ -938,6 +959,7 @@ public:
 
         bool CheckProc(ProcEventInfo& eventInfo)
         {
+            // 只认 185123，不要扩 204157
             if (eventInfo.GetSpellInfo()->Id == SPELL_DH_THROW_GLAIVE)
                 return true;
             return false;
@@ -1052,14 +1074,47 @@ public:
 
         void Register() override
         {
-            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dh_last_resort_AuraScript::CalcAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
-            OnEffectAbsorb += AuraEffectAbsorbFn(spell_dh_last_resort_AuraScript::HandleAbsorb, EFFECT_0);
+            // 209258 效果 0 是 Aura 316，进不了学派吸收收集。致死 Dummy 30 走 PlayerScript last_resort_lethal。
         }
     };
 
     AuraScript* GetAuraScript() const override
     {
         return new spell_dh_last_resort_AuraScript();
+    }
+};
+
+class last_resort_lethal : public PlayerScript
+{
+public:
+    last_resort_lethal() : PlayerScript("last_resort_lethal") { }
+
+    void OnDamage(Unit* /*attacker*/, Unit* victim, uint32& damage, SpellInfo const* /*spellProto*/)
+    {
+        if (!victim || !victim->IsPlayer())
+            return;
+        Aura* lastResort = victim->GetAura(SPELL_DH_LAST_RESORT);
+        if (!lastResort)
+            return;
+        if (damage < victim->GetHealth())
+            return;
+        if (victim->HasAura(SPELL_DH_LAST_RESORT_DEBUFF))
+            return;
+
+        int32 healPct = 30;
+        if (SpellEffectInfo const* dummy = lastResort->GetSpellInfo()->GetEffect(EFFECT_1))
+            healPct = dummy->BasePoints; // Dummy 30。不要改 Dummy。
+
+        int32 healAmount = int32(victim->CountPctFromMaxHealth(healPct));
+        HealInfo healInfo(victim, victim, uint32(healAmount), lastResort->GetSpellInfo(), lastResort->GetSpellInfo()->GetSchoolMask());
+        victim->HealBySpell(healInfo);
+        victim->AddAura(SPELL_DH_METAMORPHOSIS_VENGEANCE, victim);
+        victim->CastSpell(victim, SPELL_DH_LAST_RESORT_DEBUFF, true);
+        lastResort->Remove();
+        if (victim->GetHealth() > 1)
+            damage = victim->GetHealth() - 1;
+        else
+            damage = 0;
     }
 };
 
@@ -1380,53 +1435,65 @@ public:
             if (!caster)
                 return;
 
-            // Consume all soul fragments in 25 yards;
-            std::vector<std::vector<AreaTrigger*>> fragments;
-            fragments.push_back(caster->GetAreaTriggers(SPELL_DH_SHATTERED_SOULS));
-            fragments.push_back(caster->GetAreaTriggers(SPELL_DH_SHATTERED_SOULS_DEMON));
-            fragments.push_back(caster->GetAreaTriggers(SPELL_DH_LESSER_SOUL_SHARD));
-            int32 range = GetEffectInfo()->BasePoints;
+            std::vector<AreaTrigger*> nearby;
+            int32 range = GetSpellInfo()->GetEffect(EFFECT_0)->BasePoints; // Dummy 25
+            int32 maxFrags = GetSpellInfo()->GetEffect(EFFECT_2)->BasePoints; // Dummy 2
 
-            for (std::vector<AreaTrigger*> vec : fragments)
+            for (uint32 spellId : { SPELL_DH_SHATTERED_SOULS, SPELL_DH_SHATTERED_SOULS_DEMON, SPELL_DH_LESSER_SOUL_SHARD })
             {
-                for (AreaTrigger* at : vec)
+                for (AreaTrigger* at : caster->GetAreaTriggers(spellId))
                 {
-                    if (!caster->IsWithinDist(at, range))
-                        continue;
+                    if (at && caster->IsWithinDist(at, range))
+                        nearby.push_back(at);
+                }
+            }
 
-                    if (TempSummon * tempSumm = caster->SummonCreature(WORLD_TRIGGER, at->GetPositionX(), at->GetPositionY(), at->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN, 100))
+            std::sort(nearby.begin(), nearby.end(), [caster](AreaTrigger const* a, AreaTrigger const* b)
+            {
+                return caster->GetDistance(a) < caster->GetDistance(b);
+            });
+
+            int32 consumed = 0;
+            for (AreaTrigger* at : nearby)
+            {
+                if (consumed >= maxFrags)
+                    break;
+
+                if (TempSummon * tempSumm = caster->SummonCreature(WORLD_TRIGGER, at->GetPositionX(), at->GetPositionY(), at->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN, 100))
+                {
+                    tempSumm->SetFaction(caster->getFaction());
+                    tempSumm->SetSummonerGUID(caster->GetGUID());
+                    int32 bp = 0;
+                    switch (at->GetTemplate()->Id)
                     {
-                        tempSumm->SetFaction(caster->getFaction());
-                        tempSumm->SetSummonerGUID(caster->GetGUID());
-                        int32 bp = 0;
-                        switch (at->GetTemplate()->Id)
-                        {
-                            case 6007:
-                            case 5997:
-                                bp = SPELL_DH_SOUL_FRAGMENT_HEAL_VENGEANCE;
-                                break;
-                            case 6710:
-                                bp = SPELL_DH_LESSER_SOUL_SHARD_HEAL;
-                                break;
-                        }
-                        caster->CastCustomSpell(SPELL_DH_CONSUME_SOUL_MISSILE, SPELLVALUE_BASE_POINT0, bp, tempSumm, true);
-                        if (at->GetTemplate()->Id == 6007)
-                            caster->CastSpell(caster, SPELL_DH_SOUL_FRAGMENT_DEMON_BONUS, true);
-
-                        if (caster->HasAura(SPELL_DH_FEED_THE_DEMON))
-                            caster->GetSpellHistory()->ReduceChargeCooldown(sSpellMgr->GetSpellInfo(SPELL_DH_DEMON_SPIKES)->ChargeCategoryId, 1000);
-
-                        if (caster->HasAura(SPELL_DH_PAINBRINGER))
-                            caster->CastSpell(caster, SPELL_DH_PAINBRINGER_BUFF, true);
-
-                        if (AuraEffect* soulBarrier = caster->GetAuraEffect(SPELL_DH_SOUL_BARRIER, EFFECT_0))
-                        {
-                            int32 amount = soulBarrier->GetAmount() + (float(sSpellMgr->GetSpellInfo(SPELL_DH_SOUL_BARRIER)->GetEffect(EFFECT_1)->BasePoints) / 100.f) * caster->GetTotalAttackPowerValue(BASE_ATTACK);
-                            soulBarrier->SetAmount(amount);
-                        }
-
-                        at->SetDuration(0);
+                        case 6007:
+                        case 5997:
+                            bp = SPELL_DH_SOUL_FRAGMENT_HEAL_VENGEANCE;
+                            break;
+                        case 6710:
+                            bp = SPELL_DH_LESSER_SOUL_SHARD_HEAL;
+                            break;
                     }
+                    caster->CastCustomSpell(SPELL_DH_CONSUME_SOUL_MISSILE, SPELLVALUE_BASE_POINT0, bp, tempSumm, true);
+                    if (at->GetTemplate()->Id == 6007)
+                        caster->CastSpell(caster, SPELL_DH_SOUL_FRAGMENT_DEMON_BONUS, true);
+
+                    if (AuraEffect const* feed = caster->GetAuraEffect(SPELL_DH_FEED_THE_DEMON, EFFECT_0))
+                        caster->GetSpellHistory()->ReduceChargeCooldown(
+                            sSpellMgr->GetSpellInfo(SPELL_DH_DEMON_SPIKES)->ChargeCategoryId,
+                            feed->GetAmount() * IN_MILLISECONDS / 10);
+
+                    if (caster->HasAura(SPELL_DH_PAINBRINGER))
+                        caster->CastSpell(caster, SPELL_DH_PAINBRINGER_BUFF, true);
+
+                    if (AuraEffect* soulBarrier = caster->GetAuraEffect(SPELL_DH_SOUL_BARRIER, EFFECT_0))
+                    {
+                        int32 amount = soulBarrier->GetAmount() + (float(sSpellMgr->GetSpellInfo(SPELL_DH_SOUL_BARRIER)->GetEffect(EFFECT_1)->BasePoints) / 100.f) * caster->GetTotalAttackPowerValue(BASE_ATTACK);
+                        soulBarrier->SetAmount(amount);
+                    }
+
+                    at->SetDuration(0);
+                    ++consumed;
                 }
             }
         }
@@ -1465,7 +1532,7 @@ class spell_dh_soul_cleave_damage : public SpellScript
         if (!caster)
             return;
 
-        float dmg = GetHitDamage() * 2;
+        float dmg = GetHitDamage();
         dmg *= caster->Variables.GetValue<float>("lastSoulCleaveMod");
         SetHitDamage(dmg);
     }
@@ -2527,7 +2594,7 @@ class spell_dh_shear_proc : public SpellScriptLoader
                 int32 procChance = 100;
                 if (eventInfo.GetSpellInfo()->Id == SPELL_DH_SHEAR)
                 {
-                    procChance = 15;
+                    procChance = GetSpellInfo()->GetEffect(EFFECT_1)->BasePoints; // Dummy 8
                     procChance += caster->GetAuraEffectAmount(SPELL_DH_SHATTER_THE_SOULS, EFFECT_0);
                 }
 
@@ -2923,7 +2990,7 @@ class spell_dh_immolation_aura_initial : public SpellScriptLoader
         }
 };
 
-// 209795 - Fracture
+// 263642
 class spell_dh_fracture : public SpellScriptLoader
 {
     public:
@@ -2939,7 +3006,8 @@ class spell_dh_fracture : public SpellScriptLoader
                 if (!caster)
                     return;
 
-                for (uint8 i = 0; i < 2; ++i)
+                int32 shards = GetSpellInfo()->GetEffect(EFFECT_0)->BasePoints; // Dummy 2
+                for (int32 i = 0; i < shards; ++i)
                     caster->CastCustomSpell(SPELL_DH_SHATTERED_SOULS_MISSILE, SPELLVALUE_BASE_POINT0, SPELL_DH_LESSER_SOUL_SHARD, caster, true);
             }
 
@@ -3064,28 +3132,38 @@ class spell_dh_spirit_bomb : public SpellScriptLoader
         {
             PrepareSpellScript(spell_dh_spirit_bomb_SpellScript);
 
-            bool tryCastDamage(Unit* caster, Unit* target, uint32 spellId)
-            {
-                if (AreaTrigger* at = caster->GetAreaTrigger(spellId))
-                {
-                    caster->CastSpell(target, SPELL_DH_SPIRIT_BOMB_DAMAGE, true);
-                    at->Remove();
-                    return true;
-                }
-
-                return false;
-            }
-
             void HandleHit(SpellEffIndex /*effIndex*/)
             {
                 Unit* caster = GetCaster();
-                Unit* target = GetHitUnit();
-                if (!caster || !target)
+                if (!caster)
                     return;
 
+                // 247454 效果 0/1 ImplicitTarget_0 = TARGET_UNIT_CASTER (1)，自身施放。
+                // 不要 GetExplTargetUnit() 空则 return：无选中单位时吃残片 / 247455 / 脆弱整段都不跑。
+                // 不要用 GetHitUnit() / GetExplTargetUnit() 当脆弱单体目标。
+                // 247455 是施法者落点+范围敌人（8 码）。224509 效果 0 也是落点+范围敌人。
+                float range = float(GetSpellInfo()->GetEffect(EFFECT_0)->BasePoints); // Dummy 25
+                int32 maxFrags = GetSpellInfo()->GetEffect(EFFECT_1)->BasePoints;     // Dummy 5
+                int32 consumed = 0;
+
                 for (uint32 spellId : { SPELL_DH_LESSER_SOUL_SHARD, SPELL_DH_SHATTERED_SOULS, SPELL_DH_SHATTERED_SOULS_DEMON })
-                    if (tryCastDamage(caster, target, spellId))
+                {
+                    for (AreaTrigger* at : caster->GetAreaTriggers(spellId))
+                    {
+                        if (consumed >= maxFrags)
+                            break;
+                        if (!at || !caster->IsWithinDist(at, range))
+                            continue;
+                        at->Remove();
+                        ++consumed;
+                    }
+                    if (consumed >= maxFrags)
                         break;
+                }
+
+                // 以施法者为中心各 CastSpell 一次。表上是落点范围敌人，绕自身炸。禁止 218677。
+                caster->CastSpell(caster, SPELL_DH_SPIRIT_BOMB_DAMAGE, true);
+                caster->CastSpell(caster, SPELL_DH_FRAILTY, true);
             }
 
             SpellCastResult CheckCast()
@@ -3102,7 +3180,7 @@ class spell_dh_spirit_bomb : public SpellScriptLoader
 
             void Register()
             {
-                OnEffectHitTarget += SpellEffectFn(spell_dh_spirit_bomb_SpellScript::HandleHit, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget += SpellEffectFn(spell_dh_spirit_bomb_SpellScript::HandleHit, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
                 OnCheckCast += SpellCheckCastFn(spell_dh_spirit_bomb_SpellScript::CheckCast);
             }
         };
@@ -3694,7 +3772,6 @@ class spell_demon_hunter_chaos_strike : public SpellScript
         // Chaos Strike and Annihilation have a mainhand and an offhand spell, but the crit chance should be the same.
         float criticalChances = caster->GetUnitSpellCriticalChance(target, GetSpell(), nullptr, GetSpellInfo()->GetSchoolMask(), BASE_ATTACK);
         caster->Variables.Set("Spells.ChaosStrikeCrit", roll_chance_f(criticalChances));
-        caster->CastSpell(nullptr, SPELL_DH_CHAOS_STRIKE_PROC, true);
     }
 
     void Register()
@@ -3904,21 +3981,25 @@ public:
 
         Position fragmentPos = victim->GetRandomNearPosition(5.0f);
 
-        if (victim->GetCreatureType() == CREATURE_TYPE_DEMON && roll_chance_f(30))
+        int32 chance = 0;
+        if (AuraEffect const* aur = player->GetAuraEffect(SPELL_DH_SHATTERED_SOULS_HAVOC, EFFECT_0))
+            chance = aur->GetAmount();
+        else if (AuraEffect const* aur = player->GetAuraEffect(SPELL_DH_SHATTERED_SOULS_VENGEANCE, EFFECT_0))
+            chance = aur->GetAmount();
+
+        if (victim->GetCreatureType() == CREATURE_TYPE_DEMON && roll_chance_i(chance))
         {
-            //player->CastSpell(nullptr, SPELL_DH_SHATTERED_SOULS_MISSILE, true);
-            victim->CastSpell(nullptr, SPELL_DH_SHATTERED_SOULS_DEMON, true); //at
-            player->CastSpell(nullptr, SPELL_DH_SOUL_FRAGMENT_DEMON_BONUS, true); //buff
+            victim->CastSpell(nullptr, SPELL_DH_SHATTERED_SOULS_DEMON, true);
+            player->CastSpell(nullptr, SPELL_DH_SOUL_FRAGMENT_DEMON_BONUS, true);
         }
 
-        if (victim->GetCreatureType() != CREATURE_TYPE_DEMON && roll_chance_f(30))
-        {
-            //victim->CastSpell(nullptr, SPELL_DH_SHATTERED_SOULS_MISSILE, true);
-            player->CastSpell(fragmentPos, SPELL_DH_SHATTERED_SOULS, true); //10665
-        }
+        if (victim->GetCreatureType() != CREATURE_TYPE_DEMON && roll_chance_i(chance))
+            player->CastSpell(fragmentPos, SPELL_DH_SHATTERED_SOULS, true);
 
-        if (player->HasAura(SPELL_DH_FEED_THE_DEMON))
-            player->GetSpellHistory()->ReduceChargeCooldown(sSpellMgr->GetSpellInfo(SPELL_DH_DEMON_SPIKES)->ChargeCategoryId, 1000);
+        if (AuraEffect const* feed = player->GetAuraEffect(SPELL_DH_FEED_THE_DEMON, EFFECT_0))
+            player->GetSpellHistory()->ReduceChargeCooldown(
+                sSpellMgr->GetSpellInfo(SPELL_DH_DEMON_SPIKES)->ChargeCategoryId,
+                feed->GetAmount() * IN_MILLISECONDS / 10);
 
         if (player->HasAura(SPELL_DH_PAINBRINGER))
             player->CastSpell(player, SPELL_DH_PAINBRINGER_BUFF, true);
@@ -3936,27 +4017,8 @@ class spell_dh_annihilation : public SpellScript
 {
     PrepareSpellScript(spell_dh_annihilation);
 
-    void HandleHit(SpellMissInfo /*missInfo*/)
-    {
-        if (Unit* caster = GetCaster())
-        {
-            Unit* target = caster->GetVictim();
-            if (!target)
-                return;
-
-            float attackPower = caster->GetTotalAttackPowerValue(BASE_ATTACK) + 28.7f;
-            float damage = GetHitDamage();
-
-            SetHitDamage(damage + attackPower);
-
-            if (roll_chance_f(20))
-                caster->ModifyPower(POWER_FURY, +20);
-        }
-    }
-
     void Register() override
     {
-        BeforeHit += BeforeSpellHitFn(spell_dh_annihilation::HandleHit);
     }
 };
 
@@ -3973,14 +4035,18 @@ struct at_shattered_soul_fragment : AreaTriggerAI
         switch (at->GetEntry())
         {
         case 10665:
-            if (at->GetCaster()->ToPlayer()->GetSpecializationId() == TALENT_SPEC_DEMON_HUNTER_HAVOC)
-                at->GetCaster()->CastSpell(at->GetCaster(), SPELL_DH_SOUL_FRAGMENT_HEAL_25_HAVOC, true);
+            if (unit->ToPlayer()->GetSpecializationId() == TALENT_SPEC_DEMON_HUNTER_HAVOC)
+                unit->CastSpell(unit, SPELL_DH_SOUL_FRAGMENT_HEAL_25_HAVOC, true);
+            else if (unit->ToPlayer()->GetSpecializationId() == TALENT_SPEC_DEMON_HUNTER_VENGEANCE)
+                unit->CastSpell(unit, SPELL_DH_SOUL_FRAGMENT_HEAL_VENGEANCE, true);
             at->Remove();
             break;
 
         case 10666:
-            if (at->GetCaster()->ToPlayer()->GetSpecializationId() == TALENT_SPEC_DEMON_HUNTER_HAVOC)
-                at->GetCaster()->CastSpell(at->GetCaster(), SPELL_DH_SOUL_FRAGMENT_HEAL_25_HAVOC, true);
+            if (unit->ToPlayer()->GetSpecializationId() == TALENT_SPEC_DEMON_HUNTER_HAVOC)
+                unit->CastSpell(unit, SPELL_DH_SOUL_FRAGMENT_HEAL_25_HAVOC, true);
+            else if (unit->ToPlayer()->GetSpecializationId() == TALENT_SPEC_DEMON_HUNTER_VENGEANCE)
+                unit->CastSpell(unit, SPELL_DH_SOUL_FRAGMENT_HEAL_VENGEANCE, true);
             at->Remove();
             break;
         }
@@ -3997,7 +4063,10 @@ class spell_dh_felblade : public SpellScript
         if (!GetCaster() || !GetHitUnit())
             return;
 
-        if (GetCaster()->GetDistance2d(GetHitUnit()) <= 15.0f)
+        float range = GetSpellInfo()->GetMaxRange(false);
+        if (range <= 0.0f)
+            range = 15.0f; // 观察窗口，非 Dummy；232893 Dummy 是 0
+        if (GetCaster()->GetDistance2d(GetHitUnit()) <= range)
         {
             GetCaster()->CastSpell(GetHitUnit(), SPELL_DH_FELBLADE_CHARGE, true);
             GetCaster()->CastSpell(GetHitUnit(), SPELL_DH_FELBLADE_DAMAGE, true);
@@ -4007,6 +4076,26 @@ class spell_dh_felblade : public SpellScript
     void Register()
     {
         OnEffectHitTarget += SpellEffectFn(spell_dh_felblade::HandleOnHit, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// 162243 - Demon's Bite
+class spell_dh_demons_bite : public SpellScript
+{
+    PrepareSpellScript(spell_dh_demons_bite);
+
+    void HandleHit(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        if (AuraEffect const* hunger = caster->GetAuraEffect(SPELL_DH_UNENDING_HUNGER, EFFECT_0))
+            caster->ModifyPower(POWER_FURY, hunger->GetAmount());
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_dh_demons_bite::HandleHit, EFFECT_1, SPELL_EFFECT_SCHOOL_DAMAGE);
     }
 };
 
@@ -4035,7 +4124,7 @@ void AddSC_demon_hunter_spell_scripts()
     new spell_dh_soul_cleave();
     RegisterSpellScript(spell_dh_soul_cleave_damage);
     new spell_dh_fiery_brand();
-    new spell_dh_fiery_brand_absorb();
+    // new spell_dh_fiery_brand_absorb();
     RegisterAuraScript(spell_dh_fiery_brand_dot);
     new spell_dh_razor_spikes();
     new spell_dh_soul_barrier();
@@ -4097,7 +4186,9 @@ void AddSC_demon_hunter_spell_scripts()
     RegisterAreaTriggerAI(at_demon_hunter_mana_rift);
     RegisterAreaTriggerAI(at_demon_hunter_demonic_trample);
     RegisterPlayerScript(dh_shattered_souls);
+    RegisterPlayerScript(last_resort_lethal);
     RegisterSpellScript(spell_dh_annihilation);
     RegisterAreaTriggerAI(at_shattered_soul_fragment);
     RegisterSpellScript(spell_dh_felblade);
+    RegisterSpellScript(spell_dh_demons_bite);
 }
