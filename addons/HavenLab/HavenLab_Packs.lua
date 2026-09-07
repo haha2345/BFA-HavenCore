@@ -3669,6 +3669,121 @@ HL.PACKS = {
         end,
     },
 
+    rog_outlaw_sinister = {
+        key = "rog_outlaw_sinister",
+        title = "狂徒-影袭Dummy35打197834卸1752",
+        order = 128,
+        hint = "193315 Dummy 35/100。199603 Aura 107 30 不是 Dummy。65 不得进 Dummy。1752 不是狂徒键。",
+        startText = "【影袭】CLEU 必须是 193315，不要 1752。额外一击必须是 197834，不要 DealSpellDamage 抄伤。有 199603 时 chance = Dummy35 + 30。",
+        startPrint = "请对木桩按影袭 193315。",
+        ids = { 193315, 1752, 197834, 199603, 195627 },
+        labels = {
+            [193315] = "影袭Dummy35",
+            [1752] = "旧影袭(不应出现)",
+            [197834] = "额外一击",
+            [199603] = "骷髅黑帆Aura107 30",
+            [195627] = "可乘之机",
+        },
+        chain = {
+            { id = 193315, role = "影袭", want = "cast",
+              hintFail = "没有 193315。不要用 1752。" },
+        },
+        extraVerdict = function()
+            return {
+                "197834 必须能出现。65/30 不得进 Dummy 35。1752 不应出现。",
+            }
+        end,
+    },
+
+    rog_outlaw_rtb = {
+        key = "rog_outlaw_rtb",
+        title = "狂徒-骨骰79/20/1灌铅至少2",
+        order = 129,
+        hint = "193316 Dummy 40 不当概率。79/20/1 观察窗口非 DBC。256171 Dummy 30 不当 2 枚。不要读 240837。",
+        startText = "【骨骰】多次 193316 应 1 枚为主、偶尔 2、极少 6。骰子号 193356/199600/193358/193357/199603/193359。有 256171 时至少 2 枚。不要 15/33/40。冲动不重做急速。",
+        startPrint = "请多次掷命运骨骰，再点灌铅+冲动测至少 2 枚。",
+        ids = { 193316, 256170, 256171, 240837, 13750, 193356, 199600, 193358, 193357, 199603, 193359 },
+        labels = {
+            [193316] = "命运骨骰Dummy40",
+            [256170] = "灌铅骰子",
+            [256171] = "灌铅buff Dummy30",
+            [240837] = "艾泽里特残留(不应读)",
+            [13750] = "冲动(不重做)",
+            [193356] = "Broadside",
+            [199600] = "Buried Treasure Aura85",
+            [193358] = "Grand Melee",
+            [193357] = "Ruthless Precision",
+            [199603] = "Skull and Crossbones",
+            [193359] = "True Bearing",
+        },
+        chain = {
+            { id = 193316, role = "命运骨骰", want = "cast",
+              hintFail = "没有 193316。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 40 不是概率。79/20/1 注释非 DBC。不要读 240837。不要重做 13750。",
+            }
+        end,
+    },
+
+    rog_outlaw_true_bearing = {
+        key = "rog_outlaw_true_bearing",
+        title = "狂徒-TrueBearing认2098与Restless Dummy10",
+        order = 130,
+        hint = "193359 Aura 107 10 不是 Dummy。毫秒=10×100×CP。CheckProc 必须有 2098。79096 Dummy 10 是另一号。152150 不验收。2098 与 196819 共用 eviscerate 禁止只改一边。",
+        startText = "【True Bearing / Restless / 斩击】点 True Bearing 后按斩击 2098，冷却必须减。不要只认刺骨 196819。Restless Blades Dummy 10 减冲动/疾跑等。两专精共用 spell_rog_eviscerate，禁止只改 2098 公式。",
+        startPrint = "请点 True Bearing，用斩击 2098 花连击，看冲动冷却。",
+        ids = { 193359, 2098, 196819, 79096, 152150, 13750 },
+        labels = {
+            [193359] = "True Bearing Aura107 10",
+            [2098] = "斩击Dispatch",
+            [196819] = "刺骨(敏锐键)",
+            [79096] = "Restless Blades Dummy10",
+            [152150] = "死亡从天而降(不验收)",
+            [13750] = "冲动",
+        },
+        chain = {
+            { id = 2098, role = "斩击", want = "cast",
+              hintFail = "没有 2098。不要用 196819 验收狂徒。" },
+        },
+        extraVerdict = function()
+            return {
+                "2098 必须触发 True Bearing。−2000 已删。152150 不验收。不要只改 eviscerate 一边。",
+            }
+        end,
+    },
+
+    rog_outlaw_flurry_rush = {
+        key = "rog_outlaw_flurry_rush",
+        title = "狂徒-乱舞Dummy30潜能75刀锋冲刺武器大师200733",
+        order = 131,
+        hint = "13877 Dummy 30 不是 100%。35551 Aura 42 75 不是 20% 也不是主手 30%。271877 Dummy 100 不当 100% 伤。200733 Aura 107 10。禁止 roll 6。禁止把 193537 的 15 抄来。",
+        startText = "【乱舞/潜能/刀锋/武器大师】两只假人开乱舞，溅射约 Dummy 30%。副手平砍约 75% 触发 35546。刀锋冲刺 CLEU 271881。点 200733 约 10% 额外一击，不要 6%，不要 193537。",
+        startPrint = "请对两只假人开乱舞，再测副手回能、刀锋冲刺、狂徒武器大师。",
+        ids = { 13877, 22482, 35551, 35546, 271877, 271881, 200733, 193537, 86392 },
+        labels = {
+            [13877] = "剑刃乱舞Dummy30",
+            [22482] = "乱舞溅射",
+            [35551] = "战斗潜能Aura42 75",
+            [35546] = "潜能回能",
+            [271877] = "刀锋冲刺Dummy100",
+            [271881] = "刀锋伤Dummy200",
+            [200733] = "狂徒武器大师Aura107 10",
+            [193537] = "敏锐武器大师(不要抄15)",
+            [86392] = "Main Gauche(不要用)",
+        },
+        chain = {
+            { id = 13877, role = "剑刃乱舞", want = "cast",
+              hintFail = "没有 13877。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 30 不是 100%。75 不是 Dummy 也不是 20%。不要 86392。不要把 15 抄到狂徒。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
