@@ -3063,6 +3063,143 @@ HL.PACKS = {
         end,
     },
 
+    hun_mm_rapid_fire = {
+        key = "hun_mm_rapid_fire",
+        title = "射击-急速射击257044",
+        order = 106,
+        hint = "Dummy 10/40 都不当跳数。周期 330ms 打 257045+263585。Energize 1 不是 Dummy。",
+        startText = "【急速射击】先导入 _08。120 射击对 131989 引导 257044。CLEU 必须有 257045 与 263585。不要手写 40 跳。9.0 的 2 秒弃用。测弹射必须 3+ 假人：先 257620 上 257622，再引导急速。Apply 时若有 257622 则 _trickShots=true 并 ModStackAmount(-1) 一次。整段引导额外目标都要有 257045。不要只弹首跳。不要后续跳再查 257622。单目标看不见弹射。",
+        startPrint = "请引导急速射击 257044。测弹射请站到 3 个以上假人前。",
+        ids = { 257044, 257045, 263585, 257622, 257620 },
+        labels = {
+            [257044] = "急速射击",
+            [257045] = "急速射击伤害",
+            [263585] = "急速射击集中",
+            [257622] = "技巧射击buff",
+            [257620] = "射击多重",
+        },
+        chain = {
+            { id = 257045, role = "急速射击伤害", want = "damage",
+              hintFail = "没有 257045。确认 _08 已导入且 AuraScript 挂 PERIODIC_DUMMY。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 10 不是 SimC 跳数。Dummy 40 不得当 40 跳。3+ 假人整段引导额外目标都要有 257045。不要只弹首跳。不要后续跳再查 257622。只上 257622 不算完成。",
+            }
+        end,
+    },
+
+    hun_mm_aimed_precise = {
+        key = "hun_mm_aimed_precise",
+        title = "射击-瞄准上260242",
+        order = 107,
+        hint = "19434 Dummy 50 不得当首次命中。260242 Aura 108 75，无 Dummy。",
+        startText = "【瞄准】按 19434。必须 CastSpell(GetCaster(), 260242)，自身应有 260242，最多 2 层。木桩身上不要 260242。不要首次命中 +50%。不要 199522。稳固 56641 应回 Dummy 10 集中。测弹射必须 3+ 假人：先 257620 上 257622，再瞄准，额外目标 CLEU 也要有 19434 伤（半径 10 码，不要抄 199522 的 30 码；最多 EFFECT_0 Dummy 5），然后 257622 掉一层。",
+        startPrint = "请按瞄准射击，看自身 260242。测弹射请站到 3 个以上假人前。",
+        ids = { 19434, 260242, 199522, 56641, 257622, 257620 },
+        labels = {
+            [19434] = "瞄准射击",
+            [260242] = "精确射击(自身)",
+            [199522] = "军团天赋(不应再吃)",
+            [56641] = "稳固射击",
+            [257622] = "技巧射击buff",
+            [257620] = "射击多重",
+        },
+        chain = {
+            { id = 260242, role = "精确射击", want = "aura-self",
+              hintFail = "没有 260242。必须 CastSpell(GetCaster(), SPELL_HUNTER_PRECISE_SHOTS, true)。禁止对木桩 Cast 260242。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 50 不是首次命中，也不是精确射击层数。75 不是 Dummy。260242 必须在自身。弹射半径写死 10 码，Dummy 5 是额外目标数不是码数。不要抄 199522 的 30 码。3+ 目标才能看见 19434 弹射。只上 257622 不算完成。",
+            }
+        end,
+    },
+
+    hun_mm_trueshot = {
+        key = "hun_mm_trueshot",
+        title = "射击-百发百中288613",
+        order = 108,
+        hint = "玩家键 288613 不是 193526。Dummy 1 不读。Aura 286=HandleUnused 不会跳。Aura 148 不是周期。OnAuraUpdate 自管 1000 ms 读效果 2 基点 225。公开句 60% 不写。",
+        startText = "【百发百中】CLEU 必须是 288613，不要 193526。开 288613 后立刻打一发瞄准，必须看见第二层充能明显快于平时 12 秒（每秒 ReduceChargeCooldown 1250 ms）。只 want=cast 288613 不算过。不要按 60% 对急速射击冷却。不要改 SpellAuraEffects.cpp。不要 OnEffectPeriodic 挂 EFFECT_0。",
+        startPrint = "请开 288613，再打瞄准看充能是否加快。只开技能绿了不算过。",
+        ids = { 288613, 193526, 19434, 257044 },
+        labels = {
+            [288613] = "百发百中",
+            [193526] = "旧Trueshot(不应作为玩家键)",
+            [19434] = "瞄准射击(看充能加快)",
+            [257044] = "急速射击(本波不对60%)",
+        },
+        chain = {
+            { id = 288613, role = "百发百中", want = "aura-self",
+              hintFail = "没有 288613 光环。确认 _08 已导入。" },
+            { id = 19434, role = "瞄准射击", want = "cast",
+              hintFail = "开 288613 后必须打瞄准才能看见充能加快。只 want=cast 288613 不算过。" },
+        },
+        extraVerdict = function()
+            return {
+                "必须看见瞄准充能恢复变快。只开 288613 不算过。不要写 60。Dummy 1 不读。Aura 286 不实现。不要改 SpellAuraEffects.cpp。",
+            }
+        end,
+    },
+
+    hun_mm_multishot = {
+        key = "hun_mm_multishot",
+        title = "射击-多重257620不是2643",
+        order = 109,
+        hint = "257620 无 Dummy。半径 10 码。257621 EFFECT_1 Dummy 3 门槛、EFFECT_0 Dummy 5 额外目标数（不是码数）。瞄准弹射半径写死 10 码，不要抄 199522 的 30 码。上 257622 不够，瞄准/急速必须弹射。BM 2643 不要当射击键。",
+        startText = "【多重】射击动作条 CLEU 必须是 257620，不要 2643。必须 3 个以上假人：应上 257622，然后立刻打瞄准或急速，额外目标 CLEU 要有 19434 或 257045，257622 掉一层。只上 buff 不算 MM AoE 完成。不要打 185365。",
+        startPrint = "请对 3 个以上假人按射击多重 257620，再打瞄准或急速看弹射。",
+        ids = { 257620, 2643, 257621, 257622, 185365, 19434, 257045 },
+        labels = {
+            [257620] = "射击多重",
+            [2643] = "BM多重(不是射击键)",
+            [257621] = "技巧射击被动",
+            [257622] = "技巧射击buff",
+            [185365] = "已删印记(不应出现)",
+            [19434] = "瞄准弹射伤",
+            [257045] = "急速弹射伤",
+        },
+        chain = {
+            { id = 257620, role = "射击多重", want = "cast",
+              hintFail = "没有 257620。确认 _08 已改绑，不要再用 2643。" },
+            { id = 257622, role = "技巧射击buff", want = "aura-self",
+              hintFail = "3+ 目标才上 257622。上了还不够，必须再打瞄准或急速看弹射。" },
+        },
+        extraVerdict = function()
+            return {
+                "2643 是 BM。不要 DELETE beast_cleave。10 码不是 Dummy。Dummy 3 门槛读 EFFECT_1，Dummy 5 额外目标数读 EFFECT_0。只上 257622 不算完成。3+ 目标才能看见弹射。急速整段引导都要有 257045。",
+            }
+        end,
+    },
+
+    hun_mm_lethal_shots = {
+        key = "hun_mm_lethal_shots",
+        title = "射击-夺命Dummy50与观察窗口20%",
+        order = 110,
+        hint = "260393 Dummy 50 = CDR 毫秒×100。20% 是观察窗口，禁止写进 Dummy 50。",
+        startText = "【夺命射击】点天赋 260393。多次奥术或多重后，急速射击冷却应有时 −5 秒。不要每次必减。不要把 50 当 50% 触发率。召唤射击 Dummy 2500 减 288613。",
+        startPrint = "请点夺命射击，多次按奥术，看 257044 冷却。",
+        ids = { 260393, 185358, 257620, 257044, 260404, 288613 },
+        labels = {
+            [260393] = "夺命射击Dummy50",
+            [185358] = "奥术射击",
+            [257620] = "射击多重",
+            [257044] = "急速射击",
+            [260404] = "召唤射击Dummy2500",
+            [288613] = "百发百中",
+        },
+        chain = {
+            { id = 185358, role = "奥术射击", want = "cast",
+              hintFail = "没有 185358。" },
+        },
+        extraVerdict = function()
+            return {
+                "20 不得进 Dummy 50。−5000 必须来自 Dummy×100，不要再写死 20%。",
+            }
+        end,
+    },
+
     hun_bm_barbed = {
         key = "hun_bm_barbed",
         title = "野兽控制-倒刺272790与246152",
