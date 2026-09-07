@@ -2960,6 +2960,215 @@ HL.PACKS = {
         end,
     },
 
+    hun_c_disengage_posthaste = {
+        key = "hun_c_disengage_posthaste",
+        title = "猎人共用-逃脱Posthaste含生存",
+        order = 102,
+        hint = "781 无 Dummy。109215 Dummy 0。118922 不是 Dummy。RangeIndex 50000 不是后跳码数。公开句 20s 是 Rank 2 显示冷却。",
+        startText = "【逃脱】120 猎人（必须含一次生存）点 109215 后按 781，应后跳且有 118922。不要按 50000 码跳。鱼叉上的 118922 保留。分类充能仍是 1×30000 + Rank2 −10000。",
+        startPrint = "请三专精各按一次逃脱，生存必须有 118922。",
+        ids = { 781, 109215, 118922, 231549, 190925 },
+        labels = {
+            [781] = "逃脱",
+            [109215] = "Posthaste",
+            [118922] = "Posthaste加速",
+            [231549] = "逃脱Rank2",
+            [190925] = "鱼叉",
+        },
+        chain = {
+            { id = 781, role = "逃脱", want = "cast",
+              hintFail = "没有 781。确认动作条有逃脱。" },
+        },
+        extraVerdict = function()
+            return {
+                "生存也必须有 118922。75/20/50000 都不得进 Dummy。不要写后跳距离脚本。",
+            }
+        end,
+    },
+
+    hun_c_flare = {
+        key = "hun_c_flare",
+        title = "猎人共用-照明弹1543不是28822",
+        order = 103,
+        hint = "1543 无 Dummy。Trigger 132950。基点 20 不是 Dummy。28822 是旧号 30 秒。",
+        startText = "【照明弹】按 1543。CLEU 不要出现 28822。AT 约 20 秒、约 10 码。潜行目标走进圈应显形（OnUnitEnter 摘 SPELL_AURA_MOD_STEALTH / SPELL_AURA_MOD_INVISIBILITY）。禁止再 Cast 28822，禁止对单位 Cast 132950。",
+        startPrint = "请对地面按照明弹 1543。",
+        ids = { 1543, 132950, 28822 },
+        labels = {
+            [1543] = "照明弹",
+            [132950] = "照明弹AT",
+            [28822] = "旧Flare(不应出现)",
+        },
+        chain = {
+            { id = 1543, role = "照明弹", want = "cast",
+              hintFail = "没有 1543。不要用 28822 当玩家键。" },
+        },
+        extraVerdict = function()
+            return {
+                "28822 不应出现。20 秒不是 Dummy。显形用 RemoveAurasByType，不要 Cast 28822，不要对单位 Cast 132950。",
+            }
+        end,
+    },
+
+    hun_c_tar_trap = {
+        key = "hun_c_tar_trap",
+        title = "猎人共用-焦油Dummy8",
+        order = 104,
+        hint = "187699 Dummy 8 是半径。187700 持续 30 秒。135299 −50% 不是 Dummy。",
+        startText = "【焦油】按 187698。油池约 30 秒，不要 60 秒。减速 135299。半径按 Dummy 8。不要把 8 写成持续秒数。",
+        startPrint = "请放焦油陷阱并踩上去。",
+        ids = { 187698, 187699, 187700, 135299 },
+        labels = {
+            [187698] = "焦油陷阱",
+            [187699] = "焦油AT Dummy8",
+            [187700] = "焦油油池",
+            [135299] = "焦油减速",
+        },
+        chain = {
+            { id = 187698, role = "焦油陷阱", want = "cast",
+              hintFail = "没有 187698。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 8 不是 60 秒。激活持续读 187700，不要写死 60000。",
+            }
+        end,
+    },
+
+    hun_c_baseline_table = {
+        key = "hun_c_baseline_table",
+        title = "猎人共用-宁神打断假死表已表达",
+        order = 105,
+        hint = "19801/147362/187707/5384 不包空脚本。272651 不 INSERT。53480 是 PvP 不验收。wiki 宁神 9.0 弃用。",
+        startText = "【表已表达】宁神 19801 驱散 1 层魔法+1 层激怒，冷却 10 秒。BM/MM 打断 147362，生存 187707，不要写成同一个号。假死 5384 能放。Command Pet 动作条 272651，不要 INSERT 脚本，保持 53271。牺牲咆哮 53480 看见也不要勾完成。",
+        startPrint = "请按宁神、打断、假死各一次。生存用 187707。",
+        ids = { 19801, 147362, 187707, 5384, 272651, 53271, 53480 },
+        labels = {
+            [19801] = "宁神射击",
+            [147362] = "反制射击(BM/MM)",
+            [187707] = "锁喉(SV)",
+            [5384] = "假死",
+            [272651] = "Command Pet",
+            [53271] = "主人的召唤(Cunning)",
+            [53480] = "牺牲咆哮(PvP不验收)",
+        },
+        chain = {
+            { id = 19801, role = "宁神", want = "cast",
+              hintFail = "没有 19801。8.3 有此技能，不要按 wiki 9.0 删掉。" },
+        },
+        extraVerdict = function()
+            return {
+                "不要 INSERT 272651。147362 不是 187707。53480 不验收。",
+            }
+        end,
+    },
+
+    hun_bm_barbed = {
+        key = "hun_bm_barbed",
+        title = "野兽控制-倒刺272790与246152",
+        order = 116,
+        hint = "217200 Dummy 5 不是 3 层。狂乱 272790 无 Dummy。246152 不是 Dummy。不要五次 217207。",
+        startText = "【倒刺射击】必须有宠物。按 217200。宠物应有 272790，猎人应有 246152。CLEU 不要 217207 连击。Dummy 5 不要拿去对层数。缩放数字等 PET，本包只验光环与技能号。",
+        startPrint = "请召唤宠物后按倒刺 217200。",
+        ids = { 217200, 272790, 246152, 217207, 19574, 186254 },
+        labels = {
+            [217200] = "倒刺射击Dummy5",
+            [272790] = "狂乱3层",
+            [246152] = "倒刺回能",
+            [217207] = "军团连击(不应出现)",
+            [19574] = "狂野怒火Dummy12",
+            [186254] = "狂野怒火宠物",
+        },
+        chain = {
+            { id = 217200, role = "倒刺射击", want = "cast",
+              hintFail = "没有 217200。确认动作条是倒刺不是 Dire Frenzy 连击。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 5 不是层数。不要假装缩放已过。Bloodshed 不是 8.3。",
+            }
+        end,
+    },
+
+    hun_bm_kill_command = {
+        key = "hun_bm_kill_command",
+        title = "野兽控制-杀戮命令Dummy112",
+        order = 117,
+        hint = "34026 Dummy 1/112。不是 4.5f。无回能。83381 AP 列空。精通 76657 不搬家。缩放等 PET。",
+        startText = "【杀戮命令】CLEU 34026 + 83381。花 30 集中，不要退还焦点。不要 4.5f。眼镜蛇 193455 应减 Dummy 1 秒。生存键 259489 不要拿来验收 BM。宠物伤害数字等 PET。",
+        startPrint = "请按 BM 杀戮命令 34026。",
+        ids = { 34026, 83381, 193455, 259489, 76657 },
+        labels = {
+            [34026] = "BM杀戮命令Dummy112",
+            [83381] = "杀戮命令伤害",
+            [193455] = "眼镜蛇射击Dummy1",
+            [259489] = "生存杀敌(不是BM键)",
+            [76657] = "精通万兽之王",
+        },
+        chain = {
+            { id = 83381, role = "杀戮命令伤害", want = "damage",
+              hintFail = "没有 83381。确认宠物在场。不要用 4.5f。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 112 不是回能。不要勾缩放完成。精通不搬家。",
+            }
+        end,
+    },
+
+    hun_bm_wild_call = {
+        key = "hun_bm_wild_call",
+        title = "野兽控制-野性呼唤RestoreCharge",
+        order = 118,
+        hint = "185789 Dummy 40 不是 20%。20% 是观察窗口。217200 用 RestoreCharge，禁止 ResetCooldown。",
+        startText = "【野性呼唤】自动射击暴击后倒刺应有时还一层充能，不是每次，也不是把冷却整条清掉。Dummy 40 不要拿来对触发率。有 199528 再加 Aura 107 基点 20。120679 可以 ResetCooldown。",
+        startPrint = "请点野性呼唤，自动射击暴击，看倒刺充能。",
+        ids = { 185789, 185791, 217200, 120679, 199528, 75 },
+        labels = {
+            [185789] = "野性呼唤Dummy40",
+            [185791] = "野性呼唤触发光环",
+            [217200] = "倒刺射击(充能)",
+            [120679] = "恐怖野兽",
+            [199528] = "兽群羁绊",
+            [75] = "自动射击",
+        },
+        chain = {
+            { id = 185789, role = "野性呼唤", want = "aura-self",
+              hintFail = "没有 185789 光环。确认点了天赋。" },
+        },
+        extraVerdict = function()
+            return {
+                "禁止 ResetCooldown(217200)。20 不得进 Dummy 40。补篇 20% 弃用当 Dummy。",
+            }
+        end,
+    },
+
+    hun_bm_beast_cleave = {
+        key = "hun_bm_beast_cleave",
+        title = "野兽控制-顺劈Dummy75读表",
+        order = 119,
+        hint = "115939 Dummy 75。不要 0.75f。2643 不是射击 257620。溅射基数等 PET。",
+        startText = "【野兽顺劈】BM 多重 CLEU 必须是 2643，不要 257620。宠物应有 118455。溅射 118459 按 Dummy 75。伤害数字等 PET，本包只验光环与读表，不要假装缩放已过。",
+        startPrint = "请对两只以上假人按 BM 多重 2643。",
+        ids = { 2643, 257620, 115939, 118455, 118459 },
+        labels = {
+            [2643] = "BM多重",
+            [257620] = "射击多重(不是BM键)",
+            [115939] = "野兽顺劈Dummy75",
+            [118455] = "顺劈光环",
+            [118459] = "顺劈溅射",
+        },
+        chain = {
+            { id = 2643, role = "BM多重", want = "cast",
+              hintFail = "没有 2643。射击键是 257620，不要拿来验收 BM。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 75 读表，不要 0.75f。缩放等 PET。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
     demo = {
         key = "demo",
