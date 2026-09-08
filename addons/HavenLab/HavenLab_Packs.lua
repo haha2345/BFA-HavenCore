@@ -4631,6 +4631,127 @@ HL.PACKS = {
         end,
     },
 
+    mag_fire_ball_pyro_streak = {
+        key = "mag_fire_ball_pyro_streak",
+        title = "火焰-火球炎爆冲击充能热力连击Dummy100加热48107",
+        order = 160,
+        hint = "133/11366/108853 无 Dummy。44448 Dummy 100 不得当 100% 触发率。48108 无 Dummy。充能分类 1500 不是 Dummy。",
+        startText = "【火球/炎爆/冲击/热力连击】120 火焰打 133 铺暴击。108853 把加热转成 48108。瞬发 11366 消耗热力连击。Dummy 100 不要写成必触发。",
+        startPrint = "请打火球、火焰冲击、炎爆，看 48107/48108。",
+        ids = { 133, 11366, 108853, 44448, 48107, 48108, 195283, 231567 },
+        labels = {
+            [133] = "火球术",
+            [11366] = "炎爆术",
+            [108853] = "火焰冲击",
+            [44448] = "热力连击驱动Dummy100",
+            [48107] = "加热Dummy0",
+            [48108] = "热力连击",
+            [195283] = "热力连击被动Dummy0",
+            [231567] = "冲击Rank2 Aura411(不是Dummy)",
+        },
+        chain = {
+            { id = 133, role = "火球术", want = "cast",
+              hintFail = "没有 133。确认火焰专精。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 100 不得当 100% 触发。411 不是 Dummy。",
+            }
+        end,
+    },
+
+    mag_fire_combust_kindling_flameon = {
+        key = "mag_fire_combust_kindling_flameon",
+        title = "火焰-燃烧Dummy50引火Dummy1000只减一次火焰冲能禁止ResetCharges",
+        order = 161,
+        hint = "190319 Periodic Dummy 50。Aura 107 +100 不是 Dummy。155148 Dummy 1000。205029 Dummy 2 禁止 ResetCharges。",
+        startText = "【燃烧/引火/火焰冲能】开 190319 暴击提高，精通按 Dummy 50 不是 100。点 155148 暴击减燃烧 1000 ms，不要 2000。点 205029 冲击恢复短 2 秒，不要回满层。",
+        startPrint = "请开燃烧、点引火、点火焰冲能。",
+        ids = { 190319, 155148, 205029, 12846 },
+        labels = {
+            [190319] = "燃烧Dummy50",
+            [155148] = "引火Dummy1000",
+            [205029] = "火焰冲能Dummy2",
+            [12846] = "精通点燃Dummy75",
+        },
+        chain = {
+            { id = 190319, role = "燃烧", want = "cast",
+              hintFail = "没有 190319。" },
+        },
+        extraVerdict = function()
+            return {
+                "50 不得改成 100。不要减两次。不要 ResetCharges。",
+            }
+        end,
+    },
+
+    mag_fire_starter_searing_pyroclasm = {
+        key = "mag_fire_starter_searing_pyroclasm",
+        title = "火焰-FirestarterDummy90灼烧之触只改烧尽炎爆冲击Dummy15/225",
+        order = 162,
+        hint = "205026 Dummy 90。269644 Dummy 30/150 只改 2948。269650 Dummy 15。269651 Dummy 225。250% 弃用。",
+        startText = "【Firestarter/灼烧/炎爆冲击】高血目标火球/炎爆必爆。烧尽打低血 +Dummy 150% 且必爆，火球不要无条件 +50%。点 269650 消耗热力连击有时 269651，硬读炎爆 ×225，不要 250%。",
+        startPrint = "请点 Firestarter、灼烧之触、炎爆冲击。",
+        ids = { 205026, 269644, 2948, 269650, 269651, 133, 11366 },
+        labels = {
+            [205026] = "FirestarterDummy90",
+            [269644] = "灼烧之触Dummy30/150",
+            [2948] = "烧尽",
+            [269650] = "炎爆冲击Dummy15",
+            [269651] = "炎爆冲击buffDummy225",
+            [133] = "火球(不要走灼烧)",
+            [11366] = "炎爆",
+        },
+        chain = {
+            { id = 2948, role = "烧尽", want = "cast",
+              hintFail = "没有 2948。" },
+        },
+        extraVerdict = function()
+            return {
+                "250% 弃用。31/50 不是 Dummy。只改烧尽。",
+            }
+        end,
+    },
+
+    mag_fire_aoe_phoenix_ignite = {
+        key = "mag_fire_aoe_phoenix_ignite",
+        title = "火焰-炸弹流星烈焰风暴烈焰补丁凤凰257541必爆点燃Dummy75删0.75",
+        order = 163,
+        hint = "257541 无 Dummy T60 必爆。194466 不加厚。12846 Dummy 75。蔓延 8 码观察窗口。137019 Dummy 150 删 200。44614 卸点燃。点燃不搬家。",
+        startText = "【AoE/凤凰/点燃】44457 能扩散。153561 能砸。2120 能打且上 12654。205037 出 205470。点 257541 必爆，不要 194466 循环。点燃读 Dummy 75，约 8 码蔓延。Flurry 不要点燃。12846 不搬家。",
+        startPrint = "请放活动炸弹、流星、烈焰风暴、烈焰补丁、凤凰烈焰，看点燃。",
+        ids = { 44457, 217694, 44461, 153561, 153564, 2120, 205037, 205470, 205472, 257541, 257542, 194466, 12846, 12654, 137019, 44614, 205023, 226757 },
+        labels = {
+            [44457] = "活动炸弹Dummy0",
+            [217694] = "炸弹DoT",
+            [44461] = "炸弹爆炸",
+            [153561] = "流星Dummy0",
+            [153564] = "流星伤害",
+            [2120] = "烈焰风暴",
+            [205037] = "烈焰补丁Dummy1",
+            [205470] = "补丁AT",
+            [205472] = "补丁伤害",
+            [257541] = "凤凰烈焰T60",
+            [257542] = "凤凰溅射Dummy0",
+            [194466] = "神器凤凰(不加厚)",
+            [12846] = "精通点燃Dummy75",
+            [12654] = "点燃光环Dummy0",
+            [137019] = "火焰法师Dummy15/150",
+            [44614] = "Flurry(不应再绑点燃)",
+            [205023] = "纵火(无Dummy)",
+            [226757] = "纵火DoT",
+        },
+        chain = {
+            { id = 2120, role = "烈焰风暴", want = "cast",
+              hintFail = "没有 2120。" },
+        },
+        extraVerdict = function()
+            return {
+                "0.75/200/8 不得进 Dummy。194466 不加厚。点燃不搬家。44614 不应上 12654。纵火 226757 火球和炎爆都要能上。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
     demo = {
