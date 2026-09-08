@@ -34,6 +34,7 @@
 #include "TemporarySummon.h"
 #include "SpellHistory.h"
 #include "Log.h"
+#include "ObjectAccessor.h"
 
 enum PriestSpells
 {
@@ -222,6 +223,19 @@ enum PriestSpells
     SPELL_PRIEST_HALLUCINATIONS                     = 280752,
     SPELL_PRIEST_HALLUCINATIONS_GIVE_POWER          = 199579,
     SPELL_PRIEST_SURRENDER_TO_MADNESS               = 193223,
+    SPELL_PRIEST_SHADOW_COVENANT                    = 204065,
+    SPELL_PRIEST_EVANGELISM                         = 246287,
+    SPELL_PRIEST_APOTHEOSIS                         = 200183,
+    SPELL_PRIEST_CIRCLE_OF_HEALING                  = 204883,
+    SPELL_PRIEST_COSMIC_RIPPLE                      = 238136,
+    SPELL_PRIEST_COSMIC_RIPPLE_HEAL                 = 243241,
+    SPELL_PRIEST_BENEDICTION                        = 193157,
+    SPELL_PRIEST_PRAYER_OF_MENDING_JUMP             = 155793,
+    SPELL_PRIEST_VOID_TORRENT_INSANITY              = 289577,
+    SPELL_PRIEST_LEGACY_OF_THE_VOID                 = 193225,
+    SPELL_PRIEST_HOLY_FIRE_RANK2                    = 231687,
+    SPELL_PRIEST_PURIFY                             = 527,
+    SPELL_PRIEST_DIVINE_HYMN                        = 64843,
 };
 
 enum PriestSpellIcons
@@ -237,6 +251,48 @@ enum MiscSpells
     SHADOWY_APPARITION_TRAVEL_SPEED = 6
 };
 
+static int32 PriestHolyWordReduceMs(Unit* caster, SpellInfo const* dummySource, SpellEffIndex dummyEffect)
+{
+    if (!caster || !dummySource)
+        return 0;
+
+    SpellEffectInfo const* dummy = dummySource->GetEffect(dummyEffect);
+    if (!dummy)
+        return 0;
+
+    int32 reduce = dummy->CalcValue(caster) * IN_MILLISECONDS;
+    if (caster->HasAura(SPELL_PRIEST_LIGHT_OF_THE_NAARU_HOLY))
+        if (SpellInfo const* naaru = sSpellMgr->GetSpellInfo(SPELL_PRIEST_LIGHT_OF_THE_NAARU_HOLY))
+            if (SpellEffectInfo const* dummy33 = naaru->GetEffect(EFFECT_0))
+                AddPct(reduce, dummy33->CalcValue(caster));
+
+    if (caster->HasAura(SPELL_PRIEST_APOTHEOSIS))
+        if (SpellInfo const* apoth = sSpellMgr->GetSpellInfo(SPELL_PRIEST_APOTHEOSIS))
+            if (SpellEffectInfo const* dummy300 = apoth->GetEffect(EFFECT_0))
+                AddPct(reduce, dummy300->CalcValue(caster));
+
+    return reduce;
+}
+
+static void PriestResizeAreaTargets(SpellInfo const* dummySource, Unit* caster, SpellEffIndex dummyEffect, std::list<WorldObject*>& targets)
+{
+    if (!dummySource || !caster)
+        return;
+
+    SpellEffectInfo const* dummy = dummySource->GetEffect(dummyEffect);
+    if (!dummy)
+        return;
+
+    int32 maxTargets = dummy->CalcValue(caster);
+    if (maxTargets <= 0)
+        return;
+
+    if (int32(targets.size()) > maxTargets)
+    {
+        targets.sort(Trinity::HealthPctOrderPred());
+        targets.resize(maxTargets);
+    }
+}
 
 //7.3.2.25549
 // 17 - Power Word: Shield
@@ -285,7 +341,7 @@ class spell_pri_power_word_shield_AuraScript : public AuraScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_PRIEST_POWER_WORD_SHIELD, SPELL_PRIEST_RAPTURE, SPELL_SHADOW_PRIEST_BASE_AURA });
+        return ValidateSpellInfo({ SPELL_PRIEST_POWER_WORD_SHIELD, SPELL_PRIEST_RAPTURE });
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
@@ -294,13 +350,12 @@ class spell_pri_power_word_shield_AuraScript : public AuraScript
         {
             if (Player* player = caster->ToPlayer())
             {
+                // 1.54f * SP 观察窗口，非 Dummy。17 无 Dummy。
                 int32 absorbAmount = int32(1.54f * player->SpellBaseHealingBonusDone(GetSpellInfo()->GetSchoolMask()));
                 if (Aura* rapture = player->GetAura(SPELL_PRIEST_RAPTURE))
                     if (AuraEffect* eff0 = rapture->GetEffect(EFFECT_0))
                         absorbAmount += CalculatePct(absorbAmount, eff0->GetAmount());
 
-                if (player->HasAura(SPELL_SHADOW_PRIEST_BASE_AURA))
-                    absorbAmount *= 1.36f;
                 amount += absorbAmount;
             }
         }
@@ -426,6 +481,7 @@ class spell_pri_mind_bomb : public AuraScript
             return;
 
         std::list<Unit*> targets;
+        // 8.0f 半径观察窗口，非 Dummy。Dummy 0 不发明。
         target->GetAttackableUnitListInRange(targets, 8.0f);
 
         for (auto itr : targets)
@@ -516,8 +572,9 @@ class spell_pri_heal_flash_heal : public SpellScript
 
         if (caster->GetSpecializationId() == TALENT_SPEC_PRIEST_HOLY)
         {
-            if (caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SERENITY))
-                caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SERENITY, -6 * IN_MILLISECONDS);
+            int32 reduce = PriestHolyWordReduceMs(caster, sSpellMgr->GetSpellInfo(SPELL_PRIEST_HOLY_WORD_SERENITY), EFFECT_1);
+            if (reduce && caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SERENITY))
+                caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SERENITY, -reduce);
         }
     }
 
@@ -538,11 +595,16 @@ class spell_pri_binding_heal : public SpellScript
         if (!caster)
             return;
 
-        if (caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY))
-            caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY, -3 * IN_MILLISECONDS);
+        // 32546 EFFECT_3 Dummy 3。Dummy 0（EFFECT_0）不读成秒。
+        int32 reduce = PriestHolyWordReduceMs(caster, GetSpellInfo(), EFFECT_3);
+        if (reduce)
+        {
+            if (caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY))
+                caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY, -reduce);
 
-        if (caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SERENITY))
-            caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SERENITY, -3 * IN_MILLISECONDS);
+            if (caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SERENITY))
+                caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SERENITY, -reduce);
+        }
     }
 
     void Register() override
@@ -556,22 +618,25 @@ class spell_pri_prayer_of_mending : public SpellScript
 {
     PrepareSpellScript(spell_pri_prayer_of_mending);
 
-    void HandleAfterCast()
+    void HandleHit(SpellEffIndex /*effIndex*/)
     {
         Unit* caster = GetCaster();
-        if (!caster)
+        Unit* target = GetHitUnit();
+        if (!caster || !target)
             return;
 
-        if (caster->HasAura(SPELL_PRIEST_PIETY))
-        {
-            if (caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY))
-                caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY, -6 * IN_MILLISECONDS);
-        }
+        // 层数走 33076 EFFECT_0 Dummy 5。Piety 197034 不是 8.3 神圣格。
+        int32 stacks = 5;
+        if (SpellEffectInfo const* dummy5 = GetSpellInfo()->GetEffect(EFFECT_0))
+            stacks = dummy5->CalcValue(caster);
+        if (Aura* pom = caster->AddAura(SPELL_PRIEST_PRAYER_OF_MENDING_BUFF, target))
+            pom->SetStackAmount(std::max(1, stacks));
     }
 
     void Register() override
     {
-        AfterCast += SpellCastFn(spell_pri_prayer_of_mending::HandleAfterCast);
+        OnEffectHitTarget += SpellEffectFn(spell_pri_prayer_of_mending::HandleHit, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnEffectHitTarget += SpellEffectFn(spell_pri_prayer_of_mending::HandleHit, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
     }
 };
 
@@ -580,18 +645,27 @@ class spell_pri_prayer_of_healing : public SpellScript
 {
     PrepareSpellScript(spell_pri_prayer_of_healing);
 
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        // 596 EFFECT_2 Dummy 5。
+        PriestResizeAreaTargets(GetSpellInfo(), GetCaster(), EFFECT_2, targets);
+    }
+
     void HandleAfterCast()
     {
         Unit* caster = GetCaster();
         if (!caster)
             return;
 
-        if (caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY))
-            caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY, -6 * IN_MILLISECONDS);
+        int32 reduce = PriestHolyWordReduceMs(caster, sSpellMgr->GetSpellInfo(SPELL_PRIEST_HOLY_WORD_SANCTIFY), EFFECT_2);
+        if (reduce && caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY))
+            caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY, -reduce);
     }
 
     void Register() override
     {
+        // 596 EFFECT_1 才是范围治疗（TARGET_UNIT_DEST_AREA_ALLY）。EFFECT_0 是单体 Trigger，不要挂 DEST/SRC_AREA。
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_prayer_of_healing::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ALLY);
         AfterCast += SpellCastFn(spell_pri_prayer_of_healing::HandleAfterCast);
     }
 };
@@ -620,8 +694,10 @@ class spell_pri_smite : public SpellScript
 
         if (caster->HasAura(SPELL_PRIEST_HOLY_WORDS) || caster->GetSpecializationId() == TALENT_SPEC_PRIEST_HOLY)
         {
-            if (caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_CHASTISE))
-                caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_CHASTISE, -4 * IN_MILLISECONDS);
+            // 88625 EFFECT_1 Dummy 4。禁止 GetEffect(EFFECT_0)。
+            int32 reduce = PriestHolyWordReduceMs(caster, sSpellMgr->GetSpellInfo(SPELL_PRIEST_HOLY_WORD_CHASTISE), EFFECT_1);
+            if (reduce && caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_CHASTISE))
+                caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_CHASTISE, -reduce);
         }
         if (caster->GetSpecializationId() == TALENT_SPEC_PRIEST_DISCIPLINE)
         {
@@ -630,23 +706,9 @@ class spell_pri_smite : public SpellScript
         }
     }
 
-    void HandleAfterCast()
-    {
-        Player* caster = GetCaster()->ToPlayer();
-        if (!caster)
-            return;
-
-        if (caster->GetSpecializationId() == TALENT_SPEC_PRIEST_HOLY)
-        {
-            if (caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_CHASTISE))
-                caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_CHASTISE, -6 * IN_MILLISECONDS);
-        }
-    }
-
     void Register() override
     {
         OnEffectHitTarget += SpellEffectFn(spell_pri_smite::HandleHit, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
-        AfterCast += SpellCastFn(spell_pri_smite::HandleAfterCast);
     }
 };
 //7.3.2.25549 END
@@ -723,7 +785,7 @@ public:
 
         void Register() override
         {
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_pri_voidform_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_ADD_PCT_MODIFIER);
+            OnEffectPeriodic += AuraEffectPeriodicFn(spell_pri_voidform_AuraScript::HandlePeriodic, EFFECT_4, SPELL_AURA_PERIODIC_DUMMY);
             AfterEffectRemove += AuraEffectRemoveFn(spell_pri_voidform_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_ADD_PCT_MODIFIER, AURA_EFFECT_HANDLE_REAL);
             AfterEffectApply += AuraEffectApplyFn(spell_pri_voidform_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_ADD_PCT_MODIFIER, AURA_EFFECT_HANDLE_REAL);
         }
@@ -763,7 +825,13 @@ class spell_pri_void_eruption : public SpellScript
 
     void HandleTakePower(SpellPowerCost& powerCost)
     {
-        powerCost.Amount = 0;
+        // Dummy 1 不读成 9000。无 Legacy 时不改 Amount（SpellPower 9000）。
+        // 193225 EFFECT_5 Dummy 60 = 精神错乱阈值。不要读 EFFECT_0 Aura 107 −3000，也不要把 EFFECT_6 Dummy 5 当 60。
+        if (Unit* caster = GetCaster())
+            if (caster->HasAura(SPELL_PRIEST_LEGACY_OF_THE_VOID))
+                if (SpellInfo const* legacy = sSpellMgr->GetSpellInfo(SPELL_PRIEST_LEGACY_OF_THE_VOID))
+                    if (SpellEffectInfo const* dummy60 = legacy->GetEffect(EFFECT_5))
+                        powerCost.Amount = dummy60->CalcValue(caster) * 100;
     }
 
     void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -840,12 +908,18 @@ class spell_pri_holy_word_sanctify : public SpellScript
     {
         targets.remove_if(RaidCheck(GetCaster()));
         targets.sort(Trinity::HealthPctOrderPred());
+        // 34861 EFFECT_1 Dummy 6。禁止 Cast 88685。
+        PriestResizeAreaTargets(GetSpellInfo(), GetCaster(), EFFECT_1, targets);
     }
 
     void OnActivate()
     {
         if (Player* player = GetCaster()->ToPlayer())
-            player->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORLD_SALVATION, -30000);
+        {
+            int32 reduce = PriestHolyWordReduceMs(player, sSpellMgr->GetSpellInfo(SPELL_PRIEST_HOLY_WORLD_SALVATION), EFFECT_2);
+            if (reduce)
+                player->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORLD_SALVATION, -reduce);
+        }
     }
 
     void Register() override
@@ -869,26 +943,14 @@ public:
         {
             Unit* caster = GetCaster();
             Unit* target = GetExplTargetUnit();
-
-            if (caster != target && target->IsFriendlyTo(caster))
+            if (!caster || !target || !target->IsFriendlyTo(caster))
                 return SPELL_FAILED_BAD_TARGETS;
             return SPELL_CAST_OK;
-        }
-
-        void AfterEffectHit(SpellEffIndex /*effIndex*/)
-        {
-            if (GetHitUnit()->IsFriendlyTo(GetCaster()))
-            {
-                GetCaster()->CastSpell(GetHitUnit(), SPELL_PRIEST_DISPEL_MAGIC_HOSTILE, true);
-                GetCaster()->CastSpell(GetHitUnit(), SPELL_PRIEST_CURE_DISEASE, true);
-            }
-
         }
 
         void Register() override
         {
             OnCheckCast += SpellCheckCastFn(spell_pri_purify_SpellScript::CheckCast);
-            OnEffectHitTarget += SpellEffectFn(spell_pri_purify_SpellScript::AfterEffectHit, EFFECT_0, SPELL_EFFECT_DISPEL);
         }
     };
 
@@ -912,13 +974,8 @@ class spell_pri_divine_hymn : public SpellScriptLoader
             {
                 targets.remove_if(RaidCheck(GetCaster()));
 
-                uint32 const maxTargets = 3;
-
-                if (targets.size() > maxTargets)
-                {
-                    targets.sort(Trinity::HealthPctOrderPred());
-                    targets.resize(maxTargets);
-                }
+                // 64843 EFFECT_3 Dummy 12。禁止 Dummy 100 / 0 当人数。
+                PriestResizeAreaTargets(sSpellMgr->GetSpellInfo(SPELL_PRIEST_DIVINE_HYMN), GetCaster(), EFFECT_3, targets);
             }
 
             void Register() override
@@ -1033,7 +1090,10 @@ class aura_pri_guardian_spirit : public AuraScript
         if (dmgInfo.GetDamage() < target->GetHealth())
             return;
 
+        // 47788 EFFECT_1 Dummy 40（SPELL_EFFECT_DUMMY，不是 Aura）。禁止 AuraScript GetEffect，禁止读 EFFECT_0 Aura 118 +60。
         uint32 healPct = 0;
+        if (SpellEffectInfo const* dummy40 = GetSpellInfo()->GetEffect(EFFECT_1))
+            healPct = uint32(dummy40->CalcValue());
         int32 healAmount = int32(target->CountPctFromMaxHealth(healPct));
         Remove(AURA_REMOVE_BY_ENEMY_SPELL);        
 
@@ -1094,6 +1154,34 @@ class spell_pri_psychic_scream : public SpellScriptLoader
 public:
     spell_pri_psychic_scream() : SpellScriptLoader("spell_pri_psychic_scream") {}
 
+    class spell_pri_psychic_scream_SpellScript : public SpellScript
+    {
+        PrepareSpellScript(spell_pri_psychic_scream_SpellScript);
+
+        void FilterTargets(std::list<WorldObject*>& targets)
+        {
+            // 8122 无 Dummy。Aura 191 是移速不是人数核心。人数 = EFFECT_2 基点 4。
+            if (SpellEffectInfo const* eff2 = GetSpellInfo()->GetEffect(EFFECT_2))
+            {
+                int32 maxTargets = eff2->BasePoints;
+                if (maxTargets > 0 && int32(targets.size()) > maxTargets)
+                    targets.resize(maxTargets);
+            }
+        }
+
+        void Register() override
+        {
+            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_psychic_scream_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_psychic_scream_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_psychic_scream_SpellScript::FilterTargets, EFFECT_2, TARGET_UNIT_SRC_AREA_ENEMY);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_pri_psychic_scream_SpellScript();
+    }
+
     class spell_pri_psychic_scream_AuraScript : public AuraScript
     {
         PrepareAuraScript(spell_pri_psychic_scream_AuraScript);
@@ -1116,6 +1204,7 @@ public:
             {
                 uint64 const dmg = fear->Variables.GetValue<uint64>("damage");
                 uint64 newdamage = eventInfo.GetDamageInfo()->GetDamage() + dmg;
+                // 破控 10% 最大生命观察窗口，非 Dummy。
                 if (newdamage > target->CountPctFromMaxHealth(10))
                     fear->SetDuration(0);
                 else
@@ -1586,22 +1675,13 @@ class spell_pri_renew : public SpellScriptLoader
                 return GetCaster() && GetCaster()->GetTypeId() == TYPEID_PLAYER;
             }
 
-            void HandleApplyEffect(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+            void HandleApplyEffect(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 if (Unit* caster = GetCaster())
                 {
-                    // Reduse the GCD of Holy Word: Sanctify by 2 seconds
-                    if (caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY))
-                        caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY, -2 * IN_MILLISECONDS);
-
-                    // Divine Touch
-                    if (AuraEffect const* empoweredRenewAurEff = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST, PRIEST_ICON_ID_DIVINE_TOUCH_TALENT, EFFECT_0))
-                    {
-                        uint32 heal = caster->SpellHealingBonusDone(GetTarget(), GetSpellInfo(), aurEff->GetAmount(), DOT, aurEff->GetSpellEffectInfo());
-                        heal = GetTarget()->SpellHealingBonusTaken(caster, GetSpellInfo(), heal, DOT, aurEff->GetSpellEffectInfo());
-                        int32 basepoints0 = CalculatePct(int32(heal) * aurEff->GetTotalTicks(), empoweredRenewAurEff->GetAmount());
-                        caster->CastCustomSpell(GetTarget(), SPELL_PRIEST_DIVINE_TOUCH, &basepoints0, nullptr, nullptr, true, nullptr, aurEff);
-                    }
+                    int32 reduce = PriestHolyWordReduceMs(caster, sSpellMgr->GetSpellInfo(SPELL_PRIEST_HOLY_WORD_SANCTIFY), EFFECT_3);
+                    if (reduce && caster->GetSpellHistory()->HasCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY))
+                        caster->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORD_SANCTIFY, -reduce);
                 }
             }
 
@@ -1767,32 +1847,22 @@ public:
         void HandleScript(SpellEffIndex /* effIndex */)
         {
             Unit* caster = GetCaster();
-            if (!caster)
+            Unit* target = GetHitUnit();
+            if (!caster || !target)
                 return;
 
             if (caster->HasAura(SPELL_PRIEST_LEAP_OF_FAITH_GLYPH))
-                GetHitUnit()->RemoveMovementImpairingAuras();
+                target->RemoveMovementImpairingAuras();
 
-            GetHitUnit()->CastSpell(caster, SPELL_PRIEST_LEAP_OF_FAITH_EFFECT, true);
-        }
+            target->CastSpell(caster, SPELL_PRIEST_LEAP_OF_FAITH_EFFECT, true);
 
-        void HandleOnHit()
-        {
-            if (Player* _player = GetCaster()->ToPlayer())
-            {
-                if (Unit* target = GetHitUnit())
-                {
-                    target->CastSpell(_player, SPELL_PRIEST_LEAP_OF_FAITH_JUMP, true);
-
-                    if (_player->HasAura(SPELL_PRIEST_BODY_AND_SOUL_AURA)) _player->CastSpell(target, SPELL_PRIEST_BODY_AND_SOUL_SPEED, true);
-                }
-            }
+            if (caster->HasAura(SPELL_PRIEST_BODY_AND_SOUL_AURA))
+                caster->CastSpell(target, SPELL_PRIEST_BODY_AND_SOUL_SPEED, true);
         }
 
         void Register() override
         {
-            OnHit += SpellHitFn(spell_pri_leap_of_faith_SpellScript::HandleOnHit);
-            OnEffectHitTarget += SpellEffectFn(spell_pri_leap_of_faith_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
+            OnEffectHitTarget += SpellEffectFn(spell_pri_leap_of_faith_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
         }
     };
 
@@ -1884,18 +1954,23 @@ public:
             {
                 if (Unit* target = GetHitUnit())
                 {
-                    if (Aura* prayerOfMending = target->GetAura(SPELL_PRIEST_PRAYER_OF_MENDING_RADIUS, _player->GetGUID()))
+                    if (!_player->HasAura(SPELL_PRIEST_DIVINE_INSIGHT_HOLY))
+                        return;
+
+                    if (Aura* prayerOfMending = target->GetAura(SPELL_PRIEST_PRAYER_OF_MENDING_BUFF, _player->GetGUID()))
                     {
                         int32 value = prayerOfMending->GetEffect(0)->GetAmount();
 
-                        if (_player->HasAura(SPELL_PRIEST_DIVINE_INSIGHT_HOLY))
-                            _player->RemoveAura(SPELL_PRIEST_DIVINE_INSIGHT_HOLY);
+                        _player->RemoveAura(SPELL_PRIEST_DIVINE_INSIGHT_HOLY);
 
                         target->CastCustomSpell(target, SPELL_PRIEST_PRAYER_OF_MENDING_HEAL, &value, nullptr, nullptr, true, nullptr, 0, _player->GetGUID());
                         if (target->HasAura(GetSpellInfo()->Id))
                             target->RemoveAura(GetSpellInfo()->Id);
 
-                        float radius = sSpellMgr->GetSpellInfo(SPELL_PRIEST_PRAYER_OF_MENDING_RADIUS)->GetEffect(0)->CalcRadius(_player);
+                        float radius = 20.0f;
+                        if (SpellInfo const* jumpInfo = sSpellMgr->GetSpellInfo(SPELL_PRIEST_PRAYER_OF_MENDING_JUMP))
+                            if (SpellEffectInfo const* jumpEff = jumpInfo->GetEffect(EFFECT_0))
+                                radius = jumpEff->CalcRadius(_player);
 
                         if (Unit* secondTarget = target->GetNextRandomRaidMemberOrPet(radius))
                         {
@@ -2090,16 +2165,8 @@ public:
     {
         PrepareSpellScript(spell_pri_fade_SpellScript);
 
-        void HandleGlyph()
-        {
-            Unit* caster = GetCaster();
-            if (caster->HasAura(159628)) // Glyph of Mass dispel
-                caster->CastSpell(caster, 159630, true);
-        }
-
         void Register() override
         {
-            OnHit += SpellHitFn(spell_pri_fade_SpellScript::HandleGlyph);
         }
     };
 
@@ -2424,24 +2491,8 @@ class spell_pri_atonement_aura : public AuraScript
 {
     PrepareAuraScript(spell_pri_atonement_aura);
 
-    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-    {
-        if (Unit* caster = GetCaster())
-            if (caster->HasAura(SPELL_PRIEST_ATONEMENT))
-                caster->CastSpell(caster, SPELL_PRIEST_PLEA_MANA, true);
-    }
-
-    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-    {
-        if (Unit* caster = GetCaster())
-            if (Aura* aur = caster->GetAura(SPELL_PRIEST_PLEA_MANA))
-                aur->ModStackAmount(-1);
-    }
-
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_pri_atonement_aura::HandleApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_pri_atonement_aura::HandleRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -2650,7 +2701,9 @@ class spell_pri_power_of_the_dark_side : public AuraScript
 
     bool CheckProc(ProcEventInfo& eventInfo)
     {
-        return eventInfo.GetSpellInfo() && (eventInfo.GetSpellInfo()->Id == SPELL_PRIEST_SHADOW_WORD_PAIN || eventInfo.GetSpellInfo()->Id == SPELL_PRIEST_PURGE_THE_WICKED);
+        return eventInfo.GetSpellInfo() && (eventInfo.GetSpellInfo()->Id == SPELL_PRIEST_SHADOW_WORD_PAIN
+            || eventInfo.GetSpellInfo()->Id == SPELL_PRIEST_PURGE_THE_WICKED
+            || eventInfo.GetSpellInfo()->Id == SPELL_PRIEST_PURGE_THE_WICKED_DOT);
     }
 
     void Register() override
@@ -2793,8 +2846,13 @@ class spell_pri_holy_nova : public SpellScript
             return;
 
         if (target)
-            if (roll_chance_f(20))
-                caster->GetSpellHistory()->ResetCooldown(SPELL_PRIEST_HOLY_FIRE, true);
+        {
+            if (SpellInfo const* rank2 = sSpellMgr->GetSpellInfo(SPELL_PRIEST_HOLY_FIRE_RANK2))
+                if (caster->HasAura(SPELL_PRIEST_HOLY_FIRE_RANK2) || (caster->ToPlayer() && caster->ToPlayer()->HasSpell(SPELL_PRIEST_HOLY_FIRE_RANK2)))
+                    if (SpellEffectInfo const* dummy20 = rank2->GetEffect(EFFECT_0))
+                        if (roll_chance_f(float(dummy20->CalcValue(caster))))
+                            caster->GetSpellHistory()->ResetCooldown(SPELL_PRIEST_HOLY_FIRE, true);
+        }
     }
 
     void Register() override
@@ -2814,15 +2872,26 @@ class spell_pri_holy_word_salvation : public SpellScript
         if (!caster)
             return;
 
+        float radius = 0.0f;
+        if (SpellEffectInfo const* healEff = GetSpellInfo()->GetEffect(EFFECT_0))
+            radius = healEff->CalcRadius(caster);
+        if (radius <= 0.0f)
+            radius = GetSpellInfo()->GetMaxRange(true);
+
+        int32 pomStacks = 2;
+        if (SpellEffectInfo const* dummy2 = GetSpellInfo()->GetEffect(EFFECT_1))
+            pomStacks = dummy2->CalcValue(caster);
+
         std::list<Player*> friendlyList;
-        caster->GetPlayerListInGrid(friendlyList, 40.0f);
+        caster->GetPlayerListInGrid(friendlyList, radius);
         for (auto& friendPlayers : friendlyList)
         {
             if (friendPlayers->IsFriendlyTo(caster))
             {
                 caster->CastSpell(friendPlayers, SPELL_PRIEST_RENEW, true);
-                //TODO: Prayer of Mending part, that spell is broken now too
-            }            
+                if (Aura* pom = caster->AddAura(SPELL_PRIEST_PRAYER_OF_MENDING_BUFF, friendPlayers))
+                    pom->SetStackAmount(std::max(1, pomStacks));
+            }
         }
     }
 
@@ -2840,7 +2909,11 @@ class spell_pri_holy_word_serenity : public SpellScript
     void OnActivate()
     {
         if (Player* player = GetCaster()->ToPlayer())
-            player->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORLD_SALVATION, -30000);
+        {
+            int32 reduce = PriestHolyWordReduceMs(player, sSpellMgr->GetSpellInfo(SPELL_PRIEST_HOLY_WORLD_SALVATION), EFFECT_2);
+            if (reduce)
+                player->GetSpellHistory()->ModifyCooldown(SPELL_PRIEST_HOLY_WORLD_SALVATION, -reduce);
+        }
     }
 
     void Register() override
@@ -2854,15 +2927,8 @@ class spell_priest_void_torrent : public AuraScript
 {
     PrepareAuraScript(spell_priest_void_torrent);
 
-    void OnTick(AuraEffect const* /*aurEff*/)
-    {
-        if (Unit* caster = GetCaster())
-            caster->ModifyPower(POWER_INSANITY, + 600);
-    }
-
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_priest_void_torrent::OnTick, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
     }
 };
 
@@ -2901,6 +2967,7 @@ class spell_dark_ascension : public SpellScript
 
         caster->CastSpell(nullptr, SPELL_PRIEST_VOIDFORM_BUFFS, true);
         caster->CastSpell(target, SPELL_PRIEST_DARK_ASCENSION_DAMAGE, true);
+        // 15 秒观察窗口，非 Dummy。Dummy 1/5000 不读成 15。
         caster->GetScheduler().Schedule(15s, [caster](TaskContext /*context*/)
         {
             if (!caster)
@@ -2913,6 +2980,320 @@ class spell_dark_ascension : public SpellScript
     void Register() override
     {
         OnEffectHitTarget += SpellEffectFn(spell_dark_ascension::OnHit, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// 204065 - Shadow Covenant. Dummy 0 (EFFECT_0) 不读。FilterTargets EFFECT_2 Dummy 5。禁止 314867。
+class spell_pri_shadow_covenant : public SpellScript
+{
+    PrepareSpellScript(spell_pri_shadow_covenant);
+
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        PriestResizeAreaTargets(GetSpellInfo(), GetCaster(), EFFECT_2, targets);
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_shadow_covenant::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ALLY);
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_shadow_covenant::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ALLY);
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_shadow_covenant::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_shadow_covenant::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ALLY);
+    }
+};
+
+// 246287 - Evangelism. 6 是 EFFECT_0 Script 基点，不是 Dummy。不要绑 197862。
+class spell_pri_evangelism : public SpellScript
+{
+    PrepareSpellScript(spell_pri_evangelism);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_ATONEMENT_AURA });
+    }
+
+    void HandleScript()
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        int32 extraMs = 6 * IN_MILLISECONDS;
+        if (SpellEffectInfo const* scriptEff = GetSpellInfo()->GetEffect(EFFECT_0))
+            extraMs = scriptEff->BasePoints * IN_MILLISECONDS;
+
+        for (AuraApplication* auApp : caster->GetTargetAuraApplications(SPELL_PRIEST_ATONEMENT_AURA))
+            if (Aura* atonement = auApp->GetBase())
+                atonement->SetDuration(atonement->GetDuration() + extraMs);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_pri_evangelism::HandleScript);
+    }
+};
+
+// 200183 - Apotheosis. Dummy 300 给圣言减冷却脚本读。Aura 108 −100% 费用交给表。
+class spell_pri_apotheosis : public AuraScript
+{
+    PrepareAuraScript(spell_pri_apotheosis);
+
+    void Register() override
+    {
+    }
+};
+
+// 196985 - Light of the Naaru. Dummy 33。网页 10% 不得覆盖。
+class spell_pri_light_of_the_naaru : public AuraScript
+{
+    PrepareAuraScript(spell_pri_light_of_the_naaru);
+
+    void Register() override
+    {
+    }
+};
+
+// 204883 - Circle of Healing. FilterTargets EFFECT_2 Dummy 5。Dummy 0（EFFECT_0）不读。
+class spell_pri_circle_of_healing : public SpellScript
+{
+    PrepareSpellScript(spell_pri_circle_of_healing);
+
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        PriestResizeAreaTargets(GetSpellInfo(), GetCaster(), EFFECT_2, targets);
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_circle_of_healing::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ALLY);
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_circle_of_healing::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ALLY);
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_pri_circle_of_healing::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
+    }
+};
+
+// 200128 - Trail of Light. Dummy 35 = 上一次治疗的复制%。复制号 234946。
+class spell_pri_trail_of_light : public AuraScript
+{
+    PrepareAuraScript(spell_pri_trail_of_light);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_TRAIL_OF_LIGHT_HEALING_EFFECT });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        return eventInfo.GetHealInfo() && eventInfo.GetActionTarget();
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        Unit* caster = GetTarget();
+        Unit* current = eventInfo.GetActionTarget();
+        if (!caster || !current || !eventInfo.GetHealInfo())
+            return;
+
+        if (!_lastTarget.IsEmpty() && _lastTarget != current->GetGUID())
+        {
+            if (Unit* previous = ObjectAccessor::GetUnit(*caster, _lastTarget))
+            {
+                if (caster->IsValidAssistTarget(previous))
+                {
+                    int32 heal = CalculatePct(int32(eventInfo.GetHealInfo()->GetHeal()), aurEff->GetAmount());
+                    caster->CastCustomSpell(SPELL_TRAIL_OF_LIGHT_HEALING_EFFECT, SPELLVALUE_BASE_POINT0, heal, previous, TRIGGERED_FULL_MASK);
+                }
+            }
+        }
+
+        _lastTarget = current->GetGUID();
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_pri_trail_of_light::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_pri_trail_of_light::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+
+private:
+    ObjectGuid _lastTarget;
+};
+
+// 238136 - Cosmic Ripple. Dummy 5 = 圣言后额外治疗目标数。治疗号 243241。
+class spell_pri_cosmic_ripple : public AuraScript
+{
+    PrepareAuraScript(spell_pri_cosmic_ripple);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_COSMIC_RIPPLE_HEAL, SPELL_PRIEST_HOLY_WORD_SERENITY, SPELL_PRIEST_HOLY_WORD_SANCTIFY, SPELL_PRIEST_HOLY_WORD_CHASTISE });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        if (!eventInfo.GetSpellInfo())
+            return false;
+        uint32 id = eventInfo.GetSpellInfo()->Id;
+        return id == SPELL_PRIEST_HOLY_WORD_SERENITY || id == SPELL_PRIEST_HOLY_WORD_SANCTIFY || id == SPELL_PRIEST_HOLY_WORD_CHASTISE;
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        Unit* caster = GetTarget();
+        if (!caster)
+            return;
+
+        int32 maxTargets = aurEff->GetAmount();
+        float radius = 0.0f;
+        if (SpellInfo const* rippleHeal = sSpellMgr->GetSpellInfo(SPELL_PRIEST_COSMIC_RIPPLE_HEAL))
+            if (SpellEffectInfo const* eff0 = rippleHeal->GetEffect(EFFECT_0))
+                radius = eff0->CalcRadius(caster);
+        if (radius <= 0.0f)
+            radius = sSpellMgr->GetSpellInfo(SPELL_PRIEST_COSMIC_RIPPLE_HEAL) ? sSpellMgr->GetSpellInfo(SPELL_PRIEST_COSMIC_RIPPLE_HEAL)->GetMaxRange(true) : 0.0f;
+
+        std::list<Unit*> friendList;
+        caster->GetFriendlyUnitListInRange(friendList, radius);
+        friendList.sort(Trinity::HealthPctOrderPred());
+        if (maxTargets > 0 && int32(friendList.size()) > maxTargets)
+            friendList.resize(maxTargets);
+
+        for (Unit* ally : friendList)
+            caster->CastSpell(ally, SPELL_PRIEST_COSMIC_RIPPLE_HEAL, true);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_pri_cosmic_ripple::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_pri_cosmic_ripple::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 109186 - Surge of Light. Dummy 8 = 触发 114255 几率。最大 2 层交给 AuraOptions。
+class spell_pri_surge_of_light : public AuraScript
+{
+    PrepareAuraScript(spell_pri_surge_of_light);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_SURGE_OF_LIGHT });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        return eventInfo.GetHealInfo() != nullptr;
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
+    {
+        if (roll_chance_i(aurEff->GetAmount()))
+            GetTarget()->CastSpell(GetTarget(), SPELL_PRIEST_SURGE_OF_LIGHT, true);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_pri_surge_of_light::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_pri_surge_of_light::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 193157 - Benediction. Dummy 25 = 治疗时刷新恢复几率。
+class spell_pri_benediction : public AuraScript
+{
+    PrepareAuraScript(spell_pri_benediction);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_RENEW });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        return eventInfo.GetHealInfo() && eventInfo.GetActionTarget();
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        Unit* target = eventInfo.GetActionTarget();
+        if (!target)
+            return;
+
+        if (roll_chance_i(aurEff->GetAmount()))
+            if (Aura* renew = target->GetAura(SPELL_PRIEST_RENEW, GetTarget()->GetGUID()))
+                renew->RefreshDuration();
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_pri_benediction::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_pri_benediction::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 213634 - Purify Disease. 友方合法。不 Cast 527/528/97691。
+class spell_pri_purify_disease : public SpellScript
+{
+    PrepareSpellScript(spell_pri_purify_disease);
+
+    SpellCastResult CheckCast()
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetExplTargetUnit();
+        if (!caster || !target || !target->IsFriendlyTo(caster))
+            return SPELL_FAILED_BAD_TARGETS;
+        return SPELL_CAST_OK;
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_pri_purify_disease::CheckCast);
+    }
+};
+
+// 193223 - Surrender to Madness. Dummy 90 保持。持续/冷却走表。
+class spell_pri_surrender_to_madness : public AuraScript
+{
+    PrepareAuraScript(spell_pri_surrender_to_madness);
+
+    void Register() override
+    {
+    }
+};
+
+// 193225 - Legacy of the Void. Dummy 60 = 虚空爆发精神错乱阈值。Dummy 5 不发明。
+class spell_pri_legacy_of_the_void : public AuraScript
+{
+    PrepareAuraScript(spell_pri_legacy_of_the_void);
+
+    void Register() override
+    {
+    }
+};
+
+// 280752 - Hallucinations. Dummy 6 不读成 600。治疗时打 199579。
+class spell_pri_hallucinations : public AuraScript
+{
+    PrepareAuraScript(spell_pri_hallucinations);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_HALLUCINATIONS_GIVE_POWER });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        return eventInfo.GetHealInfo() != nullptr;
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        GetTarget()->CastSpell(GetTarget(), SPELL_PRIEST_HALLUCINATIONS_GIVE_POWER, true);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_pri_hallucinations::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_pri_hallucinations::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
@@ -2989,4 +3370,17 @@ void AddSC_priest_spell_scripts()
     RegisterAuraScript(spell_priest_void_torrent);
     RegisterSpellScript(spell_pri_dark_void);
     RegisterSpellScript(spell_dark_ascension);
+    RegisterSpellScript(spell_pri_shadow_covenant);
+    RegisterSpellScript(spell_pri_evangelism);
+    RegisterAuraScript(spell_pri_apotheosis);
+    RegisterAuraScript(spell_pri_light_of_the_naaru);
+    RegisterSpellScript(spell_pri_circle_of_healing);
+    RegisterAuraScript(spell_pri_trail_of_light);
+    RegisterAuraScript(spell_pri_cosmic_ripple);
+    RegisterAuraScript(spell_pri_surge_of_light);
+    RegisterAuraScript(spell_pri_benediction);
+    RegisterSpellScript(spell_pri_purify_disease);
+    RegisterAuraScript(spell_pri_surrender_to_madness);
+    RegisterAuraScript(spell_pri_legacy_of_the_void);
+    RegisterAuraScript(spell_pri_hallucinations);
 }
