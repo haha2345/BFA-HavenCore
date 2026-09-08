@@ -5134,7 +5134,139 @@ HL.PACKS = {
         end,
     },
 
+    pri_holy_heal_words_smite = {
+        key = "pri_holy_heal_words_smite",
+        title = "神圣-快疗读2050 Dummy6惩击只Dummy4删AfterCast-6祷言Dummy5",
+        order = 176,
+        hint = "2060/2061 无 Dummy。Dummy 6 在 2050。Dummy 4 只在 88625。596 Dummy 5。139 无 Dummy。34861 Dummy 6/6/2。32546 Dummy 3。",
+        startText = "【快疗/祷言/惩击】2061/2060 减静 Dummy 6 秒。596 Dummy 5 目标、减灵 Dummy 6。139 减灵 Dummy 2，不要 63544。585 一次只减罚 Dummy 4，不要 −6。束缚 Dummy 3。",
+        startPrint = "请打快速治疗、治疗祷言、恢复、惩击、束缚治疗。",
+        ids = { 2061, 2060, 2050, 596, 139, 32546, 585, 88625, 34861, 63544, 63733 },
+        labels = {
+            [2061] = "快速治疗",
+            [2060] = "治疗术",
+            [2050] = "圣言静Dummy6",
+            [596] = "治疗祷言Dummy5",
+            [139] = "恢复",
+            [32546] = "束缚治疗Dummy3",
+            [585] = "惩击(无Dummy)",
+            [88625] = "圣言罚Dummy4",
+            [34861] = "圣言灵Dummy6/6/2",
+            [63544] = "已删DivineTouch(不应出现)",
+            [63733] = "HolyWordsDummy0",
+        },
+        chain = {
+            { id = 2061, role = "快速治疗", want = "cast",
+              hintFail = "没有 2061。确认神圣专精。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 4 不得从 2050 Dummy 6 抄到罚。63544 不应出现。−6 已删。",
+            }
+        end,
+    },
+
+    pri_holy_pom_hymn_guardian = {
+        key = "pri_holy_pom_hymn_guardian",
+        title = "神圣-愈合祷言Dummy5半径155793赞美诗Dummy12删3守护Dummy40",
+        order = 177,
+        hint = "33076 Dummy 5。155793 Dummy 0。123262 无行。64843 Dummy 100/0/12。47788 Dummy 40。Aura 118 +60 不是 Dummy。",
+        startText = "【愈合祷言/赞美诗/守护之魂】33076 EFFECT_0 Dummy 5 跳，半径 155793 不是 123262。赞美诗读 64843 EFFECT_3 Dummy 12，不要 Dummy 100/0，不要写死 3。47788 EFFECT_1 Dummy 40% 致死治疗，不要读 EFFECT_0 +60，不要 0%。救赎之魂保持 Aura 316 PERIODIC_HASTE。",
+        startPrint = "请放愈合祷言、神圣赞美诗、守护之魂。",
+        ids = { 33076, 33110, 41635, 155793, 123262, 64843, 64844, 47788, 48153, 20711, 27827 },
+        labels = {
+            [33076] = "愈合祷言Dummy5",
+            [33110] = "愈合祷言治疗",
+            [41635] = "愈合祷言层Dummy0",
+            [155793] = "跳Dummy0半径20码",
+            [123262] = "已删半径号(不应出现)",
+            [64843] = "赞美诗Dummy12",
+            [64844] = "赞美诗跳(dump绑此号)",
+            [47788] = "守护之魂Dummy40",
+            [48153] = "守护牺牲治疗",
+            [20711] = "救赎之魂(无Dummy)",
+            [27827] = "救赎之魂变形",
+        },
+        chain = {
+            { id = 33076, role = "愈合祷言", want = "cast",
+              hintFail = "没有 33076。" },
+        },
+        extraVerdict = function()
+            return {
+                "123262 不应出现。3/全团/40 码不得改 Dummy 12。healPct 不是 0。",
+            }
+        end,
+    },
+
+    pri_holy_serenity_sanctify_salvation = {
+        key = "pri_holy_serenity_sanctify_salvation",
+        title = "神圣-静Dummy6灵Dummy6/6/2禁止88685救赎Dummy2/30新星Dummy20",
+        order = 178,
+        hint = "2050 Dummy 6。34861 Dummy 6/6/2。88685 无行。265202 Dummy 2/30。132157 无 Dummy。231687 Dummy 20。",
+        startText = "【三圣言/新星】2050 大疗并减救赎 Dummy 30 秒。34861 人数 Dummy 6，CLEU 不要 88685。265202 Dummy 2 层愈合祷言。132157 有时重置 14914（Dummy 20 在 231687）。",
+        startPrint = "请按圣言：静、圣言：灵、圣言：救赎、神圣新星。",
+        ids = { 2050, 34861, 88685, 88686, 265202, 132157, 281265, 231687, 14914 },
+        labels = {
+            [2050] = "圣言静Dummy6",
+            [34861] = "圣言灵Dummy6/6/2",
+            [88685] = "已删庇护地面(不应出现)",
+            [88686] = "已删庇护治疗(不应出现)",
+            [265202] = "圣言救赎Dummy2/30",
+            [132157] = "神圣新星",
+            [281265] = "新星治疗",
+            [231687] = "新星Rank2 Dummy20",
+            [14914] = "神圣之火",
+        },
+        chain = {
+            { id = 2050, role = "圣言：静", want = "cast",
+              hintFail = "没有 2050。" },
+        },
+        extraVerdict = function()
+            return {
+                "88685 不应出现。Dummy 2 不是 40 码。20 不得写死而不读 231687。",
+            }
+        end,
+    },
+
+    pri_holy_apoth_naaru_circle = {
+        key = "pri_holy_apoth_naaru_circle",
+        title = "神圣-化身Dummy300纳鲁Dummy33不是10%环Dummy5光晕AT不搬家Echo",
+        order = 179,
+        hint = "200183 Dummy 300。196985 Dummy 33。网页 10% 弃用。204883 Dummy 0/5。120517/110744 无 Dummy。77485 Dummy 0/125 不搬家。Archon Halo 弃用。",
+        startText = "【化身/纳鲁/环/光晕】点 200183 圣言减冷却按 Dummy 300%。点 196985 再 +Dummy 33%，不要 10%。204883 Dummy 5。120517/110744 AT 能打，不要 Archon。Echo 面板绿字，不搬家。208065 不加厚。",
+        startPrint = "请点化身、纳鲁之光、治疗之环、光晕或神圣之星。",
+        ids = { 200183, 196985, 204883, 200128, 234946, 238136, 243241, 109186, 114255, 193157, 120517, 110744, 77485, 77489, 208065, 196358 },
+        labels = {
+            [200183] = "化身Dummy300",
+            [196985] = "纳鲁之光Dummy33",
+            [204883] = "治疗之环Dummy5",
+            [200128] = "光之尾迹Dummy35",
+            [234946] = "尾迹治疗",
+            [238136] = "宇宙涟漪Dummy5",
+            [243241] = "涟漪治疗",
+            [109186] = "圣光涌动Dummy8",
+            [114255] = "涌动buff",
+            [193157] = "祈福Dummy25",
+            [120517] = "光晕(AT无Dummy)",
+            [110744] = "神圣之星(AT无Dummy)",
+            [77485] = "EchoDummy0/125(不搬家)",
+            [77489] = "Echo跳",
+            [208065] = "神器Tuure(不加厚)",
+            [196358] = "神器SayYourPrayers(不加厚)",
+        },
+        chain = {
+            { id = 200183, role = "神圣化身", want = "cast",
+              hintFail = "没有 200183。确认点了 T100 化身。" },
+        },
+        extraVerdict = function()
+            return {
+                "10 不得覆盖 Dummy 33。Echo 不搬家。Archon Halo 弃用。神器不加厚。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
+
 
     demo = {
         key = "demo",
