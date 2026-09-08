@@ -12957,7 +12957,9 @@ Item* Player::StoreNewItem(ItemPosCountVec const& pos, uint32 itemId, bool updat
 
         item->AddItemFlag(ITEM_FIELD_FLAG_NEW_ITEM);
 
-        item->SetBonuses(bonusListIDs);
+        std::vector<int32> bonuses = bonusListIDs;
+        sDB2Manager.EnsureAshjrakamasDefaultBonuses(itemId, bonuses);
+        item->SetBonuses(bonuses);
 
         item = StoreItem(pos, item, update);
 

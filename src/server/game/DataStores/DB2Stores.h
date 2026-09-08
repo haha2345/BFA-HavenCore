@@ -352,6 +352,7 @@ public:
     std::vector<ItemBonusListGroupEntryEntry const*> const* GetItemBonusListGroupEntries(uint32 groupId) const;
     uint32 GetItemBonusListForItemLevelDelta(int16 delta) const;
     std::set<uint32> GetDefaultItemBonusTree(uint32 itemId, ItemContext itemContext) const;
+    void EnsureAshjrakamasDefaultBonuses(uint32 itemId, std::vector<int32>& bonusListIDs) const;
     void LogCorruptionItemBonusDump() const;
     void CollectBonusListIdsFromTree(uint32 bonusTreeId, std::vector<int32>& out) const;
     void RemapAvoidantShopCorruptionPointLists(std::vector<int32>& bonusListIDs) const;

@@ -234,6 +234,38 @@ enum StrikethroughSpells
     SPELL_STRIKETHROUGH_HIDDEN = 320249
 };
 
+enum ExpedientSpells
+{
+    SPELL_EXPEDIENT_RANK_1 = 315544,
+    SPELL_EXPEDIENT_RANK_2 = 315545,
+    SPELL_EXPEDIENT_RANK_3 = 315546,
+    SPELL_EXPEDIENT_HIDDEN = 320257
+};
+
+enum MasterfulSpells
+{
+    SPELL_MASTERFUL_RANK_1 = 315529,
+    SPELL_MASTERFUL_RANK_2 = 315530,
+    SPELL_MASTERFUL_RANK_3 = 315531,
+    SPELL_MASTERFUL_HIDDEN = 320253
+};
+
+enum VersatileSpells
+{
+    SPELL_VERSATILE_RANK_1 = 315549,
+    SPELL_VERSATILE_RANK_2 = 315552,
+    SPELL_VERSATILE_RANK_3 = 315553,
+    SPELL_VERSATILE_HIDDEN = 320259
+};
+
+enum SevereSpells
+{
+    SPELL_SEVERE_RANK_1 = 315554,
+    SPELL_SEVERE_RANK_2 = 315557,
+    SPELL_SEVERE_RANK_3 = 315558,
+    SPELL_SEVERE_HIDDEN = 320261
+};
+
 enum RacingPulseSpells
 {
     SPELL_RACING_PULSE_RANK_1 = 318266,
@@ -411,6 +443,9 @@ constexpr uint32 TWILIGHT_BEAM_TRAVEL_MS = 4000;
 constexpr uint32 TWILIGHT_BEAM_MAX_TARGETS      = 10;
 constexpr uint32 TWILIGHT_BEAM_HALF_DAMAGE_FROM = 6;
 
+// 2020-01-27 hotfix: signature effects 12s PvP ICD. Not in AuraOptions.
+constexpr uint32 CORRUPTION_SIGNATURE_PVP_ICD_MS = 12000;
+
 // SimC bfa.echoing_void_collapse_chance. Not a DBC field — calibrate in-game if needed.
 constexpr float ECHOING_VOID_COLLAPSE_CHANCE = 0.15f;
 constexpr int32 ECHOING_VOID_RANK1_BP_FALLBACK = 40; // tooltip $s1/100 = 0.4% max HP
@@ -424,8 +459,8 @@ constexpr float VOID_RITUAL_SOLO_RPPM_MULT = 5.0f / 6.0f;
 constexpr int32 VOID_RITUAL_RANK1_RATING_FALLBACK = 14;
 constexpr uint32 VOID_RITUAL_ALLY_NEED_FALLBACK = 2;
 
-// 320249 EFFECT_0 DBC BP is 0; fill crit-damage Dummy. Do not hardcode 2/3/4.
-// Driver EFFECT_1 is a live SPELL_AURA_MOD_CRITICAL_HEALING_AMOUNT — leave 320249 heal at 0.
+// 320249 EFFECT_0/EFFECT_1 DBC BP is 0; fill the same Dummy 2/3/4. Do not hardcode 2/3/4.
+// 35662 driver has no live Aura 50; heal crit is filled on hidden EFFECT_1.
 constexpr int32 STRIKETHROUGH_RANK1_CRIT_FALLBACK = 2;
 
 // 318227 DBC BP is 0; fill rank Dummy. Do not hardcode 546 as the only value.
@@ -491,23 +526,24 @@ constexpr EyePulseSample EYE_PULSE_SAMPLES[] =
     { 80, 78431 }
 };
 
-void CorruptionRankItemContext(Unit const* owner, uint32 rankId, uint32& itemId, int32& itemLevel)
+void CorruptionRankItemContext(Unit const* owner, Aura const* aura, uint32& itemId, int32& itemLevel)
 {
     itemId = 0;
     itemLevel = -1;
     Player const* player = owner ? owner->ToPlayer() : nullptr;
-    if (!player)
+    if (!player || !aura || aura->GetCastItemGUID().IsEmpty())
         return;
-
-    Aura const* aura = player->GetAura(rankId);
-    if (!aura || aura->GetCastItemGUID().IsEmpty())
-        return;
-
     if (Item* item = player->GetItemByGuid(aura->GetCastItemGUID()))
     {
         itemId = item->GetEntry();
         itemLevel = int32(item->GetItemLevel(player));
     }
+}
+
+void CorruptionRankItemContext(Unit const* owner, uint32 rankId, uint32& itemId, int32& itemLevel)
+{
+    Aura const* aura = owner ? owner->GetAura(rankId) : nullptr;
+    CorruptionRankItemContext(owner, aura, itemId, itemLevel);
 }
 
 // P5: sum Dummy from every worn rank (not highest). CalcValue picks up item-level scaling.
@@ -520,27 +556,39 @@ int32 SumCorruptionRankDummy(Unit const* owner, uint32 const* rankIds, uint8 ran
     {
         for (uint8 i = 0; i < rankCount; ++i)
         {
-            if (!rankIds[i] || !owner->HasAura(rankIds[i]))
+            if (!rankIds[i] || !owner)
                 continue;
-            any = true;
             SpellInfo const* rank = sSpellMgr->GetSpellInfo(rankIds[i]);
             if (!rank)
                 continue;
             SpellEffectInfo const* effect = rank->GetEffect(effectIndex);
             if (!effect)
                 continue;
-            int32 value = 0;
-            if (useCalc)
+
+            Unit::AuraMapBounds bounds = owner->GetOwnedAuras().equal_range(rankIds[i]);
+            if (bounds.first == bounds.second)
+                continue;
+
+            std::set<ObjectGuid> seenItems;
+            for (auto itr = bounds.first; itr != bounds.second; ++itr)
             {
+                Aura* aura = itr->second;
+                if (!aura)
+                    continue;
+                ObjectGuid itemGuid = aura->GetCastItemGUID();
+                if (!itemGuid.IsEmpty() && !seenItems.insert(itemGuid).second)
+                    continue;
+                any = true;
                 uint32 itemId = 0;
                 int32 itemLevel = -1;
-                CorruptionRankItemContext(owner, rankIds[i], itemId, itemLevel);
-                value = effect->CalcValue(owner, nullptr, owner, nullptr, itemId, itemLevel);
+                if (useCalc)
+                    CorruptionRankItemContext(owner, aura, itemId, itemLevel);
+                int32 value = useCalc
+                    ? effect->CalcValue(owner, nullptr, owner, nullptr, itemId, itemLevel)
+                    : effect->BasePoints;
+                if (value > 0)
+                    sum += value;
             }
-            else
-                value = effect->BasePoints;
-            if (value > 0)
-                sum += value;
         }
     }
 
@@ -588,6 +636,10 @@ CorruptionDriverFamily const* FindCorruptionDriverFamily(uint32 spellId)
         { { SPELL_GLIMPSE_ITEM, 0, 0 }, 1, SPELL_GLIMPSE_PROC },
         { { SPELL_INEFFABLE_TRUTH_RANK_1, SPELL_INEFFABLE_TRUTH_RANK_2, 0 }, 2, SPELL_INEFFABLE_TRUTH_PROC },
         { { SPELL_STRIKETHROUGH_RANK_1, SPELL_STRIKETHROUGH_RANK_2, SPELL_STRIKETHROUGH_RANK_3 }, 3, SPELL_STRIKETHROUGH_HIDDEN },
+        { { SPELL_EXPEDIENT_RANK_1, SPELL_EXPEDIENT_RANK_2, SPELL_EXPEDIENT_RANK_3 }, 3, SPELL_EXPEDIENT_HIDDEN },
+        { { SPELL_MASTERFUL_RANK_1, SPELL_MASTERFUL_RANK_2, SPELL_MASTERFUL_RANK_3 }, 3, SPELL_MASTERFUL_HIDDEN },
+        { { SPELL_VERSATILE_RANK_1, SPELL_VERSATILE_RANK_2, SPELL_VERSATILE_RANK_3 }, 3, SPELL_VERSATILE_HIDDEN },
+        { { SPELL_SEVERE_RANK_1, SPELL_SEVERE_RANK_2, SPELL_SEVERE_RANK_3 }, 3, SPELL_SEVERE_HIDDEN },
     };
 
     for (CorruptionDriverFamily const& family : families)
@@ -611,6 +663,8 @@ void SyncCorruptionHiddenProc(Unit* owner, CorruptionDriverFamily const& family)
     {
         if (!owner->HasAura(family.hiddenProc))
             owner->CastSpell(owner, family.hiddenProc, true);
+        if (Aura* hidden = owner->GetAura(family.hiddenProc))
+            hidden->RecalculateAmountOfEffects();
     }
     else
         owner->RemoveAurasDueToSpell(family.hiddenProc);
@@ -778,6 +832,10 @@ void CastInfiniteStar(Unit* caster, Unit* target)
     if (caster->GetSpellHistory()->HasCooldown(SPELL_INFINITE_STARS_MISSILE))
         return;
 
+    if (target->IsPlayer())
+        caster->GetSpellHistory()->AddCooldown(SPELL_INFINITE_STARS_HIDDEN_PROC, 0,
+            Milliseconds(CORRUPTION_SIGNATURE_PVP_ICD_MS));
+
     SpellInfo const* missile = sSpellMgr->GetSpellInfo(SPELL_INFINITE_STARS_MISSILE);
     uint32 visual = missile ? missile->GetSpellVisual(caster) : 0;
     float delay = (missile && missile->Speed > 0.0f) ? missile->Speed : 1.0f;
@@ -797,21 +855,32 @@ void CastInfiniteStar(Unit* caster, Unit* target)
         caster->m_Events.CalculateTime(uint32(delay * 1000.0f)));
 }
 
-Unit* ResolveStarTarget(Unit* caster, ProcEventInfo& eventInfo)
+Unit* ResolveStarTarget(Unit* caster, Unit* exclude)
 {
-    if (Unit* procTarget = eventInfo.GetProcTarget())
-        if (procTarget->IsAlive() && procTarget != caster)
-            return procTarget;
+    if (!caster)
+        return nullptr;
 
-    if (Unit* actionTarget = eventInfo.GetActionTarget())
-        if (actionTarget->IsAlive() && actionTarget != caster)
-            return actionTarget;
+    float const range = InfiniteStarsSelectRange();
+    if (Unit* nearby = caster->SelectNearbyTarget(exclude, range))
+        if (nearby->IsAlive())
+            return nearby;
+
+    if (exclude && exclude->IsAlive() && exclude != caster && caster->GetDistance(exclude) <= range)
+        return exclude;
 
     if (Unit* victim = caster->GetVictim())
-        if (victim->IsAlive() && victim != caster)
+        if (victim->IsAlive() && victim != caster && caster->GetDistance(victim) <= range)
             return victim;
 
-    return caster->SelectNearbyTarget(nullptr, InfiniteStarsSelectRange());
+    return nullptr;
+}
+
+Unit* ResolveStarTarget(Unit* caster, ProcEventInfo& eventInfo)
+{
+    Unit* exclude = eventInfo.GetProcTarget();
+    if (!exclude)
+        exclude = eventInfo.GetActionTarget();
+    return ResolveStarTarget(caster, exclude);
 }
 
 constexpr int32 TWILIGHT_RANK1_BP_FALLBACK = 60; // tooltip $s1/10 = 6% max HP
@@ -841,13 +910,13 @@ void NotifyTwilightVisual(Unit* caster, uint32 visual, uint32 hits, int32 damage
         SPELL_TWILIGHT_BEAM, visual, hits, damage, beamOk ? 1u : 0u));
 }
 
-void NotifyTwilightHit(Unit* caster, Unit* target, uint32 hitIndex, int32 damage)
+void NotifyTwilightHit(Unit* caster, Unit* target, uint32 hitIndex, int32 damage, float radius)
 {
     if (!target)
         return;
 
     LabNotify(caster, "TWILIGHT_HIT", Trinity::StringFormat(
-        "#%u target=%s damage=%d", hitIndex, target->GetName().c_str(), damage));
+        "#%u target=%s damage=%d radius=%.1f", hitIndex, target->GetName().c_str(), damage, radius));
 }
 
 void CastTwilightDevastation(Unit* caster)
@@ -1283,22 +1352,8 @@ void CastSurgingVitality(Unit* caster)
 // 318187 Dummy% * max(AP,SP) is the pre-hotfix tooltip. Tick amount is 318272 EFFECT_0.
 int32 GushingWoundTickDamage(Unit const* owner)
 {
-    SpellInfo const* info = sSpellMgr->GetSpellInfo(SPELL_GUSHING_WOUND_RANK);
-    SpellEffectInfo const* effect = info ? info->GetEffect(EFFECT_0) : nullptr;
-    if (!effect)
-    {
-        static bool logged = false;
-        if (!logged)
-        {
-            logged = true;
-            TC_LOG_ERROR("scripts", "GushingWound: 318272 EFFECT_0 missing");
-        }
-        return 1;
-    }
-    uint32 itemId = 0;
-    int32 itemLevel = -1;
-    CorruptionRankItemContext(owner, SPELL_GUSHING_WOUND_RANK, itemId, itemLevel);
-    int32 value = effect->CalcValue(owner, nullptr, owner, nullptr, itemId, itemLevel);
+    uint32 const ranks[] = { SPELL_GUSHING_WOUND_RANK };
+    int32 value = SumCorruptionRankDummy(owner, ranks, 1, EFFECT_0, true, 1, "GushingWound");
     return value < 1 ? 1 : value;
 }
 
@@ -2451,10 +2506,18 @@ int32 LashOfTheVoidDamage(Unit const* owner)
 // (both BP=5); Task 2 devour double-counted when item + hidden proc were summed.
 int32 SearingBreathHealthPct(Unit const* owner)
 {
-    uint32 const ranks[] = { SPELL_SEARING_FLAMES_ITEM };
-    int32 pct = SumCorruptionRankDummy(owner, ranks, 1, EFFECT_0, true,
-        SEARING_BREATH_PCT_FALLBACK, "SearingFlames");
-    return pct < 1 ? SEARING_BREATH_PCT_FALLBACK : pct;
+    if (!owner)
+        return SEARING_BREATH_PCT_FALLBACK;
+
+    Aura const* aura = owner->GetAura(SPELL_SEARING_FLAMES_ITEM);
+    SpellInfo const* info = aura ? aura->GetSpellInfo() : sSpellMgr->GetSpellInfo(SPELL_SEARING_FLAMES_ITEM);
+    SpellEffectInfo const* effect = info ? info->GetEffect(EFFECT_0) : nullptr;
+    int32 pct = effect ? effect->BasePoints : 0;
+    if (pct < 1)
+        pct = SEARING_BREATH_PCT_FALLBACK;
+    if (pct > SEARING_BREATH_PCT_FALLBACK)
+        pct = SEARING_BREATH_PCT_FALLBACK;
+    return pct;
 }
 
 uint32 SearingFlamesMaxStacks()
@@ -2644,8 +2707,13 @@ class spell_infinite_stars_proc : public AuraScript
     void HandleProc(ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
-        if (Unit* caster = GetTarget())
-            CastInfiniteStar(caster, ResolveStarTarget(caster, eventInfo));
+        Unit* caster = GetTarget();
+        if (!caster)
+            return;
+        if (caster->GetSpellHistory()->HasCooldown(SPELL_INFINITE_STARS_HIDDEN_PROC))
+            return;
+        Unit* target = ResolveStarTarget(caster, eventInfo);
+        CastInfiniteStar(caster, target);
     }
 
     void Register() override
@@ -2671,19 +2739,9 @@ class spell_infinite_stars_selector : public SpellScript
         if (!caster)
             return;
 
-        Unit* target = GetHitUnit();
-        if (!target || target == caster)
-        {
-            if (Unit* expl = GetExplTargetUnit())
-                if (expl != caster)
-                    target = expl;
-        }
-        if (!target || target == caster)
-            target = caster->GetVictim();
-        if (!target)
-            target = caster->SelectNearbyTarget(nullptr, InfiniteStarsSelectRange());
-
-        CastInfiniteStar(caster, target);
+        // Same nearby-first / single-target fallback as ResolveStarTarget.
+        // No ProcEventInfo: treat GetHitUnit() as the proc target (exclude).
+        CastInfiniteStar(caster, ResolveStarTarget(caster, GetHitUnit()));
     }
 
     void Register() override
@@ -2741,13 +2799,22 @@ class spell_twilight_devastation_proc : public AuraScript
             SPELL_TWILIGHT_DEVASTATION_RANK_1, SPELL_TWILIGHT_DEVASTATION_RANK_2, SPELL_TWILIGHT_DEVASTATION_RANK_3 });
     }
 
-    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    void HandleProc(ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
         Unit* caster = GetTarget();
         if (!caster)
             return;
-
+        if (caster->GetSpellHistory()->HasCooldown(SPELL_TWILIGHT_PROC))
+            return;
+        Unit* hostile = eventInfo.GetProcTarget();
+        if (!hostile)
+            hostile = eventInfo.GetActionTarget();
+        if (!hostile)
+            hostile = caster->GetVictim();
+        if (hostile && hostile->IsPlayer())
+            caster->GetSpellHistory()->AddCooldown(SPELL_TWILIGHT_PROC, 0,
+                Milliseconds(CORRUPTION_SIGNATURE_PVP_ICD_MS));
         CastTwilightDevastation(caster);
     }
 
@@ -2857,19 +2924,31 @@ struct at_twilight_devastation : AreaTriggerAI
             return;
 
         // Each target is hit once per beam even if it re-enters the sphere.
-        if (!_hitGuids.insert(unit->GetGUID()).second)
+        if (_hitGuids.find(unit->GetGUID()) != _hitGuids.end())
             return;
 
+        // Search still uses template r=3; shrink is a script gate after 5 hits.
+        float radius = 3.0f;
+        if (_hitCount >= 5)
+        {
+            radius = 3.0f * float(TWILIGHT_BEAM_MAX_TARGETS - _hitCount) / 5.0f;
+            if (radius <= 0.0f || unit->GetExactDist2d(at) > radius)
+                return;
+        }
+
+        _hitGuids.insert(unit->GetGUID());
         ++_hitCount;
 
         int32 damage = int32(float(caster->GetMaxHealth()) * TwilightHealthPct(caster));
         if (_hitCount >= TWILIGHT_BEAM_HALF_DAMAGE_FROM)
             damage /= 2;
+        if (unit->IsPlayer())
+            damage = damage / 2; // 317159 PvpMultiplier 0.5; do not copy SpellInfo ctor
         if (damage < 1)
             damage = 1;
 
         caster->CastCustomSpell(SPELL_TWILIGHT_DAMAGE, SPELLVALUE_BASE_POINT0, damage, unit, TwilightDamageCastFlags());
-        NotifyTwilightHit(caster, unit, _hitCount, damage);
+        NotifyTwilightHit(caster, unit, _hitCount, damage, radius);
 
         if (_hitCount >= TWILIGHT_BEAM_MAX_TARGETS)
             at->Remove();
@@ -3018,11 +3097,23 @@ class spell_twisted_appendage_proc : public AuraScript
             SPELL_TWISTED_APPENDAGE_RANK_1, SPELL_TWISTED_APPENDAGE_RANK_2, SPELL_TWISTED_APPENDAGE_RANK_3 });
     }
 
-    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    void HandleProc(ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
-        if (Unit* caster = GetTarget())
-            CastTwistedAppendage(caster);
+        Unit* caster = GetTarget();
+        if (!caster)
+            return;
+        if (caster->GetSpellHistory()->HasCooldown(SPELL_TWISTED_APPENDAGE_PROC))
+            return;
+        Unit* hostile = eventInfo.GetProcTarget();
+        if (!hostile)
+            hostile = eventInfo.GetActionTarget();
+        if (!hostile)
+            hostile = caster->GetVictim();
+        if (hostile && hostile->IsPlayer())
+            caster->GetSpellHistory()->AddCooldown(SPELL_TWISTED_APPENDAGE_PROC, 0,
+                Milliseconds(CORRUPTION_SIGNATURE_PVP_ICD_MS));
+        CastTwistedAppendage(caster);
     }
 
     void Register() override
@@ -3115,6 +3206,13 @@ struct npc_twisted_appendage : public Scripted_NoMovementAI
         me->SetReactState(REACT_PASSIVE);
         me->AddUnitState(UNIT_STATE_ROOT);
 
+        uint64 hp = summoner->GetMaxHealth() / 100;
+        if (hp < 1)
+            hp = 1;
+        me->SetCreateHealth(uint32(hp));
+        me->SetMaxHealth(hp);
+        me->SetHealth(hp);
+
         Unit* target = ResolveTentacleTarget(summoner);
         _flayTarget = target ? target->GetGUID() : ObjectGuid::Empty;
         StartFlay(target);
@@ -3143,6 +3241,15 @@ struct npc_twisted_appendage : public Scripted_NoMovementAI
         StartFlay(target);
     }
 
+    void DamageTaken(Unit* /*attacker*/, uint32& damage) override
+    {
+        if (damage >= me->GetHealth())
+        {
+            damage = 0;
+            me->DespawnOrUnsummon();
+        }
+    }
+
 private:
     ObjectGuid _flayTarget;
 
@@ -3160,6 +3267,21 @@ private:
 
         // originalCaster = owner: crit + player-to-creature CLEU. Channel stays on the tentacle.
         me->CastSpell(target, SPELL_TWISTED_APPENDAGE_FLAY, TwistedAppendageFlayFlags(), nullptr, nullptr, owner->GetGUID());
+    }
+};
+
+class unit_twisted_appendage_aoe : public UnitScript
+{
+public:
+    unit_twisted_appendage_aoe() : UnitScript("unit_twisted_appendage_aoe") { }
+
+    void ModifySpellDamageTaken(Unit* target, Unit* /*attacker*/, int32& damage, SpellInfo const* spellInfo) override
+    {
+        if (!target || !spellInfo || target->GetEntry() != NPC_TWISTED_APPENDAGE)
+            return;
+        uint32 difficulty = target->GetMap() ? target->GetMap()->GetDifficultyID() : DIFFICULTY_NONE;
+        if (spellInfo->IsTargetingArea(difficulty) || spellInfo->IsAffectingArea(difficulty))
+            damage = 0;
     }
 };
 
@@ -3266,9 +3388,12 @@ class spell_strikethrough_driver : public AuraScript
     void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         Unit* owner = GetTarget();
-        if (!owner || owner->HasAura(SPELL_STRIKETHROUGH_HIDDEN))
+        if (!owner)
             return;
-        owner->CastSpell(owner, SPELL_STRIKETHROUGH_HIDDEN, true);
+        if (!owner->HasAura(SPELL_STRIKETHROUGH_HIDDEN))
+            owner->CastSpell(owner, SPELL_STRIKETHROUGH_HIDDEN, true);
+        if (Aura* hidden = owner->GetAura(SPELL_STRIKETHROUGH_HIDDEN))
+            hidden->RecalculateAmountOfEffects();
     }
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -3279,7 +3404,11 @@ class spell_strikethrough_driver : public AuraScript
         if (owner->HasAura(SPELL_STRIKETHROUGH_RANK_1) ||
             owner->HasAura(SPELL_STRIKETHROUGH_RANK_2) ||
             owner->HasAura(SPELL_STRIKETHROUGH_RANK_3))
+        {
+            if (Aura* hidden = owner->GetAura(SPELL_STRIKETHROUGH_HIDDEN))
+                hidden->RecalculateAmountOfEffects();
             return;
+        }
         owner->RemoveAurasDueToSpell(SPELL_STRIKETHROUGH_HIDDEN);
     }
 
@@ -3290,8 +3419,7 @@ class spell_strikethrough_driver : public AuraScript
     }
 };
 
-// 320249 - hidden. EFFECT_0 BP=0; fill crit-damage Dummy. EFFECT_1 heal stays 0
-// (driver already has a live crit-heal aura; filling it here would double).
+// 320249 - hidden. EFFECT_0 Aura 163 / EFFECT_1 Aura 50, BP=0; fill the same Dummy.
 class spell_strikethrough_hidden : public AuraScript
 {
     PrepareAuraScript(spell_strikethrough_hidden);
@@ -3308,9 +3436,110 @@ class spell_strikethrough_hidden : public AuraScript
         amount = owner ? StrikethroughCritDamagePct(owner) : 0;
     }
 
+    void CalculateHealing(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        Unit* owner = GetUnitOwner();
+        amount = owner ? StrikethroughCritDamagePct(owner) : 0;
+    }
+
     void Register() override
     {
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_strikethrough_hidden::CalculateDamage, EFFECT_0, SPELL_AURA_MOD_CRIT_DAMAGE_BONUS);
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_strikethrough_hidden::CalculateHealing, EFFECT_1, SPELL_AURA_MOD_CRITICAL_HEALING_AMOUNT);
+    }
+};
+
+// 320257 - hidden Aura 405. Sum Dummy 6/9/12 per worn rank; do not use item-level calc.
+class spell_corruption_expedient_hidden : public AuraScript
+{
+    PrepareAuraScript(spell_corruption_expedient_hidden);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_EXPEDIENT_RANK_1, SPELL_EXPEDIENT_RANK_2, SPELL_EXPEDIENT_RANK_3 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        uint32 const ranks[] = { SPELL_EXPEDIENT_RANK_1, SPELL_EXPEDIENT_RANK_2, SPELL_EXPEDIENT_RANK_3 };
+        Unit* owner = GetUnitOwner();
+        amount = owner ? SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, false, 6, "Expedient") : 0;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_corruption_expedient_hidden::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RATING_PCT);
+    }
+};
+
+class spell_corruption_masterful_hidden : public AuraScript
+{
+    PrepareAuraScript(spell_corruption_masterful_hidden);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MASTERFUL_RANK_1, SPELL_MASTERFUL_RANK_2, SPELL_MASTERFUL_RANK_3 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        uint32 const ranks[] = { SPELL_MASTERFUL_RANK_1, SPELL_MASTERFUL_RANK_2, SPELL_MASTERFUL_RANK_3 };
+        Unit* owner = GetUnitOwner();
+        amount = owner ? SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, false, 6, "Masterful") : 0;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_corruption_masterful_hidden::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RATING_PCT);
+    }
+};
+
+class spell_corruption_versatile_hidden : public AuraScript
+{
+    PrepareAuraScript(spell_corruption_versatile_hidden);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_VERSATILE_RANK_1, SPELL_VERSATILE_RANK_2, SPELL_VERSATILE_RANK_3 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        uint32 const ranks[] = { SPELL_VERSATILE_RANK_1, SPELL_VERSATILE_RANK_2, SPELL_VERSATILE_RANK_3 };
+        Unit* owner = GetUnitOwner();
+        amount = owner ? SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, false, 6, "Versatile") : 0;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_corruption_versatile_hidden::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RATING_PCT);
+    }
+};
+
+class spell_corruption_severe_hidden : public AuraScript
+{
+    PrepareAuraScript(spell_corruption_severe_hidden);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_SEVERE_RANK_1, SPELL_SEVERE_RANK_2, SPELL_SEVERE_RANK_3 });
+    }
+
+    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
+    {
+        canBeRecalculated = true;
+        uint32 const ranks[] = { SPELL_SEVERE_RANK_1, SPELL_SEVERE_RANK_2, SPELL_SEVERE_RANK_3 };
+        Unit* owner = GetUnitOwner();
+        amount = owner ? SumCorruptionRankDummy(owner, ranks, 3, EFFECT_0, false, 6, "Severe") : 0;
+    }
+
+    void Register() override
+    {
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_corruption_severe_hidden::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RATING_PCT);
     }
 };
 
@@ -3616,7 +3845,44 @@ class spell_glimpse_of_clarity : public AuraScript
         return ValidateSpellInfo({ SPELL_GLIMPSE_PROC, SPELL_GLIMPSE_ITEM });
     }
 
-    void Register() override { }
+    // Non-DBC: add stacks per worn 318239 copy. .lab with empty CastItem counts as 1.
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* owner = GetUnitOwner();
+        Aura* aura = GetAura();
+        if (!owner || !aura)
+            return;
+
+        uint32 copies = 0;
+        auto bounds = owner->GetOwnedAuras().equal_range(SPELL_GLIMPSE_ITEM);
+        for (auto itr = bounds.first; itr != bounds.second; ++itr)
+        {
+            Aura const* itemAura = itr->second;
+            if (!itemAura || itemAura->GetCastItemGUID().IsEmpty())
+                continue;
+            ++copies;
+        }
+        if (!copies)
+            copies = 1;
+
+        int32 extra = int32(copies) - 1;
+        if (extra <= 0)
+            return;
+
+        uint32 maxStacks = aura->GetMaxStackAmount();
+        uint32 current = aura->GetStackAmount();
+        if (maxStacks && current + uint32(extra) > maxStacks)
+            extra = int32(maxStacks) - int32(current);
+        if (extra <= 0)
+            return;
+
+        aura->ModStackAmount(extra, AURA_REMOVE_BY_DEFAULT, false, false);
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_glimpse_of_clarity::HandleApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+    }
 };
 
 class player_glimpse_of_clarity : public PlayerScript
@@ -4321,10 +4587,15 @@ void AddSC_corruption_spell_scripts()
     RegisterAuraScript(spell_twisted_appendage_proc);
     RegisterAuraScript(spell_twisted_appendage_flay);
     RegisterCreatureAI(npc_twisted_appendage);
+    new unit_twisted_appendage_aoe();
     RegisterAuraScript(spell_void_ritual_proc);
     RegisterAuraScript(spell_void_ritual_end_is_coming);
     RegisterAuraScript(spell_strikethrough_driver);
     RegisterAuraScript(spell_strikethrough_hidden);
+    RegisterAuraScript(spell_corruption_expedient_hidden);
+    RegisterAuraScript(spell_corruption_masterful_hidden);
+    RegisterAuraScript(spell_corruption_versatile_hidden);
+    RegisterAuraScript(spell_corruption_severe_hidden);
     RegisterAuraScript(spell_racing_pulse_proc);
     RegisterAuraScript(spell_racing_pulse_buff);
     RegisterAuraScript(spell_honed_mind_proc);

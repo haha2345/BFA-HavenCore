@@ -1474,6 +1474,12 @@ void WorldSession::HandlePerformItemInteraction(WorldPackets::ItemInteraction::P
         return;
     }
 
+    if (item->GetEntry() == ITEM_ASHJRAKAMAS)
+    {
+        fail(GameError::ERR_CANT_USE_ITEM, "ashjrakamas cannot be purified");
+        return;
+    }
+
     bool hasCorruption = false;
     for (int32 listId : *item->m_itemData->BonusListIDs)
     {

@@ -2347,6 +2347,18 @@ std::set<uint32> DB2Manager::GetDefaultItemBonusTree(uint32 itemId, ItemContext 
     return bonusListIDs;
 }
 
+void DB2Manager::EnsureAshjrakamasDefaultBonuses(uint32 itemId, std::vector<int32>& bonusListIDs) const
+{
+    if (itemId != ITEM_ASHJRAKAMAS)
+        return;
+    if (!bonusListIDs.empty())
+        return;
+
+    std::set<uint32> defaults = GetDefaultItemBonusTree(itemId, ItemContext::NONE);
+    for (uint32 listId : defaults)
+        bonusListIDs.push_back(int32(listId));
+}
+
 void DB2Manager::LogCorruptionItemBonusDump() const
 {
     static uint32 const kDumpItems[] = {
