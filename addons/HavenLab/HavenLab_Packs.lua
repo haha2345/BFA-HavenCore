@@ -5265,6 +5265,137 @@ HL.PACKS = {
         end,
     },
 
+    pri_shadow_eruption_voidform_bolt = {
+        key = "pri_shadow_eruption_voidform_bolt",
+        title = "暗影-虚空爆发Dummy1费用9000不是Dummy形态周期idx4箭Dummy3000",
+        order = 180,
+        hint = "228260 Dummy 1。SpellPower 9000 不是 Dummy。194249 Dummy 0/25。Aura 85 -3000 不是 Dummy。231688 Dummy 3000/1。234746 无 Dummy。",
+        startText = "【爆发/形态/虚空箭】228260 要耗精神错乱，不要免费。上 194249，周期 Dummy 0 在 idx4，抽取走 Aura 85。虚空箭延痛/触 Dummy 3000。Dummy 25 不是抽取。",
+        startPrint = "请铺 DoT 放虚空爆发，再打虚空箭。",
+        ids = { 228260, 228360, 228361, 194249, 185916, 228264, 205448, 228266, 234746, 231688, 232698 },
+        labels = {
+            [228260] = "虚空爆发Dummy1",
+            [228360] = "爆发伤A",
+            [228361] = "爆发伤B",
+            [194249] = "虚空形态Dummy0/25",
+            [185916] = "虚空形态被动Dummy5",
+            [228264] = "Voidform壳Dummy0/5",
+            [205448] = "虚空箭(无Dummy)",
+            [228266] = "虚空箭学会Dummy0",
+            [234746] = "虚空箭脚本号",
+            [231688] = "延时Dummy3000/1",
+            [232698] = "暗影形态",
+        },
+        chain = {
+            { id = 228260, role = "虚空爆发", want = "cast",
+              hintFail = "没有 228260。确认暗影专精且精神错乱够。" },
+        },
+        extraVerdict = function()
+            return {
+                "9000/-3000/25 不得进 Dummy。不要 TakePower=0。周期不要挂 EFFECT_0 Aura 108。",
+            }
+        end,
+    },
+
+    pri_shadow_dots_flay_apparitions = {
+        key = "pri_shadow_dots_flay_apparitions",
+        title = "暗影-痛无Dummy触Dummy2鞭笞Dummy4幻灵Dummy0吉兆+25不是50",
+        order = 181,
+        hint = "589 无 Dummy。34914 Dummy 2。15407 Dummy 4 不是 300 也不是 4 秒。78203 Dummy 0。155271 无 Dummy Aura +25。50% 弃用。",
+        startText = "【DoT/鞭笞/幻灵】589/34914 能打。15407 能引导（表 Energize，不要空脚本行）。痛暴击出幻灵。吉兆是 Aura +25 不是 50%。蓝贴 −8% 不要再乘 Coef。需要一排桩测灼烧 48045。",
+        startPrint = "请上痛和触，引导鞭笞，看幻灵。",
+        ids = { 589, 34914, 15407, 78203, 147193, 148859, 155271, 48045, 49821, 238558, 8092 },
+        labels = {
+            [589] = "暗言术痛(无Dummy)",
+            [34914] = "吸血鬼之触Dummy2",
+            [15407] = "精神鞭笞Dummy4",
+            [78203] = "暗影幻灵Dummy0",
+            [147193] = "幻灵导弹",
+            [148859] = "幻灵伤害",
+            [155271] = "吉兆(Aura+25不是Dummy)",
+            [48045] = "精神灼烧Dummy4",
+            [49821] = "灼烧伤Dummy0",
+            [238558] = "MiseryDummy0",
+            [8092] = "心灵震爆(无Dummy)",
+        },
+        chain = {
+            { id = 589, role = "暗言术：痛", want = "cast",
+              hintFail = "没有 589。" },
+        },
+        extraVerdict = function()
+            return {
+                "4/2/50/0.68/−8 不得进 Dummy。不要给 15407/589 包空脚本。",
+            }
+        end,
+    },
+
+    pri_shadow_torrent_ascension = {
+        key = "pri_shadow_torrent_ascension",
+        title = "暗影-洪流263165 Dummy0删+600走289577神器205065不加厚升华Dummy1/5000",
+        order = 182,
+        hint = "263165 Dummy 0。289577 Aura 24 600 不是 Dummy。Dummy 5。205065 Dummy 2 不加厚。280711 Dummy 1/5000。15 秒观察窗口。263346 无 Dummy。",
+        startText = "【洪流/升华/黑暗虚空】点 263165 回能走 289577，不要写死 +600，不要 205065 循环。点 280711 上 194249，约 15 秒后摘，15 不是 Dummy。263346 上 589。不要 DELETE 205065。",
+        startPrint = "请点虚空洪流 263165、黑暗升华 280711、黑暗虚空 263346。",
+        ids = { 263165, 289577, 205065, 262173, 280711, 280800, 263346, 194249, 589 },
+        labels = {
+            [263165] = "虚空洪流Dummy0",
+            [289577] = "洪流回能Aura24_600",
+            [205065] = "神器洪流Dummy2(不加厚)",
+            [262173] = "阻止回能",
+            [280711] = "黑暗升华Dummy1/5000",
+            [280800] = "升华伤害",
+            [263346] = "黑暗虚空",
+            [194249] = "虚空形态",
+            [589] = "痛(虚空应上)",
+        },
+        chain = {
+            { id = 263165, role = "虚空洪流", want = "cast",
+              hintFail = "没有 263165。确认点了 T90 虚空洪流。" },
+        },
+        extraVerdict = function()
+            return {
+                "600/15/5000 不得进 Dummy。不要覆盖 205065。不要 DELETE 神器行。",
+            }
+        end,
+    },
+
+    pri_shadow_death_legacy_pet = {
+        key = "pri_shadow_death_legacy_pet",
+        title = "暗影-死Dummy20/15/30 LegacyDummy60 SurrenderDummy90净化213634缩放PET不搬家Madness",
+        order = 183,
+        hint = "32379 Dummy 20/15/30。193225 Dummy 60/5。193223 Dummy 90。213634 无 Dummy。34433 Dummy 0 缩放 PET。77486 无 Dummy 不搬家。194248 无行。280752 Dummy 6。",
+        startText = "【死/Legacy/Surrender/净化/宠】32379 三列 Dummy 不互填。点 193225 Dummy 60 阈值。点 193223 Dummy 90。213634 给友方，不要 527。暗影魔能招，缩放不在本波。200174 不要和第二套 123040 PetAI 互覆盖。Madness 不搬家。194248 不补脚本。",
+        startPrint = "请打暗言术：死，点 Legacy/Surrender，用 213634，招暗影魔。",
+        ids = { 32379, 193225, 193223, 213634, 527, 34433, 200174, 123040, 77486, 194248, 280752, 199579, 15286, 47585, 15487, 108968 },
+        labels = {
+            [32379] = "暗言术死Dummy20/15/30",
+            [193225] = "LegacyDummy60/5",
+            [193223] = "SurrenderDummy90",
+            [213634] = "净化疾病(只暗影)",
+            [527] = "纯净(暗影不要用)",
+            [34433] = "暗影魔Dummy0(缩放PET)",
+            [200174] = "摧心魔Shadow",
+            [123040] = "摧心魔Disc(不要互覆盖)",
+            [77486] = "Madness(不搬家)",
+            [194248] = "空号(不补脚本)",
+            [280752] = "HallucinationsDummy6",
+            [199579] = "幻觉回能",
+            [15286] = "吸血鬼拥抱Dummy85",
+            [47585] = "消散Dummy100(表已表达)",
+            [15487] = "沉默(表已表达)",
+            [108968] = "VoidShift(本期不验收)",
+        },
+        chain = {
+            { id = 32379, role = "暗言术：死", want = "cast",
+              hintFail = "没有 32379。确认点了 T75 死，或基线学会。" },
+        },
+        extraVerdict = function()
+            return {
+                "194248 不补脚本。527 不要给暗影。缩放不在本波。Madness 不搬家。10060/PI 不验收。108968 本期不验收。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
