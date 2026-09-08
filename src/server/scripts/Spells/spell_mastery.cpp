@@ -38,7 +38,8 @@ enum MasterySpells
     SPELL_MAGE_GLACIAL_SPIKE_AMOUNT          = 214325,
     SPELL_MAGE_IGNITE                        = 12846,
     SPELL_MAGE_IGNITE_AURA                   = 12654,
-    SPELL_MAGE_SPLITTING_ICE                 = 56377
+    SPELL_MAGE_SPLITTING_ICE                 = 56377,
+    SPELL_MAGE_SCORCH                        = 2948
 };
 
 const int IcicleAuras[5] = { 214124, 214125, 214126, 214127, 214130 };
@@ -84,7 +85,19 @@ class spell_mastery_icicles_proc : public AuraScript
                     icilesAddSecond = true;
             }
 
-            hitDamage *= (player->m_activePlayerData->Mastery * 2.25f) / 100.0f;
+            float masteryCoef = 0.0f;
+            if (SpellEffectInfo const* aura107 = GetSpellInfo()->GetEffect(EFFECT_2))
+                masteryCoef = aura107->BonusCoefficient;
+            hitDamage = int32(hitDamage * player->m_activePlayerData->Mastery * masteryCoef);
+
+            int32 maxIcicles = 0;
+            if (SpellEffectInfo const* dummy5 = GetSpellInfo()->GetEffect(EFFECT_1))
+                maxIcicles = dummy5->CalcValue();
+            int32 visualSlots = int32(sizeof(IcicleAuras) / sizeof(IcicleAuras[0]));
+            if (maxIcicles > visualSlots)
+                maxIcicles = visualSlots;
+            if (maxIcicles <= 0)
+                return;
 
             // Prevent huge hits on player after hitting low level creatures
             if (player->getLevel() > target->getLevel())
@@ -93,12 +106,12 @@ class spell_mastery_icicles_proc : public AuraScript
             // We need to get the first free icicle slot
             int8 icicleFreeSlot = -1; // -1 means no free slot
             int8 icicleSecondFreeSlot = -1; // -1 means no free slot
-            for (int8 l_I = 0; l_I < 5; ++l_I)
+            for (int8 l_I = 0; l_I < maxIcicles; ++l_I)
             {
                 if (!player->HasAura(IcicleAuras[l_I]))
                 {
                     icicleFreeSlot = l_I;
-                    if (icilesAddSecond && icicleFreeSlot != 5)
+                    if (icilesAddSecond && (l_I + 1) < maxIcicles)
                         icicleSecondFreeSlot = l_I + 1;
                     break;
                 }
@@ -111,7 +124,7 @@ class spell_mastery_icicles_proc : public AuraScript
                     // We need to find the icicle with the smallest duration.
                     int8 smallestIcicle = 0;
                     int32 minDuration = 0xFFFFFF;
-                    for (int8 i = 0; i < 5; i++)
+                    for (int8 i = 0; i < maxIcicles; i++)
                     {
                         if (Aura* tmpCurrentAura = player->GetAura(IcicleAuras[i]))
                         {
@@ -161,7 +174,7 @@ class spell_mastery_icicles_proc : public AuraScript
                         {
                             if (Aura* glacialSpikeProc = player->GetAura(SPELL_MAGE_ICICLE_AURA))
                             {
-                                if (glacialSpikeProc->GetStackAmount() == 5)
+                                if (glacialSpikeProc->GetStackAmount() == maxIcicles)
                                     player->CastSpell(player, SPELL_MAGE_GLACIAL_SPIKE_PROC, true);
                             }
                         }
@@ -179,7 +192,7 @@ class spell_mastery_icicles_proc : public AuraScript
                         // We need to find the icicle with the smallest duration.
                         int8 smallestIcicle = 0;
                         int32 minDuration = 0xFFFFFF;
-                        for (int8 i = 0; i < 5; i++)
+                        for (int8 i = 0; i < maxIcicles; i++)
                         {
                             if (Aura* tmpCurrentAura = player->GetAura(IcicleAuras[i]))
                             {
@@ -229,7 +242,7 @@ class spell_mastery_icicles_proc : public AuraScript
                         {
                             if (Aura* glacialSpikeProc = player->GetAura(SPELL_MAGE_ICICLE_AURA))
                             {
-                                if (glacialSpikeProc->GetStackAmount() == 5)
+                                if (glacialSpikeProc->GetStackAmount() == maxIcicles)
                                     player->CastSpell(player, SPELL_MAGE_GLACIAL_SPIKE_PROC, true);
                             }
                         }
@@ -456,24 +469,41 @@ public:
     {
         PrepareSpellScript(spell_mastery_ignite_SpellScript);
 
+        void HandleCritChance(Unit* victim, float& chance)
+        {
+            if (GetSpellInfo()->Id != SPELL_MAGE_SCORCH)
+                return;
+
+            Unit* caster = GetCaster();
+            if (!caster || !victim || !caster->HasAura(SPELL_MAGE_SEARING_TOUCH))
+                return;
+
+            if (AuraEffect const* dummy30 = caster->GetAuraEffect(SPELL_MAGE_SEARING_TOUCH, EFFECT_0))
+                if (victim->HealthBelowPct(dummy30->GetAmount()))
+                    chance = 100.f;
+        }
+
         void HandleOnHit()
         {
+            if (GetSpellInfo()->Id != SPELL_MAGE_SCORCH)
+                return;
+
             Unit* caster = GetCaster();
             Unit* target = GetHitUnit();
-            if (caster->HasAura(SPELL_MAGE_SEARING_TOUCH))
-            {
-                if (!target->HealthBelowPct(31))
-                {
-                    //Scorch deals 150 % increased damage
-                    SetHitDamage(GetHitDamage() + GetHitDamage() / 2);
-                }
-                else
-                {                    
-                    //and is a guaranteed Critical Strike when the target is below 30 % health.
-                    int32 critChance = caster->ToPlayer()->GetRatingBonusValue(CR_CRIT_SPELL) * 100;
-                    SetHitDamage(GetHitDamage() + GetHitDamage() / 2 + critChance);
-                }
-            }
+            if (!caster || !target || !caster->HasAura(SPELL_MAGE_SEARING_TOUCH))
+                return;
+
+            AuraEffect const* dummy30 = caster->GetAuraEffect(SPELL_MAGE_SEARING_TOUCH, EFFECT_0);
+            AuraEffect const* dummy150 = caster->GetAuraEffect(SPELL_MAGE_SEARING_TOUCH, EFFECT_1);
+            if (!dummy30 || !dummy150)
+                return;
+
+            if (!target->HealthBelowPct(dummy30->GetAmount()))
+                return;
+
+            int32 damage = GetHitDamage();
+            AddPct(damage, dummy150->GetAmount());
+            SetHitDamage(damage);
         }
 
         void HandleAfterHit()
@@ -487,11 +517,19 @@ public:
                         const SpellInfo* igniteAura = sSpellMgr->GetSpellInfo(SPELL_MAGE_IGNITE_AURA);
                         if (GetSpellInfo()->Id != SPELL_MAGE_IGNITE_AURA && igniteAura != nullptr)
                         {
-                            float masteryValue = caster->ToPlayer()->m_activePlayerData->Mastery * 0.75f;
+                            float dummy75 = 0.0f;
+                            if (SpellInfo const* igniteMastery = sSpellMgr->GetSpellInfo(SPELL_MAGE_IGNITE))
+                                if (SpellEffectInfo const* eff1 = igniteMastery->GetEffect(EFFECT_1))
+                                    dummy75 = float(eff1->CalcValue());
+                            float masteryValue = caster->ToPlayer()->m_activePlayerData->Mastery * dummy75 / 100.0f;
 
                             int32 basePoints = GetHitDamage() /*+ GetAbsorbedDamage()*/;
                             if (basePoints)
                             {
+                                // Hot Streak ignite tick x2 observation window, not Dummy
+                                if (caster->Variables.GetValue<int32>("MageHotStreakIgnite", 0))
+                                    basePoints *= 2;
+
                                 basePoints = int32(CalculatePct(basePoints, masteryValue));
 
                                 if (igniteAura->GetEffect(EFFECT_0)->Amplitude > 0)
@@ -517,6 +555,7 @@ public:
 
         void Register() override
         {
+            OnCalcCritChance += SpellOnCalcCritChanceFn(spell_mastery_ignite_SpellScript::HandleCritChance);
             OnHit += SpellHitFn(spell_mastery_ignite_SpellScript::HandleOnHit);
             AfterHit += SpellHitFn(spell_mastery_ignite_SpellScript::HandleAfterHit);
         }
@@ -560,7 +599,7 @@ class spell_mage_mastery_ignite : public AuraScript
         if (!caster)
             return;
 
-        float dist = INTERACTION_DISTANCE;
+        float dist = 8.0f; // observation window, not Dummy
         std::list<Unit*> targetList;
         std::list<Unit*> targetsWithIgnite;
         std::list<Unit*> targetsWithouthIgnite;
