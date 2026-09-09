@@ -1,0 +1,7 @@
+-- 837 blizzlike: PET 缩放人测。cpp 已在 PET-loader 提交（InitStats 103822/95061/95072/62982/111101 + 石像鬼停写死）。
+-- 本文件无 INSERT / DELETE。禁止 INSERT 34902/34947/54566/19591/61017/51906/1964 空壳。
+-- 禁止 DELETE 35695/51963/16827/55342/51533/205636。
+-- 禁止再改 spell_pet.cpp / Pet.cpp / pet_dk.cpp / spell_script_loader.cpp。
+-- 表列走表：199373 AP 0.111、91776 AP 0.30、51963 AP 0.15、3110 BonusCoef 0.40、34433 Dummy 0、55342 Dummy 3。
+-- SimC 0.6/0.5/0.4/1.0/0.55/1.15/1.25/0.4*1.06 非 DBC 观察窗口，不得进 Dummy，不得进 InitStats。
+-- 不要发明 pet_warlock.cpp / pet_druid.cpp。WL-Demo 循环不验收。不要勾 MAS。不要小熊猫。

@@ -6977,6 +6977,228 @@ HL.PACKS = {
         end,
     },
 
+    pet_hun_bm_scale = {
+        key = "pet_hun_bm_scale",
+        title = "PET缩放-本包必须用打16827的科_0.333不得进Dummy0",
+        order = 234,
+        hint = "16827/17253/49966 无 Dummy。34902 Dummy 0 残留不读。20782 Aura79 60 不是继承 AP。0.333f 非 DBC 不得进 Dummy。本波不改 spell_hunter.cpp。循环不搬进 spell_pet。不勾 MAS。",
+        startText = "【猎人宠物】120 野兽控制 Call Pet 1（883）。本包必须用打 16827 的科。打 131989 出 16827。失败时禁止改 spell_hunter.cpp。0.333/0.6 不得进 Dummy 0。不要把 883 want=summon 当本包完成。不要倒刺/杀戮/眼镜蛇当本包完成。不要小熊猫 36911。",
+        startPrint = "请 Call Pet 后用打 16827 的科打伤害桩 131989。本包必须用打 16827 的科。失败时禁止改 spell_hunter.cpp。",
+        ids = { 883, 982, 16827, 17253, 49966, 34902, 20782, 35695, 76657, 267116, 36911 },
+        labels = {
+            [883] = "召唤宠物(无Dummy)",
+            [982] = "复活宠物(无Dummy)",
+            [16827] = "爪击(无Dummy,AP列0)",
+            [17253] = "撕咬(无Dummy)",
+            [49966] = "掌击(无Dummy)",
+            [34902] = "HunterPet Dummy0",
+            [20782] = "CombatExperience(60不是继承AP)",
+            [35695] = "PetPassive无Dummy",
+            [76657] = "精通Dummy190(不勾MAS)",
+            [267116] = "动物伙伴(无Dummy,Aura429-35不是Dummy)",
+            [36911] = "小熊猫(不当验收)",
+        },
+        chain = {
+            { id = 16827, role = "爪击", want = "damage",
+              hintFail = "宠物没有打出 16827 伤害。本包必须用打 16827 的科。失败时禁止改 spell_hunter.cpp。0.333/0.6 不得进 Dummy 0。不要把 883 want=summon 当本包完成。必须是战斗宠物不是小熊猫。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "本包必须用打 16827 的科。失败时禁止改 spell_hunter.cpp。0.6/0.333 不得进 Dummy 0。不要把 883 want=summon 当本包完成。不要勾 BM 循环。不要勾 MAS。不要小熊猫。",
+            }
+        end,
+    },
+
+    pet_wl_summons_scale = {
+        key = "pet_wl_summons_scale",
+        title = "PET缩放-术士召唤物能打34947无行不挂Demo循环不验收",
+        order = 235,
+        hint = "3110 BonusCoef 0.40 不是 Dummy。104318 BonusCoef 0.046。205196 AP 1.0。104316 Dummy 2 是只数。34947 SpellName 无行。SimC 0.5/1.15/1.25 非 DBC。不要发明 pet_warlock.cpp。",
+        startText = "【术士宠物】688 小鬼出 3110 或 104316 猎犬出 205196，打 131989。不要勾手之卫/暴君/恶魔箭。不要 34947。InitStats 0.15f 保持不是 SimC 0.5。",
+        startPrint = "请召唤小鬼或恐惧猎犬打伤害桩。不要按恶魔学识循环验收。",
+        ids = { 688, 697, 691, 712, 30146, 3110, 104316, 104318, 205196, 98035, 34947, 77219, 137044, 265187, 265273 },
+        labels = {
+            [688] = "召唤小鬼(无Dummy)",
+            [697] = "虚空行者(无Dummy)",
+            [691] = "地狱猎犬(无Dummy)",
+            [712] = "魅魔(无Dummy)",
+            [30146] = "恶魔卫士(无Dummy)",
+            [3110] = "火箭(BonusCoef0.40不是Dummy)",
+            [104316] = "召唤恐惧猎犬Dummy2",
+            [104318] = "野性小鬼火箭(Coef0.046)",
+            [205196] = "恐惧咬(AP1.0不是Dummy)",
+            [98035] = "恐惧猎犬生物",
+            [34947] = "已删WarlockScaling(不挂)",
+            [77219] = "恶魔学识精通(不搬家)",
+            [137044] = "专精Aura429+15不是Dummy",
+            [265187] = "暴君(循环不验收)",
+            [265273] = "DemonicPower Dummy15/15000(不互填)",
+        },
+        chain = {
+            { id = 3110, role = "小鬼火箭", want = "damage",
+              hintFail = "没有 3110 伤害。可改召 104316 看 205196。不要用 Demo 循环当失败理由。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "34947 不挂。0.5/1.15/1.25 不得进 Dummy。不要发明 pet_warlock.cpp。Demo 循环不验收。不勾 MAS。",
+            }
+        end,
+    },
+
+    pet_dk_ghoul_army_gargoyle = {
+        key = "pet_dk_ghoul_army_gargoyle",
+        title = "PET缩放-尸鬼大军石像鬼AP走表停写死15",
+        order = 236,
+        hint = "91776 AP 0.30。199373 AP 0.111。51963 AP 0.15。49206 Dummy 30/2。54566 无行。禁止 SetHitDamage AP/100*15。SimC 0.6/0.4x1.06/1/3 非 DBC。循环不搬进 spell_pet。",
+        startText = "【DK宠物】46584 尸鬼出 91776；42651 大军出 199373；49206 石像鬼出 51963 且不要主人 AP×15% 写死。不要勾脓疮/天启循环完成。111101 有 case 即可。",
+        startPrint = "请邪恶专精召尸鬼、大军、石像鬼打 131989。",
+        ids = { 46584, 52150, 26125, 91776, 42651, 24207, 199373, 49206, 27829, 51963, 221180, 111101, 54566, 137007 },
+        summonEntries = { 26125, 24207, 27829, 111101 },
+        labels = {
+            [46584] = "亡者复生Dummy1",
+            [52150] = "RaiseDead召唤",
+            [26125] = "复活盟友生物",
+            [91776] = "尸鬼爪AP0.30",
+            [42651] = "亡者大军",
+            [24207] = "大军尸鬼生物",
+            [199373] = "大军爪AP0.111",
+            [49206] = "召唤石像鬼Dummy30/2",
+            [27829] = "黑锋石像鬼生物",
+            [51963] = "石像鬼打击AP0.15",
+            [221180] = "天启大军召唤(循环不验收)",
+            [111101] = "天启尸鬼生物",
+            [54566] = "已删DKScaling01",
+            [137007] = "专精Aura429-3不是Dummy",
+        },
+        chain = {
+            { id = 51963, role = "石像鬼打击", want = "damage",
+              hintFail = "没有 51963 伤害。先 49206。不要再是脚本写死 15% 主人 AP。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "0.15 不得另造成 Dummy。0.111 不得被 0.4x1.06 覆盖。不要勾邪恶循环。54566 不挂。",
+            }
+        end,
+    },
+
+    pet_pri_shadowfiend_mindbender = {
+        key = "pet_pri_shadowfiend_mindbender",
+        title = "PET缩放-暗影魔Dummy0摧心魔62982抄0.3f不是100%SP",
+        order = 237,
+        hint = "34433 Dummy 0。200174 无 Dummy。19668/62982。SimC 1.0 非 DBC 不得进 Dummy 0。AI 在 pet_priest.cpp 不搬。",
+        startText = "【暗影魔】34433 出 19668 打 131989。有摧心魔则 200174 出 62982。自动判定不按 entry / step.id 过滤。人测确认生物 19668 / 62982。Dummy 0 不是 100% 法强。不要改 pet_priest.cpp。不要改 HavenLab_Verdict.lua。",
+        startPrint = "请暗影专精放暗影魔打伤害桩。自动判定不按 entry / step.id 过滤。人测确认生物 19668 / 62982。",
+        ids = { 34433, 19668, 200174, 62982 },
+        labels = {
+            [34433] = "暗影魔Dummy0",
+            [19668] = "暗影魔生物",
+            [200174] = "摧心魔(无Dummy)",
+            [62982] = "摧心魔生物",
+        },
+        summonEntries = { 19668, 62982 },
+        chain = {
+            { id = 34433, role = "暗影魔", want = "summon",
+              expect = { minCount = 1, dealsDamage = true },
+              hintFail = "没有 34433 召唤物打桩。自动判定不按 entry / step.id 过滤。人测确认生物 19668。摧心魔走 200174/62982。不要改 HavenLab_Verdict.lua。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定不按 entry / step.id 过滤。人测确认生物 19668 / 62982。1.0 不得进 Dummy 0。0.3f 是引擎现有不是 Dummy。不要搬 AI。不要改 HavenLab_Verdict.lua。",
+            }
+        end,
+    },
+
+    pet_mage_mirror_image = {
+        key = "pet_mage_mirror_image",
+        title = "PET缩放-镜像Dummy3是个数不是55%SP生物31216",
+        order = 238,
+        hint = "55342 Dummy 3。召唤 31216。47243/47244 不是 55342 产物。SimC 0.55 非 DBC 不得进 Dummy 3。case 31216 0.33f 保持。",
+        startText = "【镜像】55342 出三个 31216 打 131989。自动判定不按 entry / step.id 过滤。必须人测确认生物 31216，不是 510/47243。Dummy 3 = 个数。0.55 不得进 Dummy 3。不要改 HavenLab_Verdict.lua。",
+        startPrint = "请法师放镜像。自动判定不按 entry / step.id 过滤。人测确认三只是 31216，不是 510/47243。",
+        ids = { 55342, 58831, 31216, 47243, 47244, 510, 31707 },
+        labels = {
+            [55342] = "镜像Dummy3",
+            [58831] = "镜像召唤31216",
+            [31216] = "镜像生物",
+            [47243] = "旧镜像(不是55342产物)",
+            [47244] = "旧镜像(不是55342产物)",
+            [510] = "水元素(表已表达,本包不强制)",
+            [31707] = "水元素技能(BonusCoef0.2925不是Dummy)",
+        },
+        summonEntries = { 31216 },
+        chain = {
+            { id = 55342, role = "镜像", want = "summon",
+              expect = { minCount = 3, dealsDamage = true },
+              hintFail = "没有三个 31216 打桩。自动判定不按 entry / step.id 过滤。必须人测确认生物 31216，不是 510/47243。Dummy 3 = 个数。不要改 HavenLab_Verdict.lua。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定不按 entry / step.id 过滤。必须人测确认生物 31216，不是 510/47243。Dummy 3 是个数。0.55 不得进 Dummy 3。不要改 HavenLab_Verdict.lua。",
+            }
+        end,
+    },
+
+    pet_sha_wolf_ele = {
+        key = "pet_sha_wolf_ele",
+        title = "PET缩放-狼魂Dummy0火土元素95061/95072不是旧ID",
+        order = 239,
+        hint = "51533 Dummy 0。228562→29264。198067 Dummy 0→95061。198103 Dummy 0→95072。15438/15352 是旧 ID。不改 pet_shaman.cpp。58877 Dummy 225。",
+        startText = "【萨满宠物】51533 出 29264 打桩。自动判定不按 entry / step.id 过滤。火土必须分条确认地上是 95061 / 95072 不是 15438/15352。禁止把 51533 绿勾当 case 95061/95072 已落地。Dummy 0 不读成继承 0%。不要改 HavenLab_Verdict.lua。",
+        startPrint = "请萨满放狼魂、火元素、土元素。自动判定不按 entry / step.id 过滤。分条确认地上 95061/95072，禁止把 51533 绿勾当火土 case 已落地。",
+        ids = { 51533, 228562, 29264, 58877, 198067, 95061, 198103, 95072, 15438, 15352 },
+        labels = {
+            [51533] = "野性狼魂Dummy0",
+            [228562] = "狼魂召唤29264",
+            [29264] = "幽灵狼生物",
+            [58877] = "SpiritHunt Dummy225",
+            [198067] = "火元素Dummy0",
+            [95061] = "8.3火元素生物",
+            [198103] = "土元素Dummy0",
+            [95072] = "8.3土元素生物",
+            [15438] = "旧火元素ID(不验收)",
+            [15352] = "旧土元素ID(不验收)",
+        },
+        summonEntries = { 29264, 95061, 95072 },
+        chain = {
+            { id = 51533, role = "野性狼魂", want = "summon",
+              expect = { minCount = 1, dealsDamage = true },
+              hintFail = "没有 29264 打桩。自动判定不按 entry / step.id 过滤。火土必须分条确认地上是 95061 / 95072 不是 15438/15352。禁止把 51533 绿勾当 case 95061/95072 已落地。不要改 HavenLab_Verdict.lua。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定不按 entry / step.id 过滤。火土必须分条确认地上是 95061 / 95072 不是 15438/15352。禁止把 51533 绿勾当 case 95061/95072 已落地。Dummy 0 不读成继承。不改 pet_shaman.cpp。不要改 HavenLab_Verdict.lua。SimC 0.6/1.0/0.25 不得进 Dummy。",
+            }
+        end,
+    },
+
+    pet_dru_treant = {
+        key = "pet_dru_treant",
+        title = "PET缩放-树人Dummy3生物103822不是1964不发明pet_druid",
+        order = 240,
+        hint = "205636 Dummy 3。248280→103822。1964 SpellName 无行。InitStats case 103822 抄 1964 的 0.15f。禁止 SimC 0.6。不要发明 pet_druid.cpp。103822 ScriptName 保持空。",
+        startText = "【树人】平衡点 205636，三只 103822 打 131989。自动判定不按 entry / step.id 过滤。必须人测确认生物 103822，不是 1964。Dummy 3 = 只数。不要新建 pet_druid.cpp。0.6 不得进 Dummy 3。不要改 HavenLab_Verdict.lua。",
+        startPrint = "请平衡德鲁伊放自然之力。自动判定不按 entry / step.id 过滤。人测确认三只是 103822，不是 1964。",
+        ids = { 205636, 248280, 103822, 1964, 77492 },
+        labels = {
+            [205636] = "自然之力Dummy3",
+            [248280] = "树人召唤103822",
+            [103822] = "8.3树人生物",
+            [1964] = "已删旧树人",
+            [77492] = "平衡精通(不搬家,不勾MAS)",
+        },
+        summonEntries = { 103822 },
+        chain = {
+            { id = 205636, role = "自然之力", want = "summon",
+              expect = { minCount = 3, dealsDamage = true },
+              hintFail = "没有三只 103822 打桩。自动判定不按 entry / step.id 过滤。必须人测确认生物 103822，不是 1964。Dummy 3 = 只数。不要改 HavenLab_Verdict.lua。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定不按 entry / step.id 过滤。必须人测确认生物 103822，不是 1964。Dummy 3 是只数。不要发明 pet_druid.cpp。0.6 不得进 Dummy 3。本包不勾 MAS。不要改 HavenLab_Verdict.lua。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
