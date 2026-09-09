@@ -6911,6 +6911,72 @@ HL.PACKS = {
         end,
     },
 
+    pet_loader_addsc_35695 = {
+        key = "pet_loader_addsc_35695",
+        title = "PET接线-pack绿勾只证明883_AddSC与35695INSERT认3307与启动日志",
+        order = 232,
+        hint = "AddSC_pet_spell_scripts 非空。loader 必须声明并调用。35695 无 Dummy。Aura 57/52 BonusCoef 1 不是 Dummy。禁止 INSERT 19591/61013/61017/61697。",
+        startText = "【loader/35695】Call Pet 1（883）。槽 2–5 是 83242–83245，不要只靠槽 2–5。自动判定只证明 883；AddSC 声明调用与 35695 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。禁止 aura-self 盯 35695/34902。LearnPetPassives 不改。已删号不要挂。打 131989，不要小熊猫。",
+        startPrint = "请 Call Pet 1（883）打桩。自动判定只证明 883。AddSC/35695 只认 3307 SELECT + 启动日志，不要靠绿勾。不要小熊猫。",
+        ids = { 883, 35695, 35697, 34902, 20782, 51906, 76657 },
+        labels = {
+            [883] = "召唤宠物(无Dummy)",
+            [35695] = "PetPassive(DND)无Dummy",
+            [35697] = "PetPassive受伤(无Dummy,不INSERT)",
+            [34902] = "HunterPet Dummy0(不INSERT)",
+            [20782] = "CombatExperience(Aura79=60不是Dummy)",
+            [51906] = "符文武器缩放(无Dummy,不INSERT)",
+            [76657] = "野兽精通Dummy190(不搬家,不勾MAS)",
+        },
+        chain = {
+            { id = 883, role = "召唤宠物", want = "cast",
+              hintFail = "没有 883。必须 Call Pet 1（883）。槽 2–5 是 83242–83245，不要只靠槽 2–5。自动判定只证明 883；AddSC 声明调用与 35695 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。禁止 aura-self 盯 35695/34902。LearnPetPassives 不改。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定只证明 883。AddSC 声明调用与 35695 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。禁止 aura-self 盯 35695/34902。LearnPetPassives 不改。0.6 不得进 Dummy 0。本包不勾 MAS。不要小熊猫。",
+            }
+        end,
+    },
+
+    pet_deleted_ids_dummy_keep = {
+        key = "pet_deleted_ids_dummy_keep",
+        title = "PET接线-已删Scaling号不挂_绿勾只证明883不是AddSC",
+        order = 233,
+        hint = "19591/61013/61017/61697/34903/34904/54566/34947/1964 SpellName 无行。34902 Dummy 0。20782 无 Dummy Aura79 60 不是继承 60% AP。199373 AP 0.111。91776 AP 0.30。51963 AP 0.15。34433 Dummy 0。55342 Dummy 3。",
+        startText = "【已删号/Dummy保持】Call Pet 1（883）。槽 2–5 是 83242–83245，不要只靠槽 2–5。自动判定只证明 883；AddSC 声明调用与 35695 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。禁止 aura-self 盯 35695/34902。LearnPetPassives 不改。不要给 19591/61017/54566/34947 INSERT。34902 Dummy 0 残留不读。60 不是 RAP 继承。SimC 0.6/0.5/0.4/1.0/0.55 不得进 Dummy、不得进 InitStats。",
+        startPrint = "请 Call Pet 1（883）。自动判定只证明 883。已删号不挂认 3307 SELECT，不要靠 pack 绿勾。Dummy 列保持。",
+        ids = { 883, 19591, 61013, 61017, 61697, 34903, 34904, 54566, 34947, 1964, 34902, 20782, 199373, 91776, 51963, 34433, 55342 },
+        labels = {
+            [883] = "召唤宠物(无Dummy)",
+            [19591] = "已删TamedPassive06",
+            [61013] = "已删WarlockScaling05",
+            [61017] = "已删HunterScaling04",
+            [61697] = "已删DKScaling03",
+            [34903] = "已删HunterScaling02",
+            [34904] = "已删HunterScaling03",
+            [54566] = "已删DKScaling01",
+            [34947] = "已删WarlockScaling01",
+            [1964] = "已删树人旧生物",
+            [34902] = "Dummy0残留不读",
+            [20782] = "Aura79=60不是继承AP",
+            [199373] = "大军爪AP0.111不是Dummy",
+            [91776] = "尸鬼爪AP0.30不是Dummy",
+            [51963] = "石像鬼AP0.15不是Dummy",
+            [34433] = "暗影魔Dummy0",
+            [55342] = "镜像Dummy3个数",
+        },
+        chain = {
+            { id = 883, role = "召唤宠物", want = "cast",
+              hintFail = "没有 883。必须 Call Pet 1（883）。槽 2–5 是 83242–83245，不要只靠槽 2–5。自动判定只证明 883；AddSC 声明调用与 35695 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。禁止 aura-self 盯 35695/34902。LearnPetPassives 不改。本包盯已删号不挂、Dummy 列保持。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定只证明 883。AddSC 声明调用与 35695 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。禁止 aura-self 盯 35695/34902。LearnPetPassives 不改。已删号不挂。0.6/0.5/0.4/1.0/0.55/1.15/1.25/0.4x1.06 不得进 Dummy。60 不是继承 AP。不要发明 pet_warlock.cpp。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 

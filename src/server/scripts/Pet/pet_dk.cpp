@@ -134,11 +134,7 @@ class spell_dk_gargoyle_strike : public SpellScript
 
     void HandleOnHit()
     {
-        if (Unit* owner = GetCaster()->GetOwner())
-        {
-            int32 damage = owner->m_unitData->AttackPower / 100 * 15.0f;
-            SetHitDamage(damage);
-        }
+        // 51963 AP 0.15 走引擎，禁止写死 15% 主人 AP
     }
 
     void Register() override
