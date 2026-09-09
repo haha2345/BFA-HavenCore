@@ -313,6 +313,18 @@ enum WarlockSpells
     SPELL_WARLOCK_PVP_4P_BONUS = 143395,
     SPELL_SHADOW_EMBRACE = 32388,
     SPELL_SHADOW_EMBRACE_TARGET_DEBUFF = 32390,
+    SPELL_WARLOCK_HEALTH_FUNNEL = 755,
+    SPELL_WARLOCK_UNENDING_RESOLVE = 104773,
+    SPELL_WARLOCK_UNENDING_BREATH = 5697,
+    SPELL_WARLOCK_SOULSTONE = 20707,
+    SPELL_WARLOCK_DRAIN_SOUL = 198590,
+    SPELL_WARLOCK_RAIN_OF_FIRE = 5740,
+    SPELL_WARLOCK_CHANNEL_DEMONFIRE = 196447,
+    SPELL_WARLOCK_SUMMON_DARKGLARE = 205180,
+    SPELL_WARLOCK_DEATHBOLT = 264106,
+    SPELL_WARLOCK_MASTERY_POTENT_AFFLICTIONS = 77215,
+    SPELL_WARLOCK_MASTERY_CHAOTIC_ENERGIES = 77220,
+    SPELL_WARLOCK_DRAIN_LIFE = 234153,
 };
 
 enum WarlockSpellIcons
@@ -507,6 +519,7 @@ public:
             if (GetAura()->Variables.Exist("Spells.AffectedByRoaringBlaze"))
             {
                 int32 damage = GetEffect(EFFECT_0)->GetDamage();
+                // 咆哮加厚：观察窗口 +25，不是 Dummy
                 AddPct(damage, 25);
                             
                 GetEffect(EFFECT_0)->SetDamage(damage);
@@ -565,8 +578,11 @@ class spell_warl_immolate_aura : public AuraScript
     {
         if (eventInfo.GetSpellInfo() && eventInfo.GetSpellInfo()->Id == SPELL_WARLOCK_IMMOLATE_DOT)
         {
-            int32 rollChance = GetSpellInfo()->GetEffect(EFFECT_0)->BasePoints;
-            rollChance = GetCaster()->ModifyPower(POWER_SOUL_SHARDS, 2.5f);
+            // Dummy 50 在 348 EFFECT_1；193541 Dummy 0 不读成 50。禁止 EFFECT_0（伤 Coef 0.40）
+            SpellInfo const* immolate = sSpellMgr->GetSpellInfo(SPELL_WARLOCK_IMMOLATE);
+            if (!immolate || !immolate->GetEffect(EFFECT_1))
+                return false;
+            int32 rollChance = immolate->GetEffect(EFFECT_1)->CalcValue(GetCaster());
             bool crit = (eventInfo.GetHitMask() & PROC_HIT_CRITICAL) != 0;
             return crit ? roll_chance_i(rollChance * 2) : roll_chance_i(rollChance);
         }
@@ -648,6 +664,7 @@ class spell_warl_conflagrate : public SpellScript
         if (caster->HasAura(SPELL_WARLOCK_BACKDRAFT_AURA))
             caster->CastSpell(caster, SPELL_WARLOCK_BACKDRAFT, true);
 
+        // 7.5 碎裂：观察窗口，不是 Dummy
         caster->ModifyPower(POWER_SOUL_SHARDS, 7.5f);
 
         if (caster->HasAura(SPELL_WARLOCK_ROARING_BLAZE))
@@ -657,6 +674,7 @@ class spell_warl_conflagrate : public SpellScript
                 if (AuraEffect* aurEff = aur->GetEffect(EFFECT_0))
                 {
                     int32 damage = aurEff->GetDamage();
+                    // 咆哮加厚：观察窗口 +25，不是 Dummy。205184 Dummy 0 不读成 25
                     aurEff->SetDamage(AddPct(damage, 25));
                     aur->SetNeedClientUpdateForTargets();
                 }
@@ -925,17 +943,23 @@ class spell_warl_health_funnel : public AuraScript
         return ValidateSpellInfo({ SPELL_WARLOCK_HEALTH_FUNNEL_HEAL });
     }
 
-    void HandlePeriodic(AuraEffect const* /*aurEff*/)
+    void HandlePeriodic(AuraEffect const* aurEff)
     {
         Unit* target = GetUnitOwner();
         Unit* caster = GetCaster();
         if (!target || !caster)
             return;
 
+        // Dummy 5 / 基点 8 是百分数，禁止当绝对值喂进 SpellMod
         CustomSpellValues values;
-        int32 damage = caster->CountPctFromMaxHealth(4);
+        int32 damage = caster->CountPctFromMaxHealth(aurEff->GetAmount());
         values.AddSpellMod(SPELLVALUE_BASE_POINT0, damage);
-        values.AddSpellMod(SPELLVALUE_BASE_POINT1, damage * 2);
+
+        int32 petPct = 0;
+        if (SpellInfo const* healInfo = sSpellMgr->GetSpellInfo(SPELL_WARLOCK_HEALTH_FUNNEL_HEAL))
+            if (SpellEffectInfo const* healEff = healInfo->GetEffect(EFFECT_1))
+                petPct = healEff->BasePoints;
+        values.AddSpellMod(SPELLVALUE_BASE_POINT1, caster->CountPctFromMaxHealth(petPct));
 
         caster->CastCustomSpell(SPELL_WARLOCK_HEALTH_FUNNEL_HEAL, values, target, TRIGGERED_FULL_MASK);
     }
@@ -1067,29 +1091,10 @@ class spell_warl_soul_leech_aura : public AuraScript
         return ValidateSpellInfo({ SPELL_WARLOCK_DEMONSKIN });
     }
 
-    bool OnCheckProc(ProcEventInfo& eventInfo)
+    bool OnCheckProc(ProcEventInfo& /*eventInfo*/)
     {
-        Unit* caster = GetCaster();
-        if (!caster)
-            return false;
-
-        int32 basePoints = GetSpellInfo()->GetEffect(EFFECT_0)->BasePoints;
-        int32 absorb = ((eventInfo.GetDamageInfo() ? eventInfo.GetDamageInfo()->GetDamage() : 0) * basePoints) / 100.f;
-
-        // Add remaining amount if already applied
-        if (Aura* aur = caster->GetAura(SPELL_WARLOCK_SOUL_LEECH_ABSORB))
-            if (AuraEffect* aurEff = aur->GetEffect(EFFECT_0))
-                absorb += aurEff->GetAmount();
-
-        // Cannot go over 15% (or 20% with Demonskin) max health
-        int32 basePointNormal = GetSpellInfo()->GetEffect(EFFECT_1)->BasePoints;
-        int32 basePointDS = sSpellMgr->GetSpellInfo(SPELL_WARLOCK_DEMONSKIN)->GetEffect(EFFECT_1)->BasePoints;
-        int32 totalBP = caster->HasAura(SPELL_WARLOCK_DEMONSKIN) ? basePointDS : basePointNormal;
-        int32 threshold = (caster->GetMaxHealth() * totalBP) / 100.f;
-        absorb = std::min(absorb, threshold);
-
-        caster->CastCustomSpell(SPELL_WARLOCK_SOUL_LEECH_ABSORB, SPELLVALUE_BASE_POINT0, absorb, caster, TRIGGERED_FULL_MASK);
-        return true;
+        // 228974 Dummy 10/15 不得当玩家键覆盖 108370 Dummy 8/10
+        return false;
     }
 
     void Register() override
@@ -1216,7 +1221,11 @@ public:
                 return;
 
             if (Unit* dispeller = dispelInfo->GetDispeller()) {
-                int32 damage = GetAura()->GetEffect(EFFECT_0)->GetDamage() * 4;
+                int32 dummy400 = 0;
+                if (SpellInfo const* ua = sSpellMgr->GetSpellInfo(SPELL_WARLOCK_UNSTABLE_AFFLICTION))
+                    if (SpellEffectInfo const* eff0 = ua->GetEffect(EFFECT_0))
+                        dummy400 = eff0->CalcValue(caster);
+                int32 damage = CalculatePct(GetAura()->GetEffect(EFFECT_0)->GetDamage(), dummy400);
                 caster->CastCustomSpell(dispeller, SPELL_WARLOCK_UNSTABLE_AFFLICTION_DISPEL, &damage, nullptr, nullptr, true);
             }
         }
@@ -1315,39 +1324,21 @@ public:
             if (!caster)
                 return;
 
-            float soulShardAgonyTick = caster->Variables.GetValue<float>("SoulShardAgonyTick", frand(0.0f, 99.0f));
-            soulShardAgonyTick += 16.0f;
-
-            if (soulShardAgonyTick >= 100.0f)
+            if (GetStackAmount() >= auraEffect->GetBase()->GetMaxStackAmount())
             {
-                soulShardAgonyTick = frand(0.0f, 99.0f);
-
-                if (Player* player = GetCaster()->ToPlayer())
+                // 满层碎裂能量：观察窗口，+10 不是 Dummy
+                if (Player* player = caster->ToPlayer())
                     if (player->GetPower(POWER_SOUL_SHARDS) < player->GetMaxPower(POWER_SOUL_SHARDS))
                         player->SetPower(POWER_SOUL_SHARDS, player->GetPower(POWER_SOUL_SHARDS) + 10);
+                return;
             }
 
-            caster->Variables.Set("SoulShardAgonyTick", soulShardAgonyTick);
-
-            // If we have more than maxStackAmount, dont do anything
-            if (GetStackAmount() >= auraEffect->GetBase()->GetMaxStackAmount())
-                return;
-
             SetStackAmount(GetStackAmount() + 1);
-        }
-
-        void OnRemove(const AuraEffect* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-        {
-            // If last agony removed, remove tick counter
-            if (Unit* caster = GetCaster())
-                if (!caster->GetOwnedAura(SPELL_WARLOCK_AGONY))
-                    caster->Variables.Remove("SoulShardAgonyTick");
         }
 
         void Register() override
         {
             OnEffectPeriodic += AuraEffectPeriodicFn(spell_warlock_agony_AuraScript::HandleDummyPeriodic, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
-            AfterEffectRemove += AuraEffectRemoveFn(spell_warlock_agony_AuraScript::OnRemove, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
         }
     };
 
@@ -1370,6 +1361,7 @@ class spell_warl_burning_rush : public SpellScript
         if (!caster)
             return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
 
+        // CheckCast 5%：观察窗口，5 不是 Dummy
         if (caster->HealthBelowPct(5))
             return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
 
@@ -1408,7 +1400,7 @@ class aura_warl_burning_rush : public AuraScript
     {
         if (GetCaster())
         {
-            // This way if the current tick takes you below 4%, next tick won't execute
+            // 周期 4% 走 Aura 89 基点 4，4 不是 Dummy
             uint64 basepoints = GetCaster()->CountPctFromMaxHealth(4);
             if (GetCaster()->GetHealth() <= basepoints ||
                 GetCaster()->GetHealth() - basepoints <= basepoints)
@@ -1428,6 +1420,7 @@ class spell_warl_chaos_bolt : public SpellScript
 
     void HandleCritChance(Unit* /*victim*/, float& chance)
     {
+        // 8.3 混乱之箭必爆：观察窗口，100 不是 Dummy。Dummy 20 不读成暴击率
         chance = 100.f;
     }
 
@@ -1478,10 +1471,6 @@ class spell_warl_conflagrate_aura : public SpellScript
                 if (!target->HasAura(SPELL_WARLOCK_IMMOLATE) && !_player->HasAura(SPELL_WARLOCK_GLYPH_OF_CONFLAGRATE))
                     if (target->GetAura(SPELL_WARLOCK_CONFLAGRATE))
                         target->RemoveAura(SPELL_WARLOCK_CONFLAGRATE);
-
-                if (!target->HasAura(SPELL_WARLOCK_IMMOLATE_FIRE_AND_BRIMSTONE))
-                    if (target->GetAura(SPELL_WARLOCK_CONFLAGRATE_FIRE_AND_BRIMSTONE))
-                        target->RemoveAura(SPELL_WARLOCK_CONFLAGRATE_FIRE_AND_BRIMSTONE);
             }
         }
     }
@@ -1546,35 +1535,13 @@ public:
 
         void HandleRemove(const AuraEffect* /*aurEff*/, AuraEffectHandleModes /* mode */)
         {
+            // 死亡 +10 碎裂：观察窗口，不是 Dummy。Dummy 100/20 不发明成 4 个空号
             if (GetCaster() && GetTargetApplication()->GetRemoveMode() == AURA_REMOVE_BY_DEATH)
                 GetCaster()->ModifyPower(POWER_SOUL_SHARDS, 10);
         }
 
-        void HandleDummyPeriodic(AuraEffect const* /* auraEffect */)
-        {
-            Unit* target = GetTarget();
-            Unit* caster = GetCaster();
-            if (!caster || !target)
-                return;
-
-            uint32 DrainSoulData[4][3] =
-            {
-                { 146739,   EFFECT_0, 131740 }, // Corruption
-                { 30108,    EFFECT_0, 131736 },
-                { 27243,    EFFECT_0, 132566 },
-                { 980,      EFFECT_0, 131737 },
-            };
-
-            for (uint8 i = 0; i < 4; i++)
-            {
-                if (target->GetAuraEffect(DrainSoulData[i][0], DrainSoulData[i][1], GetCaster()->GetGUID()))
-                    caster->CastSpell(target, DrainSoulData[i][2], true);
-            }
-        }
-
         void Register() override
         {
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_warl_drain_soul_AuraScript::HandleDummyPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
             OnEffectRemove += AuraEffectApplyFn(spell_warl_drain_soul_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
         }
     };
@@ -1764,6 +1731,7 @@ public:
             if (GetCaster())
             {
                 AuraRemoveMode removeMode = GetTargetApplication()->GetRemoveMode();
+                // 死亡回能：观察窗口，Dummy 15 不读成 +50
                 if (removeMode == AURA_REMOVE_BY_DEATH)
                     GetCaster()->SetPower(POWER_SOUL_SHARDS, GetCaster()->GetPower(POWER_SOUL_SHARDS) + 50);
             }
@@ -1988,19 +1956,8 @@ public:
             return true;
         }
 
-        void HandleAfterHit()
-        {
-            if (Aura* aura = GetHitAura())
-            {
-                aura->SetMaxDuration(20 * IN_MILLISECONDS);
-                aura->SetDuration(20 * IN_MILLISECONDS);
-                aura->RefreshDuration();
-            }
-        }
-
         void Register() override
         {
-            AfterHit += SpellHitFn(spell_warl_fear_buff_SpellScript::HandleAfterHit);
         }
     };
 
@@ -2065,9 +2022,13 @@ public:
                     {
                         if (SpellInfo const* spellInfo = aurEff->GetSpellInfo())
                         {
+                            if (!procInfo.GetDamageInfo())
+                                return;
                             uint32 dmg = procInfo.GetDamageInfo()->GetDamage();
                             SpellNonMeleeDamage spell(caster, target, SPELL_WARLOCK_HAVOC, spellInfo->GetSpellXSpellVisualId(caster), SPELL_SCHOOL_MASK_SHADOW);
-                            spell.damage = dmg;
+                            // Dummy 60 只在 EFFECT_0。禁止 EFFECT_1（空列 → 复制 0%）
+                            SpellEffectInfo const* dummy60 = GetSpellInfo()->GetEffect(EFFECT_0);
+                            spell.damage = dummy60 ? CalculatePct(dmg, dummy60->CalcValue(caster)) : 0;
                             spell.cleanDamage = spell.damage;
                             caster->DealSpellDamage(&spell, false);
                             caster->SendSpellNonMeleeDamageLog(&spell);
@@ -2160,6 +2121,7 @@ public:
 
             // despawn all other gateways
             std::list<Creature*> targets1, targets2;
+            // 200 码：观察窗口，Dummy 60 不读成码数
             caster->GetCreatureListWithEntryInGrid(targets1, NPC_WARLOCK_DEMONIC_GATEWAY_GREEN, 200.0f);
             caster->GetCreatureListWithEntryInGrid(targets2, NPC_WARLOCK_DEMONIC_GATEWAY_PURPLE, 200.0f);
             targets1.insert(targets1.end(), targets2.begin(), targets2.end());
@@ -2682,18 +2644,8 @@ public:
     {
         PrepareSpellScript(spell_warl_soul_leach_applier_SpellScript);
 
-        void HandleCast()
-        {
-            Unit* caster = GetCaster();
-            if (!caster)
-                return;
-
-            caster->CastSpell(caster, SPELL_WARLOCK_SOUL_LEECH, true);
-        }
-
         void Register() override
         {
-            OnCast += SpellCastFn(spell_warl_soul_leach_applier_SpellScript::HandleCast);
         }
     };
 
@@ -2746,8 +2698,12 @@ public:
 
         if (Aura* aur = caster->GetAura(SPELL_WARLOCK_SOUL_LEECH_SHIELD))
         {
-            aur->SetMaxDuration(15000);
-            aur->RefreshDuration();
+            // 15 不是 Dummy；持续走吸收光环表
+            if (SpellInfo const* shieldInfo = sSpellMgr->GetSpellInfo(SPELL_WARLOCK_SOUL_LEECH_SHIELD))
+            {
+                aur->SetMaxDuration(shieldInfo->GetMaxDuration());
+                aur->RefreshDuration();
+            }
         }
     }
 
@@ -2815,10 +2771,12 @@ public:
             if (!caster)
                 return;
 
+            // Dummy 15 是周期跳数，不读成半径。100 码不是 Dummy
+            float range = GetSpellInfo()->GetMaxRange(false);
             std::list<Unit*> enemies;
-            Trinity::AnyUnfriendlyUnitInObjectRangeCheck check(caster, caster, 100.f);
+            Trinity::AnyUnfriendlyUnitInObjectRangeCheck check(caster, caster, range);
             Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(caster, enemies, check);
-            Cell::VisitAllObjects(caster, searcher, 100.f);
+            Cell::VisitAllObjects(caster, searcher, range);
             enemies.remove_if(Trinity::UnitAuraCheck(false, SPELL_WARLOCK_IMMOLATE_DOT, caster->GetGUID()));
             if (enemies.empty())
                 return;
@@ -2862,7 +2820,15 @@ public:
             if (Spell const* spell = eventInfo.GetProcSpell())
             {
                 std::vector<SpellPowerCost> const& costs = spell->GetPowerCost();
-                auto costData = std::find_if(costs.begin(), costs.end(), [](SpellPowerCost const& cost) { return cost.Power == POWER_MANA && cost.Amount > 0; });
+                auto costData = std::find_if(costs.begin(), costs.end(), [](SpellPowerCost const& cost)
+                {
+                    return cost.Power == POWER_SOUL_SHARDS && cost.Amount > 0;
+                });
+                if (costData == costs.end())
+                    costData = std::find_if(costs.begin(), costs.end(), [](SpellPowerCost const& cost)
+                    {
+                        return cost.Power == POWER_MANA && cost.Amount > 0;
+                    });
                 if (costData == costs.end())
                     return false;
 
@@ -3182,7 +3148,19 @@ public:
             Trinity::AllWorldObjectsInRange check(caster, 100.f);
             Trinity::WorldObjectListSearcher<Trinity::AllWorldObjectsInRange> search(caster, targets, check);
             Cell::VisitAllObjects(caster, search, 100.f);
-            targets.remove_if(Trinity::UnitAuraCheck(false, SPELL_WARLOCK_DOOM, caster->GetGUID()));
+            targets.remove_if([caster](WorldObject* obj)
+            {
+                Unit* unit = obj ? obj->ToUnit() : nullptr;
+                if (!unit)
+                    return true;
+                return !unit->HasAura(SPELL_WARLOCK_AGONY, caster->GetGUID())
+                    && !unit->HasAura(SPELL_CORRUPTION_DOT, caster->GetGUID())
+                    && !unit->HasAura(SPELL_WARLOCK_UNSTABLE_AFFLICTION_DOT1, caster->GetGUID())
+                    && !unit->HasAura(SPELL_WARLOCK_UNSTABLE_AFFLICTION_DOT2, caster->GetGUID())
+                    && !unit->HasAura(SPELL_WARLOCK_UNSTABLE_AFFLICTION_DOT3, caster->GetGUID())
+                    && !unit->HasAura(SPELL_WARLOCK_UNSTABLE_AFFLICTION_DOT4, caster->GetGUID())
+                    && !unit->HasAura(SPELL_WARLOCK_UNSTABLE_AFFLICTION_DOT5, caster->GetGUID());
+            });
         }
 
         void Register() override
@@ -3215,7 +3193,18 @@ public:
 
             std::list<Unit*> targets;
             owner->GetAttackableUnitListInRange(targets, 100.0f);
-            targets.remove_if(Trinity::UnitAuraCheck(false, SPELL_WARLOCK_DOOM, owner->GetGUID()));
+            targets.remove_if([owner](Unit* unit)
+            {
+                if (!unit)
+                    return true;
+                return !unit->HasAura(SPELL_WARLOCK_AGONY, owner->GetGUID())
+                    && !unit->HasAura(SPELL_CORRUPTION_DOT, owner->GetGUID())
+                    && !unit->HasAura(SPELL_WARLOCK_UNSTABLE_AFFLICTION_DOT1, owner->GetGUID())
+                    && !unit->HasAura(SPELL_WARLOCK_UNSTABLE_AFFLICTION_DOT2, owner->GetGUID())
+                    && !unit->HasAura(SPELL_WARLOCK_UNSTABLE_AFFLICTION_DOT3, owner->GetGUID())
+                    && !unit->HasAura(SPELL_WARLOCK_UNSTABLE_AFFLICTION_DOT4, owner->GetGUID())
+                    && !unit->HasAura(SPELL_WARLOCK_UNSTABLE_AFFLICTION_DOT5, owner->GetGUID());
+            });
             if (!targets.empty())
                 me->CastSpell(targets.front(), SPELL_WARLOCK_EYE_LASER, false, nullptr, nullptr, owner->GetGUID());
         }
@@ -3368,14 +3357,8 @@ public:
     {
         PrepareAuraScript(spell_warl_eradication_AuraScript);
 
-        bool CheckProc(ProcEventInfo& /*eventInfo*/)
-        {
-            return false;
-        }
-
         void Register() override
         {
-            DoCheckProc += AuraCheckProcFn(spell_warl_eradication_AuraScript::CheckProc);
         }
     };
 
@@ -3444,15 +3427,32 @@ class spell_warl_incinerate : public SpellScript
 
     void HandleOnHitMainTarget(SpellEffIndex /*effIndex*/)
     {
-        GetCaster()->ModifyPower(POWER_SOUL_SHARDS, 5.0f);
+        Unit* caster = GetCaster();
+        // 5.0 碎裂：观察窗口，不是 Dummy。Dummy 100 不读成 5
+        caster->ModifyPower(POWER_SOUL_SHARDS, 5.0f);
+        // EFFECT_1 Dummy 1 = 额外碎裂，一次施法只加一次，禁止按溅射目标连加
+        if (caster->HasAura(SPELL_WARLOCK_FIRE_AND_BRIMSTONE))
+            if (SpellInfo const* fnb = sSpellMgr->GetSpellInfo(SPELL_WARLOCK_FIRE_AND_BRIMSTONE))
+                if (SpellEffectInfo const* shardEff = fnb->GetEffect(EFFECT_1))
+                    caster->ModifyPower(POWER_SOUL_SHARDS, shardEff->CalcValue(caster));
     }
 
     void HandleOnHitTarget(SpellEffIndex /*effIndex*/)
     {
-        if (Unit* target = GetHitUnit())
-            if (!GetCaster()->HasAura(SPELL_WARLOCK_FIRE_AND_BRIMSTONE))
-                if (target != GetExplTargetUnit())
-                    PreventHitDamage();
+        Unit* target = GetHitUnit();
+        if (!target || target == GetExplTargetUnit())
+            return;
+
+        SpellInfo const* fnb = sSpellMgr->GetSpellInfo(SPELL_WARLOCK_FIRE_AND_BRIMSTONE);
+        if (!GetCaster()->HasAura(SPELL_WARLOCK_FIRE_AND_BRIMSTONE) || !fnb)
+        {
+            PreventHitDamage();
+            return;
+        }
+
+        // EFFECT_0 Dummy 40 = 溅射%；禁止 EFFECT_0 当碎裂列
+        if (SpellEffectInfo const* splashEff = fnb->GetEffect(EFFECT_0))
+            SetHitDamage(CalculatePct(GetHitDamage(), splashEff->CalcValue(GetCaster())));
     }
 
     void Register() override
@@ -3680,7 +3680,7 @@ public:
         void PreventEffectIfCastingCircle(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* caster = GetCaster();
-            if (!caster || caster->ToPlayer())
+            if (!caster || !caster->ToPlayer())
                 return;
             Player* pCaster = caster->ToPlayer();
             if (!pCaster)
@@ -3766,18 +3766,8 @@ public:
     {
         PrepareSpellScript(spell_warlock_unending_breath_SpellScript);
 
-        void HandleHit(SpellEffIndex effIndex)
-        {
-            PreventHitDefaultEffect(effIndex);
-            Unit * caster = GetCaster();
-            if (Unit * target = GetHitUnit())
-                if (caster->HasAura(SPELL_WARLOCK_SOULBURN))
-                    caster->CastSpell(target, SPELL_WARLOCK_SOULBURN_UNENDING_BREATH, true);
-        }
-
         void Register() override
         {
-            OnEffectLaunchTarget += SpellEffectFn(spell_warlock_unending_breath_SpellScript::HandleHit, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
         }
     };
 
@@ -4007,6 +3997,7 @@ struct at_warlock_rain_of_fire : AreaTriggerAI
             return;
 
         int32 timer = at->Variables.GetValue<int32>("Spells.RainOfFireTimer") + diff;
+        // 1000 ms 对齐 Periodic Dummy 0 的周期，1000 不是 Dummy。Dummy 50 不读成毫秒
         if (timer < 1000)
         {
             at->Variables.Set("Spells.RainOfFireTimer", timer);
@@ -4533,19 +4524,8 @@ public:
     {
         PrepareSpellScript(spell_warlock_siphon_life_SpellScript);
 
-        void HandleHit(SpellEffIndex effIndex)
-        {
-            Unit * caster = GetCaster();
-            uint32 heal = caster->SpellHealingBonusDone(caster, GetSpellInfo(), caster->CountPctFromMaxHealth(GetSpellInfo()->GetEffect(effIndex)->BasePoints), HEAL, GetEffectInfo());
-            heal /= 100; // 0.5%
-            heal = caster->SpellHealingBonusTaken(caster, GetSpellInfo(), heal, HEAL, GetEffectInfo());
-            SetHitHeal(heal);
-            PreventHitDefaultEffect(effIndex);
-        }
-
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_warlock_siphon_life_SpellScript::HandleHit, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
         }
     };
 
@@ -4945,11 +4925,14 @@ public:
 
         void HandleHit(SpellEffIndex /*effIndex*/)
         {
-            if (GetCaster())
-                GetCaster()->ModifyPower(POWER_SOUL_SHARDS, + 40);
+            Unit* caster = GetCaster();
+            if (!caster)
+                return;
 
-            //TODO: Improve it later
-            GetCaster()->GetSpellHistory()->ModifyCooldown(SPELL_WARLOCK_SOUL_FIRE, -2000);
+            int32 dummy2000 = 0;
+            if (SpellEffectInfo const* eff1 = GetSpellInfo()->GetEffect(EFFECT_1))
+                dummy2000 = eff1->CalcValue(caster);
+            caster->GetSpellHistory()->ModifyCooldown(SPELL_WARLOCK_SOUL_FIRE, -dummy2000);
         }
 
         void Register() override
@@ -5918,7 +5901,6 @@ void AddSC_warlock_spell_scripts()
     RegisterAuraScript(spell_warl_corruption_effect);
     RegisterSpellScript(spell_warl_create_healthstone);
     RegisterSpellScript(spell_warl_create_healthstone_soulwell);
-    RegisterAuraScript(spell_warl_dark_pact);
     RegisterAuraScript(spell_warl_dark_regeneration);
     RegisterSpellScript(spell_warl_demonbolt);
     RegisterSpellScript(spell_warl_demonic_call);
