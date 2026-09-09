@@ -6283,6 +6283,634 @@ HL.PACKS = {
         end,
     },
 
+    dru_c_dash_stealth_travel_cat = {
+        key = "dru_c_dash_stealth_travel_cat",
+        title = "德鲁伊共用-疾跑停写70潜行Dummy-30旅行形态Dummy0不是40",
+        order = 212,
+        hint = "1850 无 Dummy。Aura 31 60。70 不得进 Dummy。5215 Dummy −30。783 Dummy 0。159456 Dummy 60 不读进 783。768 无 Dummy。",
+        startText = "【疾跑/潜行/旅行/猫】1850 猫形态约 +60% 不是 +70%。5215 切猫，Dummy −30 不是码。783 陆地 165961，Dummy 0 不是 40/60/120。",
+        startPrint = "请按疾跑 1850、潜行 5215、旅行形态 783、猎豹 768。",
+        ids = { 1850, 5215, 783, 159456, 165961, 1066, 33943, 40120, 768, 113636, 252216 },
+        labels = {
+            [1850] = "疾跑(无Dummy,Aura31=60)",
+            [5215] = "潜行Dummy-30",
+            [783] = "旅行形态Dummy0",
+            [159456] = "旅行Rank2 Dummy60",
+            [165961] = "鹿形态(40不是Dummy)",
+            [1066] = "水栖(无Dummy)",
+            [33943] = "飞行(无Dummy)",
+            [40120] = "迅捷飞行(无Dummy)",
+            [768] = "猎豹(无Dummy)",
+            [113636] = "豹移速(30不是Dummy)",
+            [252216] = "猛虎冲刺Dummy20",
+        },
+        chain = {
+            { id = 1850, role = "疾跑", want = "cast",
+              hintFail = "没有 1850。" },
+        },
+        extraVerdict = function()
+            return {
+                "70 不得进 Dummy。Dummy −30 不是码。40/60/120 不得进 Dummy 0。",
+            }
+        end,
+    },
+
+    dru_c_rebirth_revive_soothe_roots = {
+        key = "dru_c_rebirth_revive_soothe_roots",
+        title = "德鲁伊共用-重生Dummy100不是基点20安抚根须表已表达",
+        order = 213,
+        hint = "20484 Dummy 100。Eff18 基点 20 不是 Dummy。50769 无 Dummy。2908 无 Dummy。2637 无 Dummy。339 无 Dummy。20 不得进 Dummy 100。",
+        startText = "【重生/起死/安抚/根须】20484 起来约 20% 血走基点 20，Dummy 100 不要写成生命%，不要包空脚本。50769/2908/2637/339 表已表达。",
+        startPrint = "请看重生 20484、起死回生 50769、安抚 2908、根须 339。",
+        ids = { 20484, 50769, 2908, 2637, 339, 18960, 193753, 5225 },
+        labels = {
+            [20484] = "重生Dummy100",
+            [50769] = "起死回生(无Dummy,基点35)",
+            [2908] = "安抚(无Dummy)",
+            [2637] = "休眠(无Dummy)",
+            [339] = "纠缠根须(无Dummy)",
+            [18960] = "月光林地(无Dummy)",
+            [193753] = "梦境漫步(无Dummy)",
+            [5225] = "追踪人型(无Dummy)",
+        },
+        chain = {
+            { id = 2908, role = "安抚", want = "cast",
+              hintFail = "没有 2908。" },
+        },
+        extraVerdict = function()
+            return {
+                "20 不得进 Dummy 100。不要包空重生脚本。表已表达不包空。",
+            }
+        end,
+    },
+
+    dru_c_moonfire_charge_typhoon_bash = {
+        key = "dru_c_moonfire_charge_typhoon_bash",
+        title = "德鲁伊共用-月火Dummy1打164812停AddPct0台风停查62135",
+        order = 214,
+        hint = "8921 Dummy 1。164812 无 Dummy。102401 Dummy 0。132469 Dummy 0。61391 无 Dummy。5211 无 Dummy。102359 无 Dummy。252216 Dummy 20。62135 无行。",
+        startText = "【月火/冲锋/台风/猛击】8921 出 164812，不要 AddPct BP 0。102401 变体能冲。132469 出 61391，不要 62135。5211 昏迷走表。102359 不要 15.0f 再加一层。",
+        startPrint = "请打月火 8921、野性冲锋 102401、台风 132469、蛮力猛击 5211。",
+        ids = { 8921, 164812, 102401, 102383, 102417, 132469, 61391, 62135, 5211, 102359, 252216 },
+        labels = {
+            [8921] = "月火Dummy1",
+            [164812] = "月火DoT(无Dummy)",
+            [102401] = "野性冲锋Dummy0",
+            [102383] = "枭兽冲锋Dummy20",
+            [102417] = "旅行冲锋Dummy20",
+            [132469] = "台风Dummy0",
+            [61391] = "台风击退(无Dummy)",
+            [62135] = "已删雕文(不应再查)",
+            [5211] = "蛮力猛击(无Dummy)",
+            [102359] = "群体缠绕(无Dummy)",
+            [252216] = "猛虎冲刺Dummy20",
+        },
+        chain = {
+            { id = 8921, role = "月火", want = "cast",
+              hintFail = "没有 8921。" },
+        },
+        extraVerdict = function()
+            return {
+                "0.145 不得进 Dummy 1。62135 不应再驱动 PreventHit。15 不得进 Dummy。",
+            }
+        end,
+    },
+
+    dru_c_stampede_cyclone_cleanse_artifact_scope = {
+        key = "dru_c_stampede_cyclone_cleanse_artifact_scope",
+        title = "德鲁伊共用-狂奔怒吼不是四专精旋风不是基线88423不验收神器不加厚",
+        order = 215,
+        hint = "106898 无 Dummy 只 103+104。33786 无 Dummy 不 INSERT。88423 无 Dummy 只 105 不验收。2782 无 Dummy 只 102+103+104。202767/210722 家在 spell_artifact.cpp 不加厚。208253 不加厚。77484 无行。",
+        startText = "【怒吼/旋风/驱散/神器/范围】不要勾 106898 当四专精。不要 33786 基线。不要勾 88423（恢复号）。2782 是三专精清除。202767/210722/208253 看见不加厚。不要发明 pet_druid.cpp。",
+        startPrint = "请确认动作条：不要旋风当基线，不要自然之愈当共用，神器不加厚。",
+        ids = { 106898, 33786, 209753, 88423, 2782, 202767, 202768, 202771, 210722, 208253, 202360, 1126, 5185, 77484, 77492, 77493, 155783, 77495 },
+        labels = {
+            [106898] = "狂奔怒吼(无Dummy,只103+104)",
+            [33786] = "旋风(无Dummy,不是基线)",
+            [209753] = "平衡PvP旋风(本期不做)",
+            [88423] = "自然之愈(不验收)",
+            [2782] = "清除腐蚀(102+103+104)",
+            [202767] = "神器新月(不加厚)",
+            [202768] = "神器半月(不加厚)",
+            [202771] = "神器满月(不加厚)",
+            [210722] = "阿莎曼狂乱(不加厚)",
+            [208253] = "加尼尔精华(不加厚)",
+            [202360] = "远古祝福(不加厚)",
+            [1126] = "野性印记(无行)",
+            [5185] = "治疗之触(无行)",
+            [77484] = "已删精通(无行)",
+            [77492] = "平衡精通(不搬家)",
+            [77493] = "野性精通Dummy200(不搬家)",
+            [155783] = "守护精通(不搬家)",
+            [77495] = "恢复精通Dummy0(不搬家)",
+        },
+        chain = {
+            { id = 2782, role = "清除腐蚀", want = "cast",
+              hintFail = "没有 2782。平衡/野性/守护才有；恢复是 88423，本包不验收 88423。" },
+        },
+        extraVerdict = function()
+            return {
+                "106898 不是四专精。33786 不 INSERT。88423 不验收。8 不得进 Dummy。神器不加厚。不要在 spell_druid.cpp 再注册 202767。本包不勾 MAS。",
+            }
+        end,
+    },
+
+    dru_bal_wrath_starfire_ss_starfall = {
+        key = "dru_bal_wrath_starfire_ss_starfall",
+        title = "平衡-愤怒星火Dummy33星涌星陨Dummy0停打197637",
+        order = 216,
+        hint = "190984 无 Dummy。194153 Dummy 33 只 idx2。78674 无 Dummy。191034 Dummy 0。191037 无 Dummy。197637 Dummy 20 不学会。850/9482 不是 Dummy。",
+        startText = "【愤怒/星火/星涌/星陨】190984 能打。194153 溅射 Dummy 33，idx3 的 20 不是 Dummy。78674 能打。191034 跳 191037，不要 197637。",
+        startPrint = "请打愤怒 190984、星火 194153、星涌 78674、星陨 191034。",
+        ids = { 190984, 194153, 78674, 191034, 191037, 197637, 24858, 93402, 164815, 8921, 164812 },
+        labels = {
+            [190984] = "愤怒(无Dummy)",
+            [194153] = "星火Dummy33",
+            [78674] = "星涌(无Dummy)",
+            [191034] = "星陨Dummy0",
+            [191037] = "星陨跳",
+            [197637] = "星辰强化(不学会,停打)",
+            [24858] = "枭兽Dummy150/0",
+            [93402] = "阳炎Dummy0/1",
+            [164815] = "阳炎DoT(无Dummy)",
+            [8921] = "月火Dummy1",
+            [164812] = "月火DoT(无Dummy)",
+        },
+        chain = {
+            { id = 190984, role = "愤怒", want = "cast",
+              hintFail = "没有 190984。确认平衡专精。" },
+        },
+        extraVerdict = function()
+            return {
+                "20 不得进 Dummy 33。850/9482 不得进 Dummy 0。CLEU 不要 197637。",
+            }
+        end,
+    },
+
+    dru_bal_newmoon_natures_balance_starlord = {
+        key = "dru_bal_newmoon_natures_balance_starlord",
+        title = "平衡-新月274281不是202767自然平衡Dummy50/2/3点名idx星辰领主Dummy4残留",
+        order = 217,
+        hint = "274281 Dummy 0 残留。274282 Dummy 0 残留。274283 Dummy 202788/202787/0 保持列值不要写成 Dummy 0。分类 1727=3/25000。禁止 AddAura 202787 切回 202767。202767 Dummy 0 不加厚。202430 Dummy idx1/2/3=50/2/3。idx0 Aura24 BP=5 不是 Dummy，须 PreventDefault。脱战一次性补到 Dummy 50。202345 Dummy 4 残留。279709 Aura193 +3 不是 Dummy。6/4/5/15000/20秒/4% 不得进 Dummy。",
+        startText = "【新月/自然平衡/星辰领主】点 T100 是 274281→274282→274283→274281 循环约 25 秒，不要变成 202767 15 秒。202430 打桩约每 3 秒 +2，脱战星能回到约 50，不要每 3 秒 +50、不要每 750 ms +5，不要 +6/+4。有 202345 才 279709 +3，Dummy 4 不读成 4%。",
+        startPrint = "请点新月 274281、自然平衡 202430、星辰领主 202345。不要用神器 202767。",
+        ids = { 274281, 274282, 274283, 202767, 202768, 202771, 202430, 202345, 279709, 202416, 202423 },
+        labels = {
+            [274281] = "新月8.3 Dummy0残留",
+            [274282] = "半月8.3 Dummy0残留",
+            [274283] = "满月8.3 Dummy202788/202787/0保持列值",
+            [202767] = "神器新月(不加厚)",
+            [202768] = "神器半月(不加厚)",
+            [202771] = "神器满月(不加厚)",
+            [202430] = "自然平衡Dummy50/2/3(idx1/2/3)",
+            [202345] = "星辰领主Dummy4(残留不读)",
+            [279709] = "星辰领主急速(+3不是Dummy)",
+            [202416] = "军团星辰领主日(停打)",
+            [202423] = "军团星辰领主月(停打)",
+        },
+        chain = {
+            { id = 274281, role = "新月", want = "cast",
+              hintFail = "没有 274281。确认点了 T100 新月，不要只看 202767。" },
+        },
+        extraVerdict = function()
+            return {
+                "274281 不是 202767。键须 274281→274282→274283→274281，不要变成 202767。禁止 AddAura 202787。Dummy 50/2/3 必须点名 idx1/2/3。脱战一次性补到 50，不要每 3 秒 +50、不要每 750 ms +5。5/6/4 不得进 Dummy。Dummy 4 不是每层 4%。15000/20秒不得覆盖 25000。满月 Dummy 不要写成 0。",
+            }
+        end,
+    },
+
+    dru_bal_eclipse_woe_fon_celestial = {
+        key = "dru_bal_eclipse_woe_fon_celestial",
+        title = "平衡-蚀星蔽月Dummy20伊露恩战士3层自然之力Dummy3超凡无Dummy",
+        order = 218,
+        hint = "279619 Dummy 20/20。禁止 roll 20 反推进 Dummy。202425 无 Dummy。205636 Dummy 3。194223 无 Dummy。102560 Dummy 0。禁止解注释 Cata eclipse。树人缩放 PET。",
+        startText = "【蚀星/战士/自然之力/超凡】279619 约 Dummy 20% 出强化。202425 3 层后卸，不要 −102。205636 Dummy 3 个树人，缩放不在本波。194223 表已表达。",
+        startPrint = "请点蚀星蔽月 279619、伊露恩的战士 202425、自然之力 205636。",
+        ids = { 279619, 164545, 164547, 202425, 205636, 248280, 194223, 102560, 202342, 202354, 279620, 202347, 202770 },
+        labels = {
+            [279619] = "蚀星蔽月Dummy20/20",
+            [164545] = "日能Dummy20",
+            [164547] = "月能(Aura108不是Dummy)",
+            [202425] = "伊露恩的战士(无Dummy)",
+            [205636] = "自然之力Dummy3",
+            [248280] = "树人召唤",
+            [194223] = "超凡之盟(无Dummy)",
+            [102560] = "化身艾露恩Dummy0",
+            [202342] = "流星Periodic Dummy10",
+            [202354] = "星辰漂流(无Dummy)",
+            [279620] = "双子月亮(无Dummy)",
+            [202347] = "星辰耀斑(无Dummy)",
+            [202770] = "伊露恩之怒Dummy0",
+        },
+        chain = {
+            { id = 205636, role = "自然之力", want = "cast",
+              hintFail = "没有 205636。确认点了 T15 自然之力。" },
+        },
+        extraVerdict = function()
+            return {
+                "20 不得从 roll 反推进 Dummy。3 不是 103822 缩放。缩放不在本波。不要 Cata 48517。",
+            }
+        end,
+    },
+
+    dru_bal_mastery_empower_artifact_scope = {
+        key = "dru_bal_mastery_empower_artifact_scope",
+        title = "平衡-77492不搬家不勾MAS星涌给164545Dummy20 Dummy35残留神器不加厚",
+        order = 219,
+        hint = "77492 无 Dummy。Coef 1.54 不是 Dummy。不搬家。本包不勾 MAS。279708 Dummy 35 残留。164545 Dummy 20。202767 不加厚。CastIdx 295 不得发明 1.5 Dummy。",
+        startText = "【精通/强化/神器/范围】77492 绿字在，不搬家，不要勾 MAS。星涌出 164545+164547，不要用 Dummy 35 覆盖 20。202767 看见不加厚。1.5 秒不得进 Dummy。",
+        startPrint = "请看精通 77492、打星涌出日能月能。不要勾精通完成。不要加厚神器。",
+        ids = { 77492, 78674, 279708, 164545, 164547, 202767, 210722, 208253, 202360, 197911, 197626 },
+        labels = {
+            [77492] = "精通星光(无Dummy,不搬家)",
+            [78674] = "星涌(无Dummy)",
+            [279708] = "Empowerments Dummy35(残留不读)",
+            [164545] = "日能Dummy20",
+            [164547] = "月能",
+            [202767] = "神器新月(不加厚)",
+            [210722] = "阿莎曼(本包不验收)",
+            [208253] = "加尼尔(不加厚)",
+            [202360] = "远古祝福(不加厚)",
+            [197911] = "星能(Aura107不是Dummy)",
+            [197626] = "亲和星涌Trigger(不验收)",
+        },
+        chain = {
+            { id = 78674, role = "星涌", want = "cast",
+              hintFail = "没有 78674。确认平衡专精。" },
+        },
+        extraVerdict = function()
+            return {
+                "14/2/1.75 不得写成 Dummy。本包不勾 MAS。35 不得覆盖 20。不要在 spell_druid.cpp 再注册 202767。",
+            }
+        end,
+    },
+
+    dru_feral_shred_rake_rip_bite = {
+        key = "dru_feral_shred_rake_rip_bite",
+        title = "野性-撕碎Dummy30/20斜掠Dummy100割裂Dummy2/6停CP+1",
+        order = 220,
+        hint = "5221 Dummy 30/20。APCoef 0.460 不是 Dummy。1822 Dummy 100。1079 Dummy 2/6。22568 无 Dummy。202031 Dummy 4。禁止 BP/100。禁止 RefreshDuration 整段。",
+        startText = "【撕碎/斜掠/割裂/撕咬】5221 能打不要 0 伤，Dummy 30/20 配 231057/231063。1822 潜行 +Dummy 100%。1079 倍率 Dummy 2/6，不要 CP+1。剑齿 Dummy 4 = +4 秒/CP。",
+        startPrint = "请打撕碎 5221、斜掠 1822、割裂 1079、凶猛撕咬 22568。",
+        ids = { 5221, 231057, 231063, 1822, 155722, 163505, 1079, 22568, 202031 },
+        labels = {
+            [5221] = "撕碎Dummy30/20",
+            [231057] = "撕碎Rank2 Dummy0开关",
+            [231063] = "撕碎流血Dummy0开关",
+            [1822] = "斜掠Dummy100",
+            [155722] = "斜掠流血",
+            [163505] = "斜掠昏迷(只潜行)",
+            [1079] = "割裂Dummy2/6",
+            [22568] = "凶猛撕咬(无Dummy)",
+            [202031] = "剑齿Dummy4",
+        },
+        chain = {
+            { id = 5221, role = "撕碎", want = "cast",
+              hintFail = "没有 5221。确认野性专精猎豹形态。" },
+        },
+        extraVerdict = function()
+            return {
+                "BP/100 应已删。Dummy 2/6 不是秒数。Dummy 4 不是整段刷新。Dummy 100 不是 100 码。",
+            }
+        end,
+    },
+
+    dru_feral_tf_thrash_swipe_berserk = {
+        key = "dru_feral_tf_thrash_swipe_berserk",
+        title = "野性-猛虎之怒表已表达痛击横扫Dummy1/20狂暴Dummy0",
+        order = 221,
+        hint = "5217 无 Dummy。106830 无 Dummy。106785 Dummy 1/20。106951 Dummy 0。202028 Dummy 1。5215 Dummy −30。768 无 Dummy。",
+        startText = "【猛虎/痛击/横扫/狂暴】5217 表已表达不包空。106830 +1 连击点。106785 Dummy 1=连击点 Dummy 20=流血+20%。106951 只猫形态。",
+        startPrint = "请开猛虎之怒 5217、痛击 106830、横扫 106785、狂暴 106951。",
+        ids = { 5217, 231055, 106830, 106785, 106951, 202028, 5215, 768, 22570, 106839 },
+        labels = {
+            [5217] = "猛虎之怒(无Dummy)",
+            [231055] = "猛虎回能+30(不是Dummy)",
+            [106830] = "痛击猫(无Dummy)",
+            [106785] = "横扫猫Dummy1/20",
+            [106951] = "狂暴Dummy0",
+            [202028] = "野蛮挥砍Dummy1",
+            [5215] = "潜行Dummy-30",
+            [768] = "猎豹(无Dummy)",
+            [22570] = "割碎Dummy0",
+            [106839] = "迎头痛击Dummy0",
+        },
+        chain = {
+            { id = 5217, role = "猛虎之怒", want = "cast",
+              hintFail = "没有 5217。确认野性专精。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 20 不是 20 码。Dummy 0 不读成几率。5217 不要包空脚本。",
+            }
+        end,
+    },
+
+    dru_feral_bloodtalons_frenzy_primal_wrath = {
+        key = "dru_feral_bloodtalons_frenzy_primal_wrath",
+        title = "野性-血爪Dummy0在155672禁止三连狂乱Dummy5原始愤怒半径8不是10",
+        order = 222,
+        hint = "155672 Dummy 0。145152 无 Dummy Aura108 +25。CumulativeAura 1 ProcCharges 2。禁止 SetMaxStack(2)。禁止三连。274837 Dummy 5。285381 无 Dummy 半径 8。10 不得进 Dummy。",
+        startText = "【血爪/狂乱/原始愤怒】点 155672 后愈合出 145152，不是两层叠 50%，不是三连。Dummy 0 在 155672 不是 145152。274837 Dummy 5 次后 274838，不要 100/20+AP。285381 半径 8 上 1079，不要 10 码。",
+        startPrint = "请点血腥爪击 155672 再愈合、野性狂乱 274837、原始愤怒 285381。",
+        ids = { 155672, 145152, 8936, 274837, 274838, 285381, 1079, 16974, 69369 },
+        labels = {
+            [155672] = "血爪Dummy0",
+            [145152] = "血爪buff(无Dummy,+25不是Dummy)",
+            [8936] = "愈合(触发血爪)",
+            [274837] = "野性狂乱Dummy5/5",
+            [274838] = "狂乱流血",
+            [285381] = "原始愤怒(无Dummy,半径8)",
+            [1079] = "割裂Dummy2/6",
+            [16974] = "掠食者的迅捷Dummy50/80/20",
+            [69369] = "掠食者迅捷buff",
+        },
+        chain = {
+            { id = 155672, role = "血腥爪击", want = "cast",
+              hintFail = "没有 155672。确认点了血腥爪击天赋。" },
+        },
+        extraVerdict = function()
+            return {
+                "禁止 SetMaxStack(2)。禁止三连。Dummy 0 在 155672。+25/2/3 不得进 Dummy 0。10 不得进 Dummy。5 不是 +5 连击点。掠食 Dummy 20×CP 挂终结技 AfterHit。禁止 DELETE 16974。禁止只改被动 AfterHit。",
+            }
+        end,
+    },
+
+    dru_feral_mastery_predator_incarn_scope = {
+        key = "dru_feral_mastery_predator_incarn_scope",
+        title = "野性-77493 Dummy200不搬家掠食者击杀重置化身上猫210722不加厚",
+        order = 223,
+        hint = "77493 Dummy 200 只 idx2。Coef 2 不是 Dummy。不搬家。本包不勾 MAS。202021 无 Dummy。102543 无 Dummy。210722 不加厚。16864 走 135700 不是 113043。",
+        startText = "【精通/掠食者/化身/范围】77493 绿字在，不搬家，不要勾 MAS。点 202021 击杀重置 5217。102543 上猫。210722 看见不加厚。野性清晰预兆是 16864→135700。",
+        startPrint = "请看精通 77493、点掠食者 202021、化身 102543。不要勾精通。不要加厚神器。",
+        ids = { 77493, 202021, 5217, 102543, 252071, 61336, 50322, 210722, 16864, 135700, 113043, 16870 },
+        labels = {
+            [77493] = "精通锐爪Dummy200(不搬家)",
+            [202021] = "掠食者(无Dummy)",
+            [5217] = "猛虎之怒(重置目标)",
+            [102543] = "化身丛林之王(无Dummy)",
+            [252071] = "丛林之王Trigger",
+            [61336] = "生存本能Dummy50/2",
+            [50322] = "生存本能-50",
+            [210722] = "阿莎曼狂乱(不加厚)",
+            [16864] = "清晰预兆野性",
+            [135700] = "野性节能",
+            [113043] = "恢复清晰预兆(不是野性键)",
+            [16870] = "恢复节能(不是野性键)",
+        },
+        chain = {
+            { id = 102543, role = "化身丛林之王", want = "cast",
+              hintFail = "没有 102543。确认点了 T75 化身。" },
+        },
+        extraVerdict = function()
+            return {
+                "2 不得进 Dummy 200。本包不勾 MAS。德鲁伊击杀才重置，类判断应已改正。不要 113043 当野性键。",
+            }
+        end,
+    },
+
+    dru_guard_mangle_thrash_maul_swipe = {
+        key = "dru_guard_mangle_thrash_maul_swipe",
+        title = "守护-裂伤Dummy20残留痛击APCoef0.025不是0.605重殴Dummy0熊横扫Dummy20",
+        order = 224,
+        hint = "33917 Dummy 0/20 残留不读。77758 无 Dummy。192090 APCoef 0.025 不是 Dummy。6807 Dummy 0。213771 Dummy 1/20。0.605 不得进 Dummy。",
+        startText = "【裂伤/痛击/重殴/横扫】33917 能打产怒，Dummy 20 不当 +20% 伤。77758 跳 192090 走 0.025×层，不要 0.605f。6807 能打。213771 Dummy 20 流血加成，不要绑猫 106785。",
+        startPrint = "请打裂伤 33917、痛击 77758、重殴 6807、熊横扫 213771。",
+        ids = { 33917, 77758, 192090, 6807, 213771, 106785, 5487, 106832 },
+        labels = {
+            [33917] = "裂伤Dummy0/20(残留不读)",
+            [77758] = "痛击熊(无Dummy)",
+            [192090] = "痛击周期(APCoef0.025)",
+            [6807] = "重殴Dummy0",
+            [213771] = "熊横扫Dummy1/20",
+            [106785] = "猫横扫(本包不验收)",
+            [5487] = "熊形态(无Dummy)",
+            [106832] = "痛击壳Dummy0(不验收mismatch)",
+        },
+        chain = {
+            { id = 77758, role = "痛击", want = "cast",
+              hintFail = "没有 77758。确认守护专精熊形态。" },
+        },
+        extraVerdict = function()
+            return {
+                "0.605 不得进 Dummy。Dummy 20 不是 +20% 裂伤。不要用猫横扫验收熊。",
+            }
+        end,
+    },
+
+    dru_guard_ironfur_frenzied_barkskin = {
+        key = "dru_guard_ironfur_frenzied_barkskin",
+        title = "守护-铁鬃Aura268的75不是Dummy狂暴回复6%/3秒不是50%/5秒",
+        order = 225,
+        hint = "192081 无 Dummy。Aura 268 75。Register EFFECT_0 SPELL_AURA_268。HandleStatModifier UNIT_MOD_ARMOR。armor=CalculatePct(敏捷,基点75)*层。禁止 DoEffectCalcAmount 当唯一落地。禁止字面 75 点护甲。22842 无 Dummy。Aura 20 6 / 3 秒。18/24/32/50/75/8/112 不得写成 Dummy。22812 Dummy 100。61336 Dummy 50/2。必须会还手的桩 131992/144078。",
+        startText = "【铁鬃/狂暴回复/树皮/生存】必须会还手的木桩。192081 绑 spell_dru_ironfur。Register EFFECT_0 SPELL_AURA_268，禁止改挂 MOD_RESISTANCE。HandleStatModifier UNIT_MOD_ARMOR TOTAL_VALUE。armor=CalculatePct(敏捷, Aura 268 基点 75)*GetStackAmount()。熊点铁鬃护甲升，层数加护甲。不要 DoEffectCalcAmount 当唯一落地。不要字面 75 点护甲。不要勾「表已表达所以没脚本」。22842 每秒约 6%×3 秒，不要过去 5 秒 50%。22812 −20%。61336 Dummy 50。",
+        startPrint = "请对会还手的桩开铁鬃 192081、狂暴回复 22842、树皮 22812、生存本能 61336。",
+        ids = { 192081, 231070, 22842, 273048, 22812, 61336, 50322 },
+        labels = {
+            [192081] = "铁鬃(无Dummy,Aura268=75,spell_dru_ironfur)",
+            [231070] = "铁鬃Rank2(+7不是Dummy)",
+            [22842] = "狂暴回复(无Dummy,Aura20=6)",
+            [273048] = "狂暴回复+1充能(不是Dummy)",
+            [22812] = "树皮Dummy100/0",
+            [61336] = "生存本能Dummy50/2",
+            [50322] = "生存本能-50",
+        },
+        chain = {
+            { id = 192081, role = "铁鬃", want = "cast",
+              hintFail = "没有 192081。确认守护专精。必须会还手的桩。" },
+        },
+        extraVerdict = function()
+            return {
+                "75/8/112 不得进 Dummy。18/24/32/50 不得写成 Dummy。不要 50%/5 秒。不要 DoEffectCalcAmount 当唯一落地。不要字面 75 点护甲。层数加护甲。不要勾「表已表达所以没脚本」。必须会还手的桩。",
+            }
+        end,
+    },
+
+    dru_guard_gore_gg_pulverize = {
+        key = "dru_guard_gore_gg_pulverize",
+        title = "守护-Gore Dummy15打93622星系Dummy0不读成几率粉碎Dummy2层",
+        order = 226,
+        hint = "210706 Dummy 15。93622 重置裂伤。203964 Dummy 0 不读成几率。213708 Dummy 0/300。80313 Dummy 0/2。观察窗口几率不得进 Dummy 0。",
+        startText = "【Gore/星系/粉碎】痛击/横扫/重殴/月火约 Dummy 15% 出 93622。点 203964 必出 213708，Dummy 0 不是几率。粉碎要 2 层 192090。",
+        startPrint = "请点 Gore 210706、星系守护者 203964、粉碎 80313。",
+        ids = { 210706, 93622, 203964, 213708, 80313, 158790, 158792, 8921 },
+        labels = {
+            [210706] = "Gore Dummy15",
+            [93622] = "Gore重置裂伤",
+            [203964] = "星系守护者Dummy0",
+            [213708] = "星系月火",
+            [80313] = "粉碎Dummy0/2",
+            [158790] = "痛击2层标记",
+            [158792] = "粉碎减伤",
+            [8921] = "月火Dummy1",
+        },
+        chain = {
+            { id = 203964, role = "星系守护者", want = "cast",
+              hintFail = "没有 203964。确认点了星系守护者。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 15 不是必 proc 且无 93622。Dummy 0 不读成几率。Dummy 2 是层数。",
+            }
+        end,
+    },
+
+    dru_guard_mastery_incarn_bristling_scope = {
+        key = "dru_guard_mastery_incarn_bristling_scope",
+        title = "守护-155783不搬家鬃毛倒竖Dummy0化身变熊200851不加厚",
+        order = 227,
+        hint = "155783 无 Dummy。Coef 0.5 不是 Dummy。不搬家。本包不勾 MAS。155835 Dummy 0。102558 无 Dummy。204066 无 Dummy AT 5994。200851 不加厚。",
+        startText = "【精通/鬃毛/化身/范围】155783 绿字在，不搬家，不要勾 MAS。155835 能开不崩，Dummy 0 不读。102558 变熊。200851 看见不加厚。月光普照 AT 5994 不是注释 10682。",
+        startPrint = "请看精通 155783、点鬃毛倒竖 155835、化身 102558。不要勾精通。不要崩服。",
+        ids = { 155783, 155835, 204031, 102558, 204066, 204069, 200851, 200854, 203953, 203974 },
+        labels = {
+            [155783] = "精通自然守护(无Dummy,不搬家)",
+            [155835] = "鬃毛倒竖Dummy0",
+            [204031] = "鬃毛回怒",
+            [102558] = "化身乌索克(无Dummy)",
+            [204066] = "月光普照(无Dummy)",
+            [204069] = "月光束跳",
+            [200851] = "沉睡者之怒(不加厚)",
+            [200854] = "GoryFur(Talent无行,不加厚)",
+            [203953] = "荆棘(无Dummy)",
+            [203974] = "大地守卫Dummy30",
+        },
+        chain = {
+            { id = 102558, role = "化身乌索克", want = "cast",
+              hintFail = "没有 102558。确认点了 T75 化身。" },
+        },
+        extraVerdict = function()
+            return {
+                "0.5 不得进 Dummy。本包不勾 MAS。Dummy 0 不读成回怒%。不要发明 pet_druid.cpp。必须会还手的桩测减伤。",
+            }
+        end,
+    },
+
+    dru_resto_rejuv_regrowth_lifebloom_swiftmend = {
+        key = "dru_resto_rejuv_regrowth_lifebloom_swiftmend",
+        title = "恢复-回春愈合Lifebloom迅捷治愈无Dummy必须治疗假人",
+        order = 228,
+        hint = "774 无 Dummy。8936 无 Dummy。33763 无 Dummy。18562 无 Dummy。5185 无行不验收。必须治疗假人 131994/132036/144075。",
+        startText = "【回春/愈合/绽放/迅捷】必须治疗假人。774 能跳。8936 能治。33763 单层到期 33778。18562 不消耗 HoT。不要按 5185 验收。",
+        startPrint = "请对治疗假人按回春 774、愈合 8936、生命绽放 33763、迅捷治愈 18562。",
+        ids = { 774, 8936, 33763, 33778, 18562, 5185, 231040, 155675, 155777, 114108 },
+        labels = {
+            [774] = "回春(无Dummy)",
+            [8936] = "愈合(无Dummy)",
+            [33763] = "生命绽放(无Dummy)",
+            [33778] = "绽放",
+            [18562] = "迅捷治愈(无Dummy)",
+            [5185] = "治疗之触(无行,不验收)",
+            [231040] = "回春Rank2 +3000ms(不是Dummy)",
+            [155675] = "萌芽(无Dummy)",
+            [155777] = "萌芽第二层",
+            [114108] = "丛林之魂恢复",
+        },
+        chain = {
+            { id = 774, role = "回春", want = "cast",
+              hintFail = "没有 774。必须用治疗假人。" },
+        },
+        extraVerdict = function()
+            return {
+                "必须治疗假人。5185 不要勾完成。0 不是 Dummy。",
+            }
+        end,
+    },
+
+    dru_resto_wildgrowth_efflo_tranq = {
+        key = "dru_resto_wildgrowth_efflo_tranq",
+        title = "恢复-野性成长人数6不是7百花Dummy5人数6宁静Dummy1/100不是180%",
+        order = 229,
+        hint = "48438 Dummy 20 只 idx1。人数 Idx2 6。6/7 不得改 Dummy 20。145205 Dummy 5。人数 Idx2 6。resize 3 应已改。740 Dummy 1/100。180 不得进 Dummy。必须治疗假人。",
+        startText = "【野性成长/百花/宁静】必须治疗假人。48438 最多 6 人不是 7，Dummy 20 不是人数。145205 Dummy 5 残留，人数 6 不是 3。740 跳 157982，不要 180% 法强。",
+        startPrint = "请对一排治疗假人按野性成长 48438、百花 145205、宁静 740。",
+        ids = { 48438, 145205, 81262, 81269, 740, 157982, 33891, 117679, 5420 },
+        labels = {
+            [48438] = "野性成长Dummy20(人数6不是Dummy)",
+            [145205] = "百花Dummy5",
+            [81262] = "百花周期Dummy0",
+            [81269] = "百花疗",
+            [740] = "宁静Dummy1/100",
+            [157982] = "宁静跳",
+            [33891] = "树命Dummy0",
+            [117679] = "树命30秒(不是Dummy)",
+            [5420] = "树形态增强(不是Dummy)",
+        },
+        chain = {
+            { id = 48438, role = "野性成长", want = "cast",
+              hintFail = "没有 48438。必须用治疗假人。" },
+        },
+        extraVerdict = function()
+            return {
+                "6/7 不得改 Dummy 20。5/6/3 不得互填 Dummy。180 不得进 Dummy。30/-1 不得进 Dummy 0。必须治疗假人。",
+            }
+        end,
+    },
+
+    dru_resto_photosynthesis_flourish_innervate = {
+        key = "dru_resto_photosynthesis_flourish_innervate",
+        title = "恢复-光合Dummy20/5繁盛无Dummy激活Aura423不是Dummy结界Dummy100",
+        order = 230,
+        hint = "274902 Dummy 20/5。停一律 274906。197721 无 Dummy。8 不是 Dummy。29166 无 Dummy。−100 不是 Dummy。102351 Dummy 100。220 不得进 Dummy。必须治疗假人。",
+        startText = "【光合/繁盛/激活/结界】必须治疗假人。274902：自己 Lifebloom 才 274906，Dummy 5 是盟友绽放不是 4。197721 延长秒。29166 耗蓝约 0。102351 挨打出 102352，不要 220/4。",
+        startPrint = "请对治疗假人点光合作用 274902、繁盛 197721、激活 29166、塞纳里奥结界 102351。",
+        ids = { 274902, 274906, 33763, 197721, 29166, 102351, 102352, 207385, 207386, 200390, 207383 },
+        labels = {
+            [274902] = "光合作用Dummy20/5",
+            [274906] = "光合加速(自己HoT)",
+            [33763] = "生命绽放",
+            [197721] = "繁盛(无Dummy)",
+            [29166] = "激活(无Dummy)",
+            [102351] = "结界Dummy100",
+            [102352] = "结界HoT",
+            [207385] = "春暖花开Dummy0",
+            [207386] = "春暖花开跳",
+            [200390] = "栽培Dummy60",
+            [207383] = "丰饶Dummy0",
+        },
+        chain = {
+            { id = 274902, role = "光合作用", want = "cast",
+              hintFail = "没有 274902。确认点了 T100 光合作用。必须治疗假人。" },
+        },
+        extraVerdict = function()
+            return {
+                "Wowpedia 4 不得覆盖 Dummy 5。−100/12/180 不得进 Dummy。220 不得进 Dummy 100。必须治疗假人。",
+            }
+        end,
+    },
+
+    dru_resto_mastery_ht_cleanse_scope = {
+        key = "dru_resto_mastery_ht_cleanse_scope",
+        title = "恢复-77495 Dummy0不搬家5185无行88423不选边填8神器不加厚",
+        order = 231,
+        hint = "77495 Dummy 0 只 idx0。Coef 0.55 不是 Dummy。77484 无行。不搬家。本包不勾 MAS。5185 无行不验收。88423 无 Dummy。8 不得进 Dummy。208253 不加厚。CastIdx 243 不得发明 1.5 Dummy。必须治疗假人。",
+        startText = "【精通/治疗之触/自然之愈/范围】必须治疗假人。77495 绿字在，不要把 0.55 填进 Dummy 0，不要勾 MAS。不要按 5185 验收。88423 能驱散，Rec 0 与分类 8000 两边留，8 不得进 Dummy。208253 看见不加厚。",
+        startPrint = "请看精通 77495、自然之愈 88423。不要按治疗之触验收。不要勾精通。",
+        ids = { 77495, 77484, 5185, 88423, 2782, 208253, 218889, 145108, 102342, 113043, 16870 },
+        labels = {
+            [77495] = "精通和谐Dummy0(不搬家)",
+            [77484] = "已删精通(无行)",
+            [5185] = "治疗之触(无行,不验收)",
+            [88423] = "自然之愈(无Dummy,不选边填8)",
+            [2782] = "另一号清除(本包不验收)",
+            [208253] = "加尼尔精华(不加厚)",
+            [218889] = "神器繁盛Trigger(不加厚)",
+            [145108] = "伊瑟拉的礼物Dummy3",
+            [102342] = "铁木树皮Dummy12",
+            [113043] = "清晰预兆恢复",
+            [16870] = "节能施法Dummy0",
+        },
+        chain = {
+            { id = 88423, role = "自然之愈", want = "cast",
+              hintFail = "没有 88423。确认恢复专精。不要用 2782 验收恢复。" },
+        },
+        extraVerdict = function()
+            return {
+                "0.55 不得进 Dummy 0。本包不勾 MAS。5185 不要勾完成。8 不得进 Dummy。必须治疗假人。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 

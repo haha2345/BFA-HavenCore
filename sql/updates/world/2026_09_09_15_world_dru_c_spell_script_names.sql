@@ -1,0 +1,8 @@
+-- 837 blizzlike: DRU-C 共用。疾跑停写 70、重生 Dummy 100 与基点 20 不互填、潜行 Dummy −30 走 cpp。
+-- 本文件无 INSERT / DELETE。禁止 INSERT 33786/88423/1126/5185/323764/202767/210722/77492/77493/155783/77495/20484 空壳。
+-- 禁止 DELETE 1850/5215/783/8921/106898/202767/210722/208253/202360/200851。
+-- 禁止在 spell_druid.cpp 再注册 spell_arti_dru_new_moon / spell_arti_dru_ashamane_frenzy。
+-- 禁止 AddAura(202787/202788/202789) 切回 202767。新月三连 LearnSpell/RemoveSpell 8.3 自己的键。
+-- 自然平衡 202430：OnEffectPeriodic PreventDefault EFFECT_0；战斗 Dummy 2/3 秒；脱战一次性补到 Dummy 50。
+-- 铁鬃 192081 新建 spell_dru_ironfur（INSERT 在 _18）。掠食终结技双绑 INSERT 在 _17。禁止 DELETE 16974。
+-- 狂奔怒吼不是四专精、旋风不是基线、神器不加厚、208253 不加厚、88423 不验收。
