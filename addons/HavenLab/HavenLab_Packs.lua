@@ -7835,6 +7835,107 @@ HL.PACKS = {
         end,
     },
 
+    rac_voidelf_spatial_rift_dummy0 = {
+        key = "rac_voidelf_spatial_rift_dummy0",
+        title = "RAC空间裂隙-Dummy0传送钩子_不要编伤_6秒是裂隙不是260369",
+        order = 265,
+        hint = "257040 Dummy 0。256948 无 Dummy DurationIndex 32=6秒。257034 传送。不要给 Dummy 0 编 AP 伤。",
+        startText = "【裂隙Dummy0】120 虚空精灵放 256948 再按 257040 传送。不要勾裂隙有伤。6 秒是裂隙不是奥术脉冲减速。",
+        startPrint = "请虚空精灵放空间裂隙再传送。Dummy 0。",
+        ids = { 256948, 257040, 257034, 260369 },
+        labels = {
+            [256948] = "裂隙学会无Dummy_6秒",
+            [257040] = "裂隙再激活Dummy0",
+            [257034] = "裂隙传送无Dummy",
+            [260369] = "奥术脉冲减速12秒不要互填",
+        },
+        chain = {
+            { id = 256948, role = "放裂隙", want = "cast",
+              hintFail = "没有 256948。120 虚空精灵先放裂隙。禁止 want=aura。" },
+            { id = 257040, role = "再激活传送", want = "cast",
+              hintFail = "没有 257040。Dummy 0 是传送钩子。不要编伤。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持传送。不要勾裂隙有伤。6 秒不要写进 260369。本包勾 RAC 裂隙。",
+            }
+        end,
+    },
+
+    rac_maghar_ancestral_call_dummy0 = {
+        key = "rac_maghar_ancestral_call_dummy0",
+        title = "RAC先祖召唤-Dummy0抽签_1.32走子号不是Dummy基点",
+        order = 266,
+        hint = "274738 Dummy 0 Coef 1.32 不是 Dummy 基点。urand 四选一。子号 274739-274742 Aura 189 无 Dummy。",
+        startText = "【先祖Dummy0】120 玛格汉放 274738。身上出现 274739-274742 之一约 15 秒。不要勾 Dummy 改成 1.32。",
+        startPrint = "请玛格汉放先祖召唤。Dummy 0 抽签。",
+        ids = { 274738, 274739, 274740, 274741, 274742 },
+        labels = {
+            [274738] = "先祖Dummy0抽签",
+            [274739] = "笑颅暴击_1.32不是Dummy",
+            [274740] = "燃刃加速",
+            [274741] = "霜狼精通",
+            [274742] = "黑石全能",
+        },
+        chain = {
+            { id = 274738, role = "先祖召唤", want = "cast",
+              hintFail = "没有 274738。120 玛格汉放。Dummy 0 抽签。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持。1.32 不是 Dummy 基点。本包勾 RAC 先祖召唤。不要勾已搬进 mastery。",
+            }
+        end,
+    },
+
+    rac_lightforged_lights_reckoning = {
+        key = "rac_lightforged_lights_reckoning",
+        title = "RAC圣光清算-PlayerScript读Trigger_Coef352.53不是Dummy",
+        order = 267,
+        hint = "255652 Dummy 0 Trigger 256896。PlayerScript 不走 ssn。禁止 INSERT 255652。",
+        startText = "【清算PlayerScript】120 光铸在 131989 旁死亡，出 256896。不要给 255652 INSERT。352.53 不是 Dummy。",
+        startPrint = "请光铸死亡测圣光清算。PlayerScript。",
+        ids = { 255652, 256896 },
+        labels = {
+            [255652] = "清算Dummy0_PlayerScript",
+            [256896] = "清算爆发Coef不是Dummy",
+        },
+        chain = {
+            { id = 256896, role = "清算爆发", want = "damage",
+              hintFail = "没有 256896。光铸死亡才放。PlayerScript 不走 ssn。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "不要 INSERT 255652。Coef 不是 Dummy。本包勾 RAC 清算。",
+            }
+        end,
+    },
+
+    rac_undead_cannibalize_dummy0 = {
+        key = "rac_undead_cannibalize_dummy0",
+        title = "RAC食尸-Dummy0钩子放20578_BP7不是Dummy",
+        order = 268,
+        hint = "20577 Dummy 0。20578 Aura 20/21 BP 7 不是 Dummy。形状已对，禁止再改 cpp。",
+        startText = "【食尸Dummy0】120 亡灵附近有尸体时放 20577，上 20578。7 不是 Dummy。",
+        startPrint = "请亡灵食尸。Dummy 0 钩子。",
+        ids = { 20577, 20578 },
+        labels = {
+            [20577] = "食尸Dummy0",
+            [20578] = "食尸触发BP7不是Dummy",
+        },
+        chain = {
+            { id = 20577, role = "食尸", want = "cast",
+              hintFail = "没有 20577。附近要有尸体。禁止 want=aura。" },
+            { id = 20578, role = "食尸回复", want = "aura-self",
+              hintFail = "没有 20578。BP 7 不是 Dummy。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持。7 不是 Dummy。禁止再改 cannibalize。本包勾 RAC 食尸。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
