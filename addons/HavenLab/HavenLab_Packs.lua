@@ -7313,6 +7313,30 @@ HL.PACKS = {
         end,
     },
 
+    mas_wl_chaotic_two_homes = {
+        key = "mas_wl_chaotic_two_homes",
+        title = "MAS混乱能量-两处家Dummy0/0_吸收读EFFECT1_PlayerScript非DBC_/2不得进Dummy",
+        order = 245,
+        hint = "77220 Dummy 0/0。吸收 Aura 在 spell_warlock.cpp。PlayerScript 在 mastery。不搬家不删一边。ceil(EFFECT_0/2)+urand 非 DBC。Coef 2/0.666 不是 Dummy。10.0 删减伤弃用。",
+        startText = "【混乱能量两处家】120 毁灭打 131989。77220 在身。直伤浮动。吸收仍在。不要搬家。/2 不得进 Dummy 0/0。不要勾已搬进 mastery。",
+        startPrint = "请毁灭术士打桩看伤浮动和吸收。两处家都留。",
+        ids = { 77220, 116858, 29722 },
+        labels = {
+            [77220] = "混乱能量Dummy0/0两处家",
+            [116858] = "混乱之箭",
+            [29722] = "烧尽",
+        },
+        chain = {
+            { id = 116858, role = "混乱之箭", want = "damage",
+              hintFail = "没有 116858 伤害。120 毁灭打桩。77220 两处家都要在。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0/0 保持。/2 rng 不得进 Dummy。不要搬家、不要删一边。10.0 删减伤弃用。本包勾 MAS 混乱能量两处家。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
