@@ -2475,6 +2475,9 @@ class spell_pri_atonement : public AuraScript
 
         uint32 heal = CalculatePct(eventInfo.GetDamageInfo()->GetDamage(), aurEff->GetAmount());
 
+        if (AuraEffect const* grace = caster->GetAuraEffect(SPELL_PRIEST_GRACE, EFFECT_0))
+            AddPct(heal, grace->GetAmount());
+
         for (AuraApplication* auApp : caster->GetTargetAuraApplications(SPELL_PRIEST_ATONEMENT_AURA))
             caster->CastCustomSpell(SPELL_PRIEST_ATONEMENT_HEAL, SPELLVALUE_BASE_POINT0, heal, auApp->GetTarget(), TRIGGERED_FULL_MASK);
     }
@@ -3297,6 +3300,66 @@ class spell_pri_hallucinations : public AuraScript
     }
 };
 
+// 77485 - Mastery: Echo of Light. Dummy 0/125. 125 is ratio, not seconds.
+class spell_pri_echo_of_light : public AuraScript
+{
+    PrepareAuraScript(spell_pri_echo_of_light);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_PRIEST_ECHO_OF_LIGHT_HEAL });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        HealInfo* healInfo = eventInfo.GetHealInfo();
+        if (!healInfo || !healInfo->GetHeal())
+            return false;
+        SpellInfo const* spell = eventInfo.GetSpellInfo();
+        if (spell && spell->Id == SPELL_PRIEST_ECHO_OF_LIGHT_HEAL)
+            return false;
+        return true;
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        Unit* caster = GetTarget();
+        Unit* target = eventInfo.GetActionTarget();
+        if (!target)
+            target = eventInfo.GetProcTarget();
+        Player* player = caster ? caster->ToPlayer() : nullptr;
+        HealInfo* healInfo = eventInfo.GetHealInfo();
+        if (!caster || !target || !player || !healInfo)
+            return;
+
+        float dummy125 = 0.f;
+        if (SpellInfo const* echoMastery = sSpellMgr->GetSpellInfo(SPELL_PRIEST_ECHO_OF_LIGHT))
+            if (SpellEffectInfo const* eff1 = echoMastery->GetEffect(EFFECT_1))
+                dummy125 = float(eff1->CalcValue());
+        float echoPct = player->m_activePlayerData->Mastery * dummy125 / 100.f;
+        int32 bp = int32(CalculatePct(healInfo->GetHeal(), echoPct));
+        if (!bp)
+            return;
+
+        caster->CastCustomSpell(SPELL_PRIEST_ECHO_OF_LIGHT_HEAL, SPELLVALUE_BASE_POINT0, bp, target, true);
+        if (SpellInfo const* echoHeal = sSpellMgr->GetSpellInfo(SPELL_PRIEST_ECHO_OF_LIGHT_HEAL))
+        {
+            if (echoHeal->GetMaxDuration() == 0)
+            {
+                // observation window, not Dummy 125
+                if (Aura* echo = target->GetAura(SPELL_PRIEST_ECHO_OF_LIGHT_HEAL, caster->GetGUID()))
+                    echo->SetDuration(6000);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_pri_echo_of_light::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_pri_echo_of_light::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
 void AddSC_priest_spell_scripts()
 {
     RegisterAreaTriggerAI(at_pri_angelic_feather);
@@ -3383,4 +3446,5 @@ void AddSC_priest_spell_scripts()
     RegisterAuraScript(spell_pri_surrender_to_madness);
     RegisterAuraScript(spell_pri_legacy_of_the_void);
     RegisterAuraScript(spell_pri_hallucinations);
+    RegisterAuraScript(spell_pri_echo_of_light);
 }

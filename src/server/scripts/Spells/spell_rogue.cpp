@@ -82,6 +82,7 @@ enum RogueSpells
     SPELL_ROGUE_LEECHING_POISON = 108211,
     SPELL_ROGUE_LEECHING_POISON_DEBUFF = 112961,
     SPELL_ROGUE_LEECH_VITALITY = 116921,
+    SPELL_ROGUE_MASTERY_MAIN_GAUCHE = 76806,
     SPELL_ROGUE_MASTERY_MAIN_GAUCHE_DAMAGE = 86392,
     SPELL_ROGUE_MASTER_OF_SHADOWS = 196976,
     SPELL_ROGUE_MASTER_OF_SUBTLETY_DAMAGE_PERCENT = 31665,
@@ -2804,6 +2805,46 @@ class spell_rog_secret_technique : public SpellScript
     }
 };
 
+// 76806 - Mastery: Main Gauche. Dummy 0. Coef 1.3 is not Dummy.
+class spell_rog_main_gauche : public AuraScript
+{
+    PrepareAuraScript(spell_rog_main_gauche);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_ROGUE_MASTERY_MAIN_GAUCHE_DAMAGE });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        DamageInfo* damageInfo = eventInfo.GetDamageInfo();
+        if (!damageInfo || damageInfo->GetAttackType() != BASE_ATTACK)
+            return false;
+        if (SpellInfo const* spell = eventInfo.GetSpellInfo())
+            if (spell->Id == SPELL_ROGUE_MASTERY_MAIN_GAUCHE_DAMAGE)
+                return false;
+        return roll_chance_f(30.f); // 8.0.1 public 30%, non-DBC, not Dummy 0
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        Unit* caster = GetTarget();
+        Unit* victim = eventInfo.GetProcTarget();
+        if (!victim)
+            victim = eventInfo.GetActionTarget();
+        if (!caster || !victim)
+            return;
+
+        caster->CastSpell(victim, SPELL_ROGUE_MASTERY_MAIN_GAUCHE_DAMAGE, true);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_rog_main_gauche::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_rog_main_gauche::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
 void AddSC_rogue_spell_scripts()
 {
     new at_rog_smoke_bomb();
@@ -2862,4 +2903,5 @@ void AddSC_rogue_spell_scripts()
     RegisterAuraScript(spell_rog_weaponmaster_outlaw);
     RegisterAuraScript(spell_rog_shuriken_tornado);
     RegisterSpellScript(spell_rog_secret_technique);
+    RegisterAuraScript(spell_rog_main_gauche);
 }

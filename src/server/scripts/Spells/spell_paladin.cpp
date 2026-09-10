@@ -154,7 +154,8 @@ enum PaladinSpells
     SPELL_PALADIN_HAND_OF_HINDRANCE = 183218,
     SPELL_PALADIN_LAW_AND_ORDER = 204934,
     SPELL_PALADIN_DARKEST_BEFORE_THE_DAWN = 210378,
-    SPELL_PALADIN_DARKEST_BEFORE_THE_DAWN_BUFF = 210391
+    SPELL_PALADIN_DARKEST_BEFORE_THE_DAWN_BUFF = 210391,
+    SPELL_PALADIN_MASTERY_LIGHTBRINGER = 183997
 };
 
 enum PaladinNPCs
@@ -2516,6 +2517,36 @@ class spell_pal_beacon_of_virtue : public SpellScript
     }
 };
 
+class paladin_lightbringer_mastery : public PlayerScript
+{
+public:
+    paladin_lightbringer_mastery() : PlayerScript("paladin_lightbringer_mastery") { }
+
+    void OnHeal(Unit* healer, Unit* receiver, uint32& gain)
+    {
+        if (!healer || !receiver || !gain)
+            return;
+        Aura* mastery = healer->GetAura(SPELL_PALADIN_MASTERY_LIGHTBRINGER);
+        if (!mastery)
+            return;
+        AuraEffect const* eff0 = mastery->GetEffect(EFFECT_0);
+        if (!eff0)
+            return;
+
+        int32 amount = eff0->GetAmount();
+        float dist = healer->GetDistance(receiver);
+        float factor = 0.f;
+        // 10yd/40yd public falloff, non-DBC, not Dummy 0
+        if (dist <= 10.f)
+            factor = 1.f;
+        else if (dist >= 40.f)
+            factor = 0.f;
+        else
+            factor = (40.f - dist) / 30.f;
+        AddPct(gain, int32(amount * factor));
+    }
+};
+
 void AddSC_paladin_spell_scripts()
 {
     new spell_pal_bastion_of_light();
@@ -2582,4 +2613,5 @@ void AddSC_paladin_spell_scripts()
     RegisterAuraScript(spell_pal_hand_of_hindrance);
     RegisterPlayerScript(fist_of_justice);
     RegisterAuraScript(aura_darkest_before_the_dawn);
+    RegisterPlayerScript(paladin_lightbringer_mastery);
 }

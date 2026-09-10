@@ -178,6 +178,8 @@ enum MonkSpells
     SPELL_MONK_MYSTIC_TOUCH_TARGET_DEBUFF               = 113746,
     SPELL_MONK_ESSENCE_FONT                             = 191837,
     SPELL_MONK_ESSENCE_FONT_PERIODIC_HEAL               = 191840,
+    SPELL_MONK_MASTERY_GUST_OF_MISTS                    = 117907,
+    SPELL_MONK_GUST_OF_MISTS_HEAL                       = 191894,
     SPELL_RISING_MIST                                   = 274909,
     SPELL_RISING_MIST_HEAL                              = 274912,
     SPELL_MONK_FISTS_OF_FURY_STUN                       = 120086,
@@ -3528,13 +3530,66 @@ class spell_monk_elusive_brawler_mastery : public AuraScript
         if (eventInfo.GetTypeMask() & TAKEN_HIT_PROC_FLAG_MASK)
             return true;
 
-        return eventInfo.GetProcSpell() &&
-               eventInfo.GetProcSpell()->GetSpellInfo()->Id == SPELL_MONK_BLACKOUT_STRIKE;
+        if (!eventInfo.GetProcSpell())
+            return false;
+
+        uint32 id = eventInfo.GetProcSpell()->GetSpellInfo()->Id;
+        return id == SPELL_MONK_BLACKOUT_STRIKE
+            || id == SPELL_MONK_BREATH_OF_FIRE;
     }
 
     void Register() override
     {
         DoCheckProc += AuraCheckProcFn(spell_monk_elusive_brawler_mastery::CheckProc);
+    }
+};
+
+// 117907 - Mastery: Gust of Mists. Dummy 0/0. Coef 3 is not Dummy.
+class spell_monk_gust_of_mists : public AuraScript
+{
+    PrepareAuraScript(spell_monk_gust_of_mists);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MONK_GUST_OF_MISTS_HEAL });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        SpellInfo const* spell = eventInfo.GetSpellInfo();
+        if (!spell)
+            return false;
+        uint32 id = spell->Id;
+        return id == SPELL_MONK_RENEWING_MIST
+            || id == SPELL_MONK_ENVELOPING_MIST
+            || id == SPELL_MONK_VIVIFY
+            || id == SPELL_MONK_RISING_SUN_KICK
+            || id == SPELL_MONK_ESSENCE_FONT;
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        Unit* caster = GetTarget();
+        if (!caster)
+            return;
+
+        Unit* target = eventInfo.GetActionTarget();
+        if (!target)
+            target = eventInfo.GetProcTarget();
+        if (!target)
+            return;
+
+        caster->CastSpell(target, SPELL_MONK_GUST_OF_MISTS_HEAL, true);
+
+        SpellInfo const* spell = eventInfo.GetSpellInfo();
+        if (spell && spell->Id == SPELL_MONK_ESSENCE_FONT && target->HasAura(SPELL_MONK_ESSENCE_FONT_HEAL))
+            caster->CastSpell(target, SPELL_MONK_GUST_OF_MISTS_HEAL, true);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_monk_gust_of_mists::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_monk_gust_of_mists::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
@@ -4743,6 +4798,7 @@ void AddSC_monk_spell_scripts()
     RegisterCreatureAI(npc_monk_jade_serpent_statue);
     RegisterAreaTriggerAI(at_monk_ring_of_peace);
     RegisterPlayerScript(mystic_touch);
+    RegisterAuraScript(spell_monk_gust_of_mists);
     RegisterSpellScript(spell_monk_essence_font);
     RegisterAuraScript(aura_monk_transcendence);
     new spell_monk_chi_wave_target_selector();

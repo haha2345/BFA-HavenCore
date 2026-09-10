@@ -7366,6 +7366,233 @@ HL.PACKS = {
         end,
     },
 
+    mas_monk_brew_elusive_breath = {
+        key = "mas_monk_brew_elusive_breath",
+        title = "MAS酒仙-无Dummy_CheckProc含115181_家在monk不搬家",
+        order = 247,
+        hint = "117906 无 Dummy。Trigger 195630。CheckProc：挨打或 205523 或 115181。家在 spell_monk.cpp。不搬家。禁止 spell_mastery_elusive。",
+        startText = "【酒仙115181】120 酒仙打 131992。喷火 115181 每目标叠 195630。幻灭 205523 与挨打也叠。无 Dummy。不要搬进 mastery。",
+        startPrint = "请酒仙对坦克桩喷火叠躲闪层。必须含 115181。",
+        ids = { 117906, 195630, 115181, 205523 },
+        labels = {
+            [117906] = "酒仙精通(无Dummy)",
+            [195630] = "醉拳层Trigger",
+            [115181] = "火焰之息(本波CheckProc必含)",
+            [205523] = "幻灭打击",
+        },
+        chain = {
+            { id = 115181, role = "火焰之息", want = "cast",
+              hintFail = "没有 115181。120 酒仙对 131992 喷火。CheckProc 必须含 115181。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "无 Dummy。CheckProc 含 115181。不搬家。不要 spell_mastery_elusive。本包勾 MAS 酒仙。",
+            }
+        end,
+    },
+
+    mas_dk_blood_shield_death_strike = {
+        key = "mas_dk_blood_shield_death_strike",
+        title = "MAS鲜血护盾-Dummy0_家在死亡打击_不空INSERT77513",
+        order = 248,
+        hint = "77513 Dummy 0。Coef 2 不是 Dummy。家在 spell_dk_death_strike_heal HandleHeal2。3307 绑 77535。不要 INSERT 77513 空壳。不搬家。",
+        startText = "【鲜血护盾】120 鲜血对 131992 死亡打击。出 77535 吸收。不要给 77513 空 INSERT。Dummy 0。不搬家。",
+        startPrint = "请鲜血 DK 死亡打击看护盾。不要 77513 空脚本。",
+        ids = { 77513, 77535, 49998 },
+        labels = {
+            [77513] = "鲜血精通Dummy0(不INSERT)",
+            [77535] = "鲜血护盾吸收",
+            [49998] = "死亡打击",
+        },
+        chain = {
+            { id = 49998, role = "死亡打击", want = "cast",
+              hintFail = "没有 49998。120 鲜血打死亡打击。护盾是 77535。禁止 want=aura。" },
+            { id = 77535, role = "鲜血护盾", want = "aura-self",
+              hintFail = "没有 77535。家在 HandleHeal2。不要 INSERT 77513。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持。不要 INSERT 77513。不搬家。本包勾 MAS 鲜血护盾。",
+            }
+        end,
+    },
+
+    mas_war_unshackled_aura108 = {
+        key = "mas_war_unshackled_aura108",
+        title = "MAS狂怒解放-无Dummy_挂钩Aura108不是79_怒气门闩保留_不搬家",
+        order = 249,
+        hint = "76856 无 Dummy。Register 改 SPELL_AURA_ADD_PCT_MODIFIER。未激怒 amount=0 保留。不搬家。",
+        startText = "【狂怒Aura108】120 狂怒激怒后打 131989 伤害涨；没激怒不涨。挂钩 Aura 108 不是 79。不要搬进 mastery。",
+        startPrint = "请狂怒战士激怒打桩。挂钩必须是 Aura 108。",
+        ids = { 76856, 23881, 184362 },
+        labels = {
+            [76856] = "狂怒精通(无Dummy,Aura108)",
+            [23881] = "嗜血",
+            [184362] = "激怒",
+        },
+        chain = {
+            { id = 23881, role = "嗜血", want = "damage",
+              hintFail = "没有 23881 伤害。激怒后门闩应打开。挂钩 Aura 108 不是 79。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "无 Dummy。挂钩 Aura 108 不是 79。怒气门闩保留。不搬家。本包勾 MAS 狂怒精通。",
+            }
+        end,
+    },
+
+    mas_rog_main_gauche_30obs = {
+        key = "mas_rog_main_gauche_30obs",
+        title = "MAS左右开弓-Dummy0_触发30观察窗口非DBC_类在rogue_禁止mastery新类",
+        order = 250,
+        hint = "76806 Dummy 0。Coef 1.3 不是 Dummy。30% 公开句非 DBC，不得进 Dummy 0。spell_rog_main_gauche 打 86392。禁止 spell_mastery_main_gauche。",
+        startText = "【左右开弓Dummy0】120 狂徒主手打 131989。有时出 86392（约 30% 观察窗口）。30 不得进 Dummy 0。类在 spell_rogue.cpp。不要 1.3 当 Dummy。",
+        startPrint = "请狂徒打桩看出手 86392。30% 不是 Dummy。",
+        ids = { 76806, 86392, 193315 },
+        labels = {
+            [76806] = "左右开弓Dummy0(30不是Dummy)",
+            [86392] = "左右开弓伤害",
+            [193315] = "影袭",
+        },
+        chain = {
+            { id = 193315, role = "影袭", want = "cast",
+              hintFail = "没有 193315。120 狂徒打桩。76806 Dummy 0。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持。30 不得进 Dummy 0。1.3 不是 Dummy。类在 rogue 文件。禁止 spell_mastery_main_gauche。本包勾 MAS 左右开弓。",
+            }
+        end,
+    },
+
+    mas_pri_echo_dummy125 = {
+        key = "mas_pri_echo_dummy125",
+        title = "MAS回响-Dummy0/125是比率不是6秒_77489周期3000_家在牧师文件",
+        order = 251,
+        hint = "77485 Dummy 0/125。echoPct=Mastery*Dummy125/100。77489 周期 3000 ms。125 不得改写成 6 秒。6 秒是持续观察窗口。家在 spell_priest.cpp。",
+        startText = "【回响Dummy125】120 神圣牧师治疗 131994。出 77489，约每 3 秒一跳。Dummy 125 是比率不是 6 秒。不要搬进 mastery。",
+        startPrint = "请神圣牧师治疗假人看 77489。125 不是 6 秒。",
+        ids = { 77485, 77489, 2060 },
+        labels = {
+            [77485] = "回响Dummy0/125(125不是6秒)",
+            [77489] = "回响治疗周期3000",
+            [2060] = "治疗术",
+        },
+        chain = {
+            { id = 2060, role = "治疗术", want = "cast",
+              hintFail = "没有 2060。120 神圣牧师治疗 131994。禁止 want=aura。" },
+            { id = 77489, role = "回响HoT", want = "aura-target",
+              hintFail = "没有 77489。Dummy 125 是比率。周期 3000 ms。125 不是 6 秒。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 125 是比率不是 6 秒。周期 3000 ms。家在牧师文件。禁止 spell_mastery_echo。本包勾 MAS 回响。",
+            }
+        end,
+    },
+
+    mas_pri_grace_coef135_no_plus12 = {
+        key = "mas_pri_grace_coef135_no_plus12",
+        title = "MAS恩典-Dummy0_Coef1.35不是Dummy_禁止再乘12%_家在牧师赎罪",
+        order = 252,
+        hint = "271534 Dummy 0。Coef 1.35 不是 Dummy。8.3 +12% 已进系数。AddPct 81751 GetAmount()。禁止 *1.12。家在 spell_pri_atonement::HandleProc。",
+        startText = "【恩典Dummy0】120 戒律先上赎罪再打伤害，目标吃 81751。数字吃 271534 GetAmount()。不要再乘 12%。不要写死 1.35。不要搬进 mastery。",
+        startPrint = "请戒律牧师看赎罪治疗吃精通。不要再乘 12%。",
+        ids = { 271534, 81751, 194384, 589 },
+        labels = {
+            [271534] = "恩典Dummy0(1.35不是Dummy)",
+            [81751] = "赎罪治疗",
+            [194384] = "赎罪光环",
+            [589] = "暗言术痛",
+        },
+        chain = {
+            { id = 589, role = "暗言术痛", want = "cast",
+              hintFail = "没有 589。120 戒律先上赎罪再打伤害。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持。禁止再乘 +12%。1.35 不是 Dummy。家在牧师文件。禁止 spell_mastery_grace。本包勾 MAS 恩典。",
+            }
+        end,
+    },
+
+    mas_monk_gust_191894 = {
+        key = "mas_monk_gust_191894",
+        title = "MAS迷雾-Dummy0/0_治疗191894_Coef3不是Dummy_家在武僧文件",
+        order = 253,
+        hint = "117907 Dummy 0/0。Coef 3 不是 Dummy。键 115151/124682/116670/107428/191837。191840 是 HoT 条件，不是触发键：仅 191837 且目标已有 191840 才第二次 Cast 191894。不要 Effuse。spell_monk_gust_of_mists。禁止 spell_mastery_gust。",
+        startText = "【迷雾191894】120 织雾对 131994 活血 116670 / 复苏 115151 出 191894。精华之泉 191837 仅当目标已有 191840 HoT 才两次。191840 是 HoT 条件，不是触发键。Dummy 0/0。3 不是 Dummy。不要 Effuse。不要搬进 mastery。",
+        startPrint = "请织雾治疗假人看出 191894。不要 Effuse。",
+        ids = { 117907, 191894, 116670, 115151, 124682, 107428, 191837, 191840 },
+        labels = {
+            [117907] = "迷雾Dummy0/0(3不是Dummy)",
+            [191894] = "迷雾治疗",
+            [116670] = "活血术",
+            [115151] = "复苏之雾",
+            [124682] = "氤氲之雾",
+            [107428] = "旭日东升踢",
+            [191837] = "精华之泉",
+            [191840] = "HoT条件不是触发键",
+        },
+        chain = {
+            { id = 116670, role = "活血术", want = "cast",
+              hintFail = "没有 116670。120 织雾治疗 131994。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0/0 保持。3 不是 Dummy。不要 Effuse。家在武僧文件。禁止 spell_mastery_gust。本包勾 MAS 迷雾。",
+            }
+        end,
+    },
+
+    mas_pal_lightbringer_falloff = {
+        key = "mas_pal_lightbringer_falloff",
+        title = "MAS光明使者-Dummy0_10码满40码零观察窗口_PlayerScript在圣骑士文件",
+        order = 254,
+        hint = "183997 Dummy 0。Coef 1.5 不是 Dummy。Aura 4 无 Handler。10yd=100% 40yd=0% 线性，非 DBC。类名 paladin_lightbringer_mastery，禁止 spell_mastery_*。不 INSERT spell_script_names。",
+        startText = "【光明使者距离】120 神圣骑治疗 131994。贴脸数字高于 40 码外。Dummy 0。10/40 不得进 Dummy。家在 spell_paladin.cpp。不要搬进 mastery。",
+        startPrint = "请神圣骑贴脸再拉远治疗假人。10/40 是观察窗口。",
+        ids = { 183997, 19750, 82326 },
+        labels = {
+            [183997] = "光明使者Dummy0(10/40不是Dummy)",
+            [19750] = "圣光闪现",
+            [82326] = "圣光术",
+        },
+        chain = {
+            { id = 19750, role = "圣光闪现", want = "cast",
+              hintFail = "没有 19750。120 神圣骑治疗 131994。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持。10/40 不得进 Dummy 0。1.5 不是 Dummy。禁止 spell_mastery_lightbringer。不搬家。本包勾 MAS 光明使者。",
+            }
+        end,
+    },
+
+    mas_dru_harmony_table_only = {
+        key = "mas_dru_harmony_table_only",
+        title = "MAS和谐-Dummy0_Coef0.55走表_不包空脚本_不要勾脚本已接线",
+        order = 255,
+        hint = "77495 Dummy 0。Coef 0.55 不是 Dummy。8.3 -9% 已进系数。不写脚本。不 INSERT。不搬家。本包只勾绿字走表，不要勾和谐脚本已接线。77484 无行。",
+        startText = "【和谐走表】120 恢复德身上 77495。治疗 131994 看绿字。不要勾「和谐脚本已接线」。不要再乘 -9%。不要搬进 mastery。不要 77484。",
+        startPrint = "请恢复德治疗假人看精通绿字。不要勾脚本接线。",
+        ids = { 77495, 77484, 5185 },
+        labels = {
+            [77495] = "和谐Dummy0(0.55不是Dummy,不包空)",
+            [77484] = "SpellName无行",
+            [5185] = "治疗之触",
+        },
+        chain = {
+            { id = 5185, role = "治疗之触", want = "cast",
+              hintFail = "没有 5185。120 恢复德治疗 131994。77495 走表。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持。0.55 不是 Dummy。不要勾和谐脚本已接线。禁止再乘 -9%。不包空进 mastery。本包只勾和谐绿字走表。不要勾 203747。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
