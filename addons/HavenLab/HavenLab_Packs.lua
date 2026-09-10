@@ -8076,6 +8076,35 @@ HL.PACKS = {
         end,
     },
 
+    az_scripts_wired = {
+        key = "az_scripts_wired",
+        title = "AZ接线-pack绿勾只证明277253仍在_AddSC与_09INSERT认3307与启动日志",
+        order = 276,
+        hint = "新建 spell_azerite.cpp + AddSC_azerite_spell_scripts 放在 AddSC_pet_spell_scripts 之后。不要改 spell_item.cpp。不要重写 277253 Dummy 0。人测穿脱物品 158075（277253），确认挂上/卸下。不允许 .aura 代替穿脱。277639 不绑脚本。不要 Learn 299349。191837 不是 AZE。自动判定只证明当时 277253 光环仍在，绿勾不能代替穿脱完成定义。AddSC 与 _09 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。",
+        startText = "【AZ接线】确认 loader 在 pet 之后调 AddSC_azerite_spell_scripts。3307 已 INSERT 278495/278497/295373/295376。277253 仍是 spell_item_heart_of_azeroth。人测穿脱物品 158075，确认 277253 挂上/卸下。不允许 .aura 代替穿脱。自动判定只证明当时 277253 光环仍在，绿勾不能代替穿脱完成定义。AddSC 声明调用与 _09 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。不要勾地震波/浓缩火焰完成。不要 Learn 299349。191837 不是 AZE。禁止 want=aura。",
+        startPrint = "请穿脱物品 158075 确认 277253 挂上/卸下。接线认 3307 SELECT + 启动日志，不要靠绿勾代替穿脱。不要勾地震波完成。",
+        ids = { 277253, 277639, 278495, 278497, 295373, 295376, 299349, 191837 },
+        labels = {
+            [277253] = "项链Dummy0_不要重写",
+            [277639] = "地震波Dummy10_不绑脚本",
+            [278495] = "地震波隐藏proc_Dummy0",
+            [278497] = "地震波伤_Dummy0",
+            [295373] = "浓缩火焰学会_Dummy100",
+            [295376] = "浓缩火焰导弹_Dummy100",
+            [299349] = "Rank2Actual_禁止Learn",
+            [191837] = "织雾精华之泉_不是AZE",
+        },
+        chain = {
+            { id = 277253, role = "项链Dummy0", want = "aura-self",
+              hintFail = "没有 277253。穿物品 158075（艾泽拉斯之心）确认挂上。自动判定只证明当时 277253 仍在，绿勾不能代替穿脱完成定义。AddSC 与 _09 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。不要重写 277253。不允许 .aura 代替穿脱。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测穿脱物品 158075，确认 277253 挂上/卸下。自动判定只证明当时 277253 光环仍在，绿勾不能代替穿脱完成定义。AddSC_azerite_spell_scripts 声明调用与 _09 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。不要勾地震波/浓缩火焰完成。不要重写 277253。不要 Learn 299349。191837 不是 AZE。9.52/16.71/67/30/740/1000/1500 不得进 Dummy。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
