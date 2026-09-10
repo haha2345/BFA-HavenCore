@@ -1718,33 +1718,19 @@ class spell_gen_gift_of_naaru : public SpellScriptLoader
 
             void CalculateAmount(AuraEffect const* aurEff, int32& amount, bool& /*canBeRecalculated*/)
             {
-                if (!GetCaster())
+                // Dummy 20 = max-health percent; 1.885 / 1.1 is not Dummy
+                Unit* caster = GetCaster();
+                if (!caster || !aurEff->GetTotalTicks())
                     return;
 
-                float heal = 0.0f;
-                switch (GetSpellInfo()->SpellFamilyName)
-                {
-                    case SPELLFAMILY_MAGE:
-                    case SPELLFAMILY_WARLOCK:
-                    case SPELLFAMILY_PRIEST:
-                        heal = 1.885f * float(GetCaster()->SpellBaseDamageBonusDone(GetSpellInfo()->GetSchoolMask()));
-                        break;
-                    case SPELLFAMILY_PALADIN:
-                    case SPELLFAMILY_SHAMAN:
-                        heal = std::max(1.885f * float(GetCaster()->SpellBaseDamageBonusDone(GetSpellInfo()->GetSchoolMask())), 1.1f * float(GetCaster()->GetTotalAttackPowerValue(BASE_ATTACK)));
-                        break;
-                    case SPELLFAMILY_WARRIOR:
-                    case SPELLFAMILY_HUNTER:
-                    case SPELLFAMILY_DEATHKNIGHT:
-                        heal = 1.1f * float(std::max(GetCaster()->GetTotalAttackPowerValue(BASE_ATTACK), GetCaster()->GetTotalAttackPowerValue(RANGED_ATTACK)));
-                        break;
-                    case SPELLFAMILY_GENERIC:
-                    default:
-                        break;
-                }
+                SpellEffectInfo const* dummy = GetSpellInfo()->GetEffect(EFFECT_1);
+                if (!dummy)
+                    return;
 
-                int32 healTick = int32(std::floor(heal / aurEff->GetTotalTicks()));
-                amount += int32(std::max(healTick, 0));
+                int32 dummyPct = dummy->BasePoints;
+                int32 heal = int32(caster->CountPctFromMaxHealth(dummyPct));
+                int32 healTick = int32(std::floor(float(heal) / float(aurEff->GetTotalTicks())));
+                amount = std::max(healTick, 0);
             }
 
             void Register() override
@@ -4644,11 +4630,10 @@ class spell_arcane_pulse : public SpellScript
 
     void HandleDamage(SpellEffIndex /*effIndex*/)
     {
-        float damage = GetCaster()->GetTotalAttackPowerValue(BASE_ATTACK) * 2.f;
-
-        if (!damage)
-            damage = float(GetCaster()->GetTotalSpellPowerValue(SPELL_SCHOOL_MASK_ALL, false)) * 0.75f;
-
+        // 260364 has no Dummy; 0.5 AP / 0.25 SP is non-DBC 8.3 tooltip window; do not write as Dummy
+        float ap = GetCaster()->GetTotalAttackPowerValue(BASE_ATTACK);
+        float sp = float(GetCaster()->GetTotalSpellPowerValue(SPELL_SCHOOL_MASK_ALL, false));
+        float damage = std::max(ap * 0.5f, sp * 0.25f);
         SetHitDamage(int32(damage));
     }
 
@@ -4692,8 +4677,13 @@ class spell_light_judgement : public SpellScript
 
     void HandleDamage(SpellEffIndex /*effIndex*/)
     {
+        // 256893 has no Dummy; 3.0 * max(AP,SP) is non-DBC 8.3 tooltip window; 6.25 retired
         if (Unit* caster = GetCaster())
-            SetHitDamage(int32(6.25f * caster->m_unitData->AttackPower));
+        {
+            float ap = caster->GetTotalAttackPowerValue(BASE_ATTACK);
+            float sp = float(caster->GetTotalSpellPowerValue(SPELL_SCHOOL_MASK_ALL, false));
+            SetHitDamage(int32(std::max(ap, sp) * 3.0f));
+        }
     }
 
     void Register() override
@@ -7742,6 +7732,31 @@ public:
     }
 };
 
+enum RacialCombatSpells
+{
+    SPELL_ARCANE_PULSE                  = 260364,
+    SPELL_ARCANE_PULSE_SLOW             = 260369,
+    SPELL_LIGHTS_JUDGMENT               = 255647,
+    SPELL_LIGHTS_JUDGMENT_DAMAGE        = 256893,
+    SPELL_LIGHTS_RECKONING_BURST        = 256896,
+    SPELL_ANCESTRAL_CALL                = 274738,
+    SPELL_ANCESTORS_LAUGHING_SKULL      = 274739,
+    SPELL_ANCESTORS_BURNING_BLADE       = 274740,
+    SPELL_ANCESTORS_FROSTWOLF           = 274741,
+    SPELL_ANCESTORS_BLACKROCK           = 274742,
+    SPELL_GIFT_OF_THE_NAARU             = 28880,
+    SPELL_EMERGENCY_FAILSAFE            = 312916,
+    SPELL_EMERGENCY_HEAL                = 313010,
+    SPELL_EMERGENCY_ICD                 = 313015,
+    SPELL_FIREBLOOD                     = 265221,
+    SPELL_FIREBLOOD_BUFF                = 265226,
+    SPELL_HAYMAKER                      = 287712,
+    SPELL_BAG_OF_TRICKS                 = 312411,
+    SPELL_COMBAT_ANALYSIS               = 312923,
+    SPELL_ESCAPE_ARTIST                 = 20589,
+    SPELL_SHADOWMELD                    = 58984
+};
+
 //312916
 class spell_class_mecagnomo_emergency : public SpellScriptLoader
 {
@@ -7757,15 +7772,12 @@ public:
         {
             PreventDefaultAction();
             Unit* caster = GetCaster();
-
-            uint32 triggerOnHealth = uint32(caster->CountPctFromMaxHealth(aurEff->GetAmount()));
-            uint32 currentHealth = uint32(caster->GetHealth());
-            // Just falling below threshold
-            if (currentHealth > triggerOnHealth && (currentHealth - caster->GetMaxHealth() * 25.0f / 100.0f) <= triggerOnHealth){
-                caster->CastSpell(caster, 313010);
-            }
-            
-            
+            if (!caster)
+                return;
+            if (caster->HasAura(SPELL_EMERGENCY_ICD))
+                return;
+            if (caster->HealthBelowPct(aurEff->GetAmount()))
+                caster->CastSpell(caster, SPELL_EMERGENCY_HEAL, true);
         }
 
       
@@ -7804,7 +7816,7 @@ public:
            
         void HandleHit(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
-            if (!GetCaster()->HasAura(313010))
+            if (!GetCaster()->HasAura(SPELL_EMERGENCY_HEAL))
                 PreventDefaultAction();
         }
 
@@ -7832,21 +7844,14 @@ public:
 
         void HandleHit(SpellEffIndex effIndex)
         {
-            if (!GetCaster()->HasAura(313015))
+            if (!GetCaster()->HasAura(SPELL_EMERGENCY_ICD))
                 PreventHitDefaultEffect(effIndex);
         }
 
-        void HandleHeal(SpellEffIndex effIndex)
+        void HandleHeal(SpellEffIndex /*effIndex*/)
         {
-
-            Unit * caster = GetCaster();
-            uint32 heal = uint32(caster->GetMaxHealth() * 25.0f / 100.0f);
-            //caster->SpellHealingBonusDone(caster, GetSpellInfo(), caster->CountPctFromMaxHealth(GetSpellInfo()->GetEffect(effIndex)->BasePoints), HEAL, GetEffectInfo());
-            heal = caster->SpellHealingBonusTaken(caster, GetSpellInfo(), heal, HEAL, GetEffectInfo());
-            SetHitHeal(heal);
-            caster->CastSpell(caster, 313015, true);
-
-            PreventHitDefaultEffect(effIndex);
+            if (Unit* caster = GetCaster())
+                caster->CastSpell(caster, SPELL_EMERGENCY_ICD, true);
         }
 
         void Register()
@@ -8071,23 +8076,23 @@ class spell_maghar_orc_racial_ancestors_call : public SpellScript
         {   
         case 0:        
             //mastery
-            caster->CastSpell(nullptr, 274741, true);
+            caster->CastSpell(nullptr, SPELL_ANCESTORS_FROSTWOLF, true);
             break;
 
         case 1:
   
             //versatility
-            caster->CastSpell(nullptr, 274742, true);
+            caster->CastSpell(nullptr, SPELL_ANCESTORS_BLACKROCK, true);
             break;
     
         case 2:    
             //haste
-            caster->CastSpell(nullptr, 274740, true);
+            caster->CastSpell(nullptr, SPELL_ANCESTORS_BURNING_BLADE, true);
             break;
   
         case 3:     
             //crit
-            caster->CastSpell(nullptr, 274739, true);    
+            caster->CastSpell(nullptr, SPELL_ANCESTORS_LAUGHING_SKULL, true);    
             break;
         }
     }
@@ -8095,6 +8100,217 @@ class spell_maghar_orc_racial_ancestors_call : public SpellScript
     void Register() override
     {
         OnCast += SpellCastFn(spell_maghar_orc_racial_ancestors_call::Oncast);
+    }
+};
+
+// 265221 Fireblood - Dummy BP=0 hook on EFFECT_5 only; 1 / 0.5 / 0.643 are not Dummy BP
+class spell_gen_fireblood : public SpellScript
+{
+    PrepareSpellScript(spell_gen_fireblood);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_FIREBLOOD_BUFF });
+    }
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        SpellInfo const* buff = sSpellMgr->GetSpellInfo(SPELL_FIREBLOOD_BUFF);
+        if (!buff)
+            return;
+        SpellEffectInfo const* eff0 = buff->GetEffect(EFFECT_0);
+        if (!eff0)
+            return;
+
+        int32 x = eff0->CalcValue(caster);
+        int32 amount = x * 3; // 3 is observation window, not Dummy
+        int32 bp0 = 0;
+        int32 bp1 = 0;
+        int32 bp2 = 0;
+
+        float strength = caster->GetStat(STAT_STRENGTH);
+        float agility = caster->GetStat(STAT_AGILITY);
+        float intellect = caster->GetStat(STAT_INTELLECT);
+        // bp0=AGI EFFECT_0 Misc0=1; bp1=INT EFFECT_1 Misc0=3; bp2=STR EFFECT_2 Misc0=0
+        if (agility >= strength && agility >= intellect)
+            bp0 = amount;
+        else if (intellect >= strength && intellect >= agility)
+            bp1 = amount;
+        else
+            bp2 = amount;
+
+        caster->CastCustomSpell(caster, SPELL_FIREBLOOD_BUFF, &bp0, &bp1, &bp2, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_gen_fireblood::HandleDummy, EFFECT_5, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// 287712 Haymaker - Dummy 0; 0.75 * max(AP,SP) is non-DBC; stun/knockback stay on table
+class spell_gen_haymaker : public SpellScript
+{
+    PrepareSpellScript(spell_gen_haymaker);
+
+    void HandleDamage(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        float ap = caster->GetTotalAttackPowerValue(BASE_ATTACK);
+        float sp = float(caster->GetTotalSpellPowerValue(SPELL_SCHOOL_MASK_ALL, false));
+        SetHitDamage(int32(std::max(ap, sp) * 0.75f));
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_gen_haymaker::HandleDamage, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+    }
+};
+
+// 312411 Bag of Tricks - Dummy 1000 hook; 1.8 damage / 2.7 heal are non-DBC
+class spell_gen_bag_of_tricks : public SpellScript
+{
+    PrepareSpellScript(spell_gen_bag_of_tricks);
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        Unit* target = GetHitUnit();
+        if (!target)
+            target = GetExplTargetUnit();
+        if (!target)
+            return;
+
+        float ap = caster->GetTotalAttackPowerValue(BASE_ATTACK);
+        float sp = float(caster->GetTotalSpellPowerValue(SPELL_SCHOOL_MASK_ALL, false));
+        float power = std::max(ap, sp);
+        if (caster->IsFriendlyTo(target))
+        {
+            HealInfo healInfo(caster, target, uint32(power * 2.7f), GetSpellInfo(), SpellSchoolMask(GetSpellInfo()->SchoolMask));
+            caster->HealBySpell(healInfo);
+        }
+        else
+        {
+            SpellNonMeleeDamage damageLog(caster, target, GetSpellInfo()->Id, GetSpellInfo()->GetSpellXSpellVisualId(caster), GetSpellInfo()->SchoolMask);
+            damageLog.damage = uint32(power * 1.8f);
+            caster->DealSpellDamage(&damageLog, true);
+            caster->SendSpellNonMeleeDamageLog(&damageLog);
+        }
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_gen_bag_of_tricks::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// 312923 Combat Analysis - Dummy 5 is period tooltip; Dummy 25 is scale tooltip not amount; Dummy 10 is stack cap
+class spell_gen_combat_analysis : public AuraScript
+{
+    PrepareAuraScript(spell_gen_combat_analysis);
+
+    int32 _applied = 0;
+    Stats _stat = STAT_STRENGTH;
+
+    void HandlePeriodic(AuraEffect const* aurEff)
+    {
+        Unit* target = GetTarget();
+        if (!target)
+            return;
+
+        uint32 stacks = target->Variables.GetValue<uint32>("rac_combat_analysis_stacks", 0);
+        uint32 stackCap = 0;
+        if (SpellEffectInfo const* dummy10 = GetSpellInfo()->GetEffect(EFFECT_2))
+            stackCap = uint32(dummy10->BasePoints);
+        if (target->IsInCombat())
+            stacks = std::min(stacks + 1, stackCap);
+        else if (stacks > 0)
+            --stacks;
+        target->Variables.Set("rac_combat_analysis_stacks", stacks);
+
+        int32 per = aurEff->GetAmount();
+        if (!per)
+        {
+            if (SpellEffectInfo const* eff0 = GetSpellInfo()->GetEffect(EFFECT_0))
+                per = eff0->CalcValue(target);
+        }
+
+        if (_applied != 0)
+            target->HandleStatModifier(UnitMods(UNIT_MOD_STAT_START + _stat), TOTAL_VALUE, float(_applied), false);
+
+        float strength = target->GetStat(STAT_STRENGTH);
+        float agility = target->GetStat(STAT_AGILITY);
+        float intellect = target->GetStat(STAT_INTELLECT);
+        if (agility >= strength && agility >= intellect)
+            _stat = STAT_AGILITY;
+        else if (intellect >= strength && intellect >= agility)
+            _stat = STAT_INTELLECT;
+        else
+            _stat = STAT_STRENGTH;
+
+        _applied = per * int32(stacks);
+        if (_applied != 0)
+            target->HandleStatModifier(UnitMods(UNIT_MOD_STAT_START + _stat), TOTAL_VALUE, float(_applied), true);
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* target = GetTarget();
+        if (target && _applied != 0)
+            target->HandleStatModifier(UnitMods(UNIT_MOD_STAT_START + _stat), TOTAL_VALUE, float(_applied), false);
+        _applied = 0;
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_gen_combat_analysis::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectRemove += AuraEffectRemoveFn(spell_gen_combat_analysis::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 20589 Escape Artist - EFFECT_0 SCRIPT_EFFECT, no Dummy
+class spell_gen_escape_artist : public SpellScript
+{
+    PrepareSpellScript(spell_gen_escape_artist);
+
+    void HandleScript(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* target = GetHitUnit())
+            target->RemoveMovementImpairingAuras(true);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_gen_escape_artist::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+    }
+};
+
+// 58984 Shadowmeld - Dummy 0 idx1 CombatStop only; stealth/threat stay on table
+class spell_gen_shadowmeld : public SpellScript
+{
+    PrepareSpellScript(spell_gen_shadowmeld);
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        caster->CombatStop();
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_gen_shadowmeld::HandleDummy, EFFECT_1, SPELL_EFFECT_DUMMY);
     }
 };
 
@@ -8286,4 +8502,10 @@ void AddSC_generic_spell_scripts()
     RegisterSpellScript(spell_make_camp);
     RegisterSpellScript(spell_back_camp);
     RegisterSpellScript(spell_maghar_orc_racial_ancestors_call);
+    RegisterSpellScript(spell_gen_fireblood);
+    RegisterSpellScript(spell_gen_haymaker);
+    RegisterSpellScript(spell_gen_bag_of_tricks);
+    RegisterSpellScript(spell_gen_escape_artist);
+    RegisterSpellScript(spell_gen_shadowmeld);
+    RegisterAuraScript(spell_gen_combat_analysis);
 }

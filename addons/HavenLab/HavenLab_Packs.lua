@@ -7593,6 +7593,248 @@ HL.PACKS = {
         end,
     },
 
+    rac_nightborne_arcane_pulse_obs = {
+        key = "rac_nightborne_arcane_pulse_obs",
+        title = "RAC奥术脉冲-自动判定只证明出手_0.5/0.25观察窗口只认人测",
+        order = 256,
+        hint = "260364 本表无 Dummy。删 Haven 2.0/0.75。0.5 AP / 0.25 SP 非 DBC 观察窗口，不得进 Dummy。260369 DurationIndex 29=12秒。50 不是 Dummy。6秒是 256948/291944。分类不读 Dummy 不等于表上有 Dummy 没读。自动判定只证明出手，不要把绿勾当已读 Dummy。",
+        startText = "【奥术脉冲无Dummy】120 夜之子对 131989 放 260364。CLEU 有伤。目标 260369 约 12 秒不是 6 秒。自动判定只证明技能出手。0.5/0.25 观察窗口只认人测（读脚本注释），不要靠 pack 绿勾。不要勾读了 Dummy。2.0/0.75/0.5/0.25 不得进 Dummy。",
+        startPrint = "请夜之子打桩放奥术脉冲。无 Dummy。减速 12 秒。",
+        ids = { 260364, 260369, 256948, 291944 },
+        labels = {
+            [260364] = "奥术脉冲无Dummy",
+            [260369] = "减速Aura33_BP50不是Dummy_12秒",
+            [256948] = "裂隙6秒不要和260369互填",
+            [291944] = "再生6秒不要和260369互填",
+        },
+        chain = {
+            { id = 260364, role = "奥术脉冲", want = "damage",
+              hintFail = "没有 260364 伤害。120 夜之子对 131989 放。本表无 Dummy。自动判定只证明出手。0.5/0.25 观察窗口只认人测，不要靠 pack 绿勾。禁止 want=aura。" },
+            { id = 260369, role = "减速12秒", want = "aura-target",
+              hintFail = "没有 260369。持续应约 12 秒。禁止以表为准 6 秒。自动判定只证明出手。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定只证明技能出手。0.5/0.25 观察窗口只认人测（读脚本注释），不要靠 pack 绿勾。不要把绿勾当已读 Dummy。260364 无 Dummy。0.5/0.25 不得进 Dummy。260369 是 12 秒不是 6 秒。本包勾 RAC 奥术脉冲出手。不要勾词缀。",
+            }
+        end,
+    },
+
+    rac_lightforged_lights_judgment_obs = {
+        key = "rac_lightforged_lights_judgment_obs",
+        title = "RAC圣光裁决-无Dummy_观察窗口max(AP,SP)*3_删6.25",
+        order = 257,
+        hint = "256893 本表无 Dummy。学会号 255647。删 6.25f*AttackPower。3.0*max(AP,SP) 非 DBC。Rad1=8=5码走表。6.25/3 不得进 Dummy。",
+        startText = "【圣光裁决无Dummy】120 光铸对 131989 放 255647。CLEU 有 256893。不要勾读了 Dummy。不要勾 6.25 Dummy。5 码走表。",
+        startPrint = "请光铸打桩放圣光裁决。无 Dummy。",
+        ids = { 255647, 256893, 255652, 256896 },
+        labels = {
+            [255647] = "圣光裁决学会号无Dummy",
+            [256893] = "圣光裁决伤号无Dummy",
+            [255652] = "圣光清算PlayerScript不走ssn",
+            [256896] = "清算爆发Coef不是Dummy",
+        },
+        chain = {
+            { id = 255647, role = "圣光裁决学会", want = "cast",
+              hintFail = "没有 255647。120 光铸对 131989 放。脚本绑的是 256893。禁止 want=aura。" },
+            { id = 256893, role = "圣光裁决伤", want = "damage",
+              hintFail = "没有 256893 伤害。6.25 已删。3 不得进 Dummy。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "256893 无 Dummy。6.25/3 不得进 Dummy。本包勾 RAC 圣光裁决。不要勾清算已搬家。",
+            }
+        end,
+    },
+
+    rac_draenei_gift_of_naaru_dummy20 = {
+        key = "rac_draenei_gift_of_naaru_dummy20",
+        title = "RAC纳鲁之赐-自动判定只证明出手_Dummy20只认人测",
+        order = 258,
+        hint = "28880 族 Dummy 20。周期 Aura 8 BP=0。删 1.885/1.1。1.885 不得进 Dummy 20。121093 必须 INSERT。自动判定只证明出手，不要把绿勾当已读 Dummy 20。",
+        startText = "【纳鲁Dummy20】120 德莱尼对 131994 或自己放 28880。治疗总量约 20% 生命。自动判定只证明技能出手。Dummy 20 只认人测（治疗假人数字 / 读脚本注释），不要靠 pack 绿勾。不要 1.885 SP。武僧德莱尼测 121093。",
+        startPrint = "请德莱尼放纳鲁之赐。读 Dummy 20。",
+        ids = { 28880, 59542, 59544, 121093, 20578 },
+        labels = {
+            [28880] = "纳鲁Dummy20",
+            [59542] = "纳鲁圣骑号Dummy20",
+            [59544] = "纳鲁牧师号Dummy20",
+            [121093] = "纳鲁武僧号必须绑",
+            [20578] = "食尸BP7不是Dummy",
+        },
+        chain = {
+            { id = 28880, role = "纳鲁之赐", want = "aura-self",
+              hintFail = "没有 28880。120 德莱尼放纳鲁。自动判定只证明出手。Dummy 20 只认人测（治疗假人数字），不要靠 pack 绿勾。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定只证明技能出手。Dummy 20 只认人测（治疗假人数字 / 读脚本注释），不要靠 pack 绿勾。不要把绿勾当已读 Dummy。1.885/1.1 不得进 Dummy 20。121093 必须绑。本包勾 RAC 纳鲁出手。",
+            }
+        end,
+    },
+
+    rac_mechagnomo_emergency_bp20_15 = {
+        key = "rac_mechagnomo_emergency_bp20_15",
+        title = "RAC应急保险-自动判定只证明出手_20/15只认人测_无Dummy",
+        order = 259,
+        hint = "312916 无 Dummy。Aura 42 BP 20。313010 BP 15 不是 Dummy。313015 Dummy 0 / 150秒。删 25/25。25 不得进 Dummy。自动判定只证明出手，不要把绿勾当已改 20/15。",
+        startText = "【应急20/15】120 机械侏儒在 131992 上把血打到 20% 以下。出 313010，随后 313015。治疗约 15% 生命。自动判定只证明技能出手。20/15 只认人测（治疗假人数字 / 读脚本注释），不要靠 pack 绿勾。不要勾 25。",
+        startPrint = "请机械侏儒在会还手的桩上测应急。阈值 20 治疗 15。",
+        ids = { 312916, 313010, 313015 },
+        labels = {
+            [312916] = "应急无Dummy_BP20",
+            [313010] = "应急治疗BP15不是Dummy",
+            [313015] = "应急ICD_Dummy0_150秒",
+        },
+        chain = {
+            { id = 313010, role = "应急治疗", want = "cast",
+              hintFail = "没有 313010。把血打到 20% 以下。自动判定只证明出手。20/15 只认人测，不要靠 pack 绿勾。阈值读 GetAmount()=20。禁止 25。禁止 want=aura。" },
+            { id = 313015, role = "应急ICD", want = "aura-self",
+              hintFail = "没有 313015。DurationIndex 562=150秒走表。自动判定只证明出手。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定只证明技能出手。20/15 只认人测（治疗假人数字 / 读脚本注释），不要靠 pack 绿勾。不要把绿勾当已改公式。25 不得进 Dummy。本包勾 RAC 应急出手。不要勾词缀。",
+            }
+        end,
+    },
+
+    rac_dark_iron_fireblood_dummy0 = {
+        key = "rac_dark_iron_fireblood_dummy0",
+        title = "RAC火焰之血-Dummy0钩子_Coef1和0.5不是Dummy基点",
+        order = 260,
+        hint = "265221 Dummy BP=0 idx5/6。Coefficient 1/0.5 不是 Dummy 基点。265226 Coef 0.643 不是 Dummy。驱散走表。金额 CalcValue*3 观察窗口。3 不得进 Dummy 0。",
+        startText = "【火焰之血Dummy0】120 黑铁放 265221。驱散走表。身上 265226。不要勾 Dummy Coef 1/0.5。不要把 0.643 写成 Dummy。",
+        startPrint = "请黑铁放火焰之血。Dummy 0 是钩子。",
+        ids = { 265221, 265226 },
+        labels = {
+            [265221] = "火焰之血Dummy0钩子",
+            [265226] = "火焰之血主属性_0.643不是Dummy",
+        },
+        chain = {
+            { id = 265221, role = "火焰之血", want = "cast",
+              hintFail = "没有 265221。120 黑铁放。Dummy 0 钩子。禁止 want=aura。" },
+            { id = 265226, role = "主属性光环", want = "aura-self",
+              hintFail = "没有 265226。金额是 CalcValue*3 观察窗口。1/0.5 不是 Dummy 基点。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持。1/0.5/0.643 不是 Dummy。本包勾 RAC 火焰之血。",
+            }
+        end,
+    },
+
+    rac_kultiran_haymaker_obs075 = {
+        key = "rac_kultiran_haymaker_obs075",
+        title = "RAC重击-Dummy0_观察窗口max(AP,SP)*0.75_昏迷走表",
+        order = 261,
+        hint = "287712 Dummy 0。伤 Coef/AP 0。0.75 非 DBC。昏迷 Aura 12 / 击退 BP 60 不是 Dummy。0.75 不得进 Dummy 0。",
+        startText = "【重击Dummy0】120 库尔提拉斯对 131989 放 287712。CLEU 有伤。昏迷/击退走表。不要把 0.75 写成 Dummy。",
+        startPrint = "请库尔提拉斯打桩放重击。Dummy 0。",
+        ids = { 287712 },
+        labels = {
+            [287712] = "重击Dummy0",
+        },
+        chain = {
+            { id = 287712, role = "重击", want = "damage",
+              hintFail = "没有 287712 伤害。0.75 观察窗口不得进 Dummy 0。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持。0.75 不是 Dummy。本包勾 RAC 重击。",
+            }
+        end,
+    },
+
+    rac_vulpera_bag_of_tricks_dummy1000 = {
+        key = "rac_vulpera_bag_of_tricks_dummy1000",
+        title = "RAC把戏袋-Dummy1000钩子_1.8伤2.7疗观察窗口_翻袋不验收",
+        order = 262,
+        hint = "312411 Dummy 1000。1.8/2.7 非 DBC 不得改 Dummy 1000。312425 翻袋登记不验收。",
+        startText = "【把戏袋Dummy1000】120 狐人对 131989 放 312411 出伤；对 131994 出疗。不要翻袋。不要把 Dummy 1000 改成 1.8。",
+        startPrint = "请狐人把戏袋打桩。Dummy 1000 是钩子。",
+        ids = { 312411, 312425 },
+        labels = {
+            [312411] = "把戏袋Dummy1000",
+            [312425] = "翻袋不验收",
+        },
+        chain = {
+            { id = 312411, role = "把戏袋", want = "damage",
+              hintFail = "没有 312411 伤害。Dummy 1000 是钩子。1.8 不得进 Dummy。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 1000 保持。1.8/2.7 不是 Dummy。312425 不要勾完成。本包勾 RAC 把戏袋伤侧。",
+            }
+        end,
+    },
+
+    rac_mechagnomo_combat_analysis = {
+        key = "rac_mechagnomo_combat_analysis",
+        title = "RAC战斗分析-绿勾只证被动光环在_层数Dummy10与主属性只认人测",
+        order = 263,
+        hint = "312923 Periodic Dummy 5 是周期 tooltip。Dummy 25 是缩放 tooltip，不得进常数。Dummy 10 是层数。金额只读 EFFECT_0 GetAmount()/CalcValue（Coef 0.080）。50/8 不得覆盖。Variables 键 rac_combat_analysis_stacks。绿勾只证明被动光环在，不要假装已叠 10 层。",
+        startText = "【战斗分析】120 机械侏儒被动 312923。绿勾只证明被动光环在。层数 Dummy 10 / 主属性只认人测，不要靠 pack 绿勾。进战约每 5 秒主属性涨，最多 10 层。不要把 Dummy 5 当属性。Dummy 25 不得进常数。不要勾 50/8。",
+        startPrint = "请机械侏儒进战看战斗分析叠层。Dummy 10 是上限。",
+        ids = { 312923 },
+        labels = {
+            [312923] = "战斗分析Dummy5/25/10",
+        },
+        chain = {
+            { id = 312923, role = "战斗分析被动", want = "aura-self",
+              hintFail = "没有 312923。机械侏儒被动。绿勾只证明被动光环在。层数 Dummy 10 / 主属性只认人测，不要靠 pack 绿勾。金额不是 Dummy 5。Dummy 25 不得进常数。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "绿勾只证明被动光环在。层数 Dummy 10 / 主属性只认人测，不要靠 pack 绿勾。不要假装绿勾=已叠 10 层。Dummy 5 不当属性。Dummy 25 不得进常数。50/8 不得覆盖。本包勾 RAC 战斗分析被动在。",
+            }
+        end,
+    },
+
+    rac_gnome_escape_artist = {
+        key = "rac_gnome_escape_artist",
+        title = "RAC逃脱大师-自动判定只证明出手_减速被清只认人测",
+        order = 264,
+        hint = "20589 无 Dummy。Eff=77 服务器脚本。RemoveMovementImpairingAuras(true)。不要从 434/548 覆盖。自动判定只证明出手，不要把绿勾当减速已清。",
+        startText = "【逃脱大师】120 侏儒先吃一个减速，再放 20589。自动判定只证明技能出手。减速被清只认人测（动作条减速消失），不要靠 pack 绿勾。无 Dummy。",
+        startPrint = "请侏儒先减速再逃脱大师。",
+        ids = { 20589 },
+        labels = {
+            [20589] = "逃脱大师无Dummy",
+        },
+        chain = {
+            { id = 20589, role = "逃脱大师", want = "cast",
+              hintFail = "没有 20589。120 侏儒放。自动判定只证明出手。减速被清只认人测（动作条减速消失），不要靠 pack 绿勾。无 Dummy。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定只证明技能出手。减速被清只认人测（动作条减速消失 / 读脚本注释），不要靠 pack 绿勾。不要把绿勾当已清减速。无 Dummy。不要从 434/548 覆盖。本包勾 RAC 逃脱大师出手。",
+            }
+        end,
+    },
+
+    rac_nightelf_shadowmeld_dummy0 = {
+        key = "rac_nightelf_shadowmeld_dummy0",
+        title = "RAC影遁-Dummy0脱战钩子_隐身仇恨走表_人测隐身后脱离战斗",
+        order = 274,
+        hint = "58984 Dummy 0 idx1 只做 CombatStop 脱战钩子。Aura 16 隐身 / Aura 103 仇恨走表。不要 PreventDefault。不要从 12x 整类粘贴。人测隐身后脱离战斗。",
+        startText = "【影遁Dummy0】120 暗夜精灵进战（会还手的桩 131992）再放 58984。隐身走表。人测隐身后脱离战斗。自动判定只证明出手/光环在。不要 PreventDefault 隐身/仇恨。不要从 12x 整类粘贴。",
+        startPrint = "请暗夜精灵进战放影遁。Dummy 0 脱战钩子。人测脱离战斗。",
+        ids = { 58984 },
+        labels = {
+            [58984] = "影遁Dummy0脱战钩子",
+        },
+        chain = {
+            { id = 58984, role = "影遁", want = "cast",
+              hintFail = "没有 58984。120 暗夜精灵放。Dummy 0 脱战钩子。自动判定只证明出手。隐身后脱离战斗只认人测。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 只做脱战钩子。隐身/仇恨走表。人测隐身后脱离战斗。不要 PreventDefault。不要从 12x 整类粘贴。本包勾 RAC 影遁出手。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
