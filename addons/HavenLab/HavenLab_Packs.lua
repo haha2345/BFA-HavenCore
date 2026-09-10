@@ -7337,6 +7337,35 @@ HL.PACKS = {
         end,
     },
 
+    mas_sha_overload_keep_shaman_file = {
+        key = "mas_sha_overload_keep_shaman_file",
+        title = "MAS过载-Dummy0/85不读75_不搬家_禁止roll15_不勾已搬进mastery",
+        order = 246,
+        hint = "168534 Dummy 0/85/75。现行读 0/85，不读 75。无 roll_chance_f(15)。家在 spell_shaman.cpp。禁止再改 spell_shaman.cpp。分类旧句 15 不得当 Dummy。15/25/1.875 不得进 Dummy。",
+        startText = "【过载不搬家】120 元素打 131989。过载第二发 45284/77451/120588/45297，伤约 Dummy 85%。几率走 EFFECT_0 不是 15。Dummy 75 残留不读。闪电链不要 51505。不要勾过载已搬进 mastery。",
+        startPrint = "请元素萨满打出过载。不要搬家。不要 roll 15。",
+        ids = { 168534, 188196, 45284, 188443, 45297, 51505, 77451, 280609 },
+        labels = {
+            [168534] = "过载Dummy0/85/75(不搬家不读75)",
+            [188196] = "闪电箭",
+            [45284] = "LB过载",
+            [188443] = "闪电链",
+            [45297] = "CL过载(不是51505)",
+            [51505] = "熔岩爆裂(CL过载不应打出)",
+            [77451] = "LvB过载",
+            [280609] = "过载Rank2 Dummy0",
+        },
+        chain = {
+            { id = 188196, role = "闪电箭", want = "cast",
+              hintFail = "没有 188196。120 元素打桩。过载几率不是 15。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "不搬家。不要勾过载已搬进 mastery。禁止 roll 15。Dummy 75 不读。15/25/1.875 不得进 Dummy。本包勾 MAS 过载验收。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
