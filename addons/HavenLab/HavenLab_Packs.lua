@@ -8133,6 +8133,34 @@ HL.PACKS = {
         end,
     },
 
+    az_concentrated_flame_learn_295373 = {
+        key = "az_concentrated_flame_learn_295373",
+        title = "AZ浓缩火焰-学会295373_Dummy100_30秒是Category1852_不要Learn299349",
+        order = 278,
+        hint = "EssenceID 12 学会 295373。Dummy 100/100。Coef 16.71 不是 Dummy。30 秒是 Category 1852 不是 Dummy。GCD 列 1500 只登记。禁止 Learn 299349（换号会把 GCD 从 1500 改成 1000）。191837 不是 AZE。自动判定只证明 295373 出手。",
+        startText = "【浓缩火焰学会295373】120 任意输出 .learn 295373（或项链 Major EssenceID 12 Rank1）。不要 .learn 299349。对 131989 放 295373。自动判定只证明 295373 出手。Dummy 100 保持。30 秒是 Category 1852 不是 Dummy。16.71/67/30/1500/1000 不得进 Dummy 100。不要勾灼烧。191837 不是 AZE。禁止 want=aura。",
+        startPrint = "请 .learn 295373 打桩。不要 Learn 299349。只证明出手。30 秒不是 Dummy。",
+        ids = { 295373, 295376, 295374, 299349, 295377, 295368, 191837 },
+        labels = {
+            [295373] = "浓缩火焰学会_Dummy100",
+            [295376] = "导弹Dummy100",
+            [295374] = "敌对伤_无Dummy_不INSERT",
+            [299349] = "Rank2Actual_禁止Learn_GCD1000",
+            [295377] = "Rank2 Dummy75_不验收",
+            [295368] = "灼烧6秒不是Dummy_不验收",
+            [191837] = "织雾精华之泉_不是AZE",
+        },
+        chain = {
+            { id = 295373, role = "浓缩火焰学会", want = "cast",
+              hintFail = "没有 295373。必须 .learn 295373 或镶嵌 EssenceID 12 Rank1。不要 Learn 299349。自动判定只证明出手。Dummy 100。30 秒是 Category 1852 不是 Dummy。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定只证明 295373 出手。Dummy 100 保持。30 秒是 Category 1852 不是 Dummy。不要 Learn 299349（换号会把 GCD 从 1500 改成 1000）。16.71/67/30/1500/1000 不得进 Dummy 100。不要勾灼烧。191837 不是 AZE。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
