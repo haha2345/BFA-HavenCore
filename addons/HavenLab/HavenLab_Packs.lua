@@ -8161,6 +8161,36 @@ HL.PACKS = {
         end,
     },
 
+    itm_scripts_wired = {
+        key = "itm_scripts_wired",
+        title = "ITM接线-pack绿勾不能代替穿脱169311_AddSC与_12INSERT认3307与启动日志",
+        order = 279,
+        hint = "填 spell_item.cpp。不要改 loader。不要新建 cpp。不要改 CMakeLists。不要重写 277253 Dummy 0。人测穿脱物品 169311，确认挂上/卸下。不允许 .aura 代替穿脱。3307 应有 303564/303565/313948/314040/314042 五行新绑；277253 仍是 spell_item_heart_of_azeroth。AddSC 本波不改 loader，接线认 3307 SELECT + 启动日志仍加载 AddSC_item。自动判定不能代替穿脱。不要勾珊瑚/宣言已修。",
+        startText = "【ITM接线】确认 loader 本波无 diff，启动日志仍加载 AddSC_item_spell_scripts。3307 已 INSERT 303564/303565/313948/314040/314042。277253 仍是 spell_item_heart_of_azeroth。人测穿脱物品 169311，确认挂上/卸下。不允许 .aura 代替穿脱。自动判定不能代替穿脱完成定义。AddSC 与 _12 INSERT 只认 3307 SELECT + 启动日志，不要靠 pack 绿勾。不要勾珊瑚/宣言完成。禁止 want=aura。",
+        startPrint = "请穿脱物品 169311。接线认 3307 SELECT + 启动日志，不要靠绿勾代替穿脱。不要勾珊瑚/宣言完成。不要重写 277253。",
+        ids = { 277253, 303564, 303565, 303573, 304877, 313948, 314040, 314042, 302855 },
+        labels = {
+            [277253] = "项链Dummy0_AZP一字不改",
+            [303564] = "珊瑚ON_USE_Dummy0_本包不勾已修",
+            [303565] = "珊瑚proc_Dummy0_本包不勾已修",
+            [303573] = "珊瑚ON_EQUIP金额_不绑脚本",
+            [304877] = "珊瑚ON_EQUIP金额_不绑脚本",
+            [313948] = "宣言ON_USE_Dummy8_5_本包不勾已修",
+            [314040] = "宣言第二章_本包不勾已修",
+            [314042] = "宣言ON_EQUIP_Dummy1_本包不勾已修",
+            [302855] = "regenerative_coral_不是303564",
+        },
+        chain = {
+            { id = 303573, role = "珊瑚ON_EQUIP金额光环_不绑脚本", want = "aura-self",
+              hintFail = "没有 303573。穿物品 169311 确认核心挂上 ON_EQUIP 金额光环。自动判定只证明当时 303573 仍在，绿勾不能代替穿脱完成定义。不要勾珊瑚已修。AddSC 与 _12 INSERT 只认 3307 SELECT + 启动日志。不允许 .aura 代替穿脱。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测穿脱物品 169311，确认挂上/卸下。自动判定只证明当时 303573 光环仍在，绿勾不能代替穿脱完成定义。不要勾珊瑚/宣言已修。AddSC_item_spell_scripts 本波不改 loader，接线认 3307 SELECT + 启动日志。277253 仍是 spell_item_heart_of_azeroth。不要重写 277253。不要把 302855 当成 303564。6.0/0.265/22.99/2.759/0.551/allies_end=4 不得进 Dummy。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 

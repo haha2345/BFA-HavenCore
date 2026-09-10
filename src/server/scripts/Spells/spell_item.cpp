@@ -38,6 +38,7 @@
 #include "SpellHistory.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "ObjectAccessor.h"
 
 // Generic script for handling item dummy effects which trigger another spell.
 class spell_item_trigger_spell : public SpellScriptLoader
@@ -4847,6 +4848,305 @@ public:
     }
 };
 
+enum ITMSignatureTrinketSpells
+{
+    SPELL_ASHVANES_RAZOR_CORAL              = 303564,
+    SPELL_ASHVANES_RAZOR_CORAL_CRIT_AURA    = 303573,
+    SPELL_ASHVANES_RAZOR_CORAL_DAMAGE_AURA  = 304877,
+    SPELL_ASHVANES_RAZOR_CORAL_PROC         = 303565,
+    SPELL_ASHVANES_RAZOR_CORAL_STACK        = 303568,
+    SPELL_ASHVANES_RAZOR_CORAL_CRIT         = 303570,
+    SPELL_ASHVANES_RAZOR_CORAL_DAMAGE       = 303572,
+    SPELL_MANIFESTO_OF_MADNESS              = 313948,
+    SPELL_MANIFESTO_OF_MADNESS_CHAPTER_TWO  = 314040,
+    SPELL_MANIFESTO_OF_MADNESS_EQUIP        = 314042
+};
+
+namespace
+{
+    char constexpr ITM_RAZOR_CORAL_TARGET[] = "itm_razor_coral_target";
+    char constexpr ITM_MANIFESTO_ALLY_CAP[] = "itm_manifesto_ally_cap";
+
+    int32 ITMCalcEffectValue(uint32 spellId, SpellEffIndex effIndex, Unit* caster)
+    {
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
+        if (!info || !caster)
+            return 0;
+        SpellEffectInfo const* effect = info->GetEffect(effIndex);
+        if (!effect)
+            return 0;
+        return effect->CalcValue(caster);
+    }
+
+    float ITMGetManifestoAllyYards(SpellInfo const* info)
+    {
+        // 公开句 8 码 / 5 码是观察窗口，非 DBC。禁止把 Dummy 8 / Dummy 5 当码。
+        if (info)
+        {
+            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+            {
+                if (SpellEffectInfo const* effect = info->GetEffect(SpellEffIndex(i)))
+                {
+                    if (!effect->IsEffect())
+                        continue;
+                    float radius = effect->CalcRadius();
+                    if (radius > 0.0f)
+                        return radius;
+                }
+            }
+        }
+        return 8.0f; // 非 DBC，不是 Dummy 8
+    }
+
+    uint32 ITMCountManifestoAllies(Unit* caster, float yards, int32 cap)
+    {
+        if (!caster || !caster->IsPlayer())
+            return 0;
+        std::list<Player*> list;
+        caster->GetPlayerListInGrid(list, yards);
+        uint32 n = 0;
+        for (Player* player : list)
+        {
+            if (!player || player == caster->ToPlayer())
+                continue;
+            if (!caster->IsValidAssistTarget(player))
+                continue;
+            ++n;
+        }
+        if (cap >= 0 && int32(n) > cap)
+            n = uint32(cap);
+        return n;
+    }
+}
+
+// 303564 Dummy 0 ON_USE hook. First: 303572+303568+self 303565. Second: strip 303568, 303570.
+class spell_item_ashvanes_razor_coral : public SpellScript
+{
+    PrepareSpellScript(spell_item_ashvanes_razor_coral);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_ASHVANES_RAZOR_CORAL_DAMAGE, SPELL_ASHVANES_RAZOR_CORAL_STACK, SPELL_ASHVANES_RAZOR_CORAL_CRIT, SPELL_ASHVANES_RAZOR_CORAL_PROC, SPELL_ASHVANES_RAZOR_CORAL_CRIT_AURA, SPELL_ASHVANES_RAZOR_CORAL_DAMAGE_AURA });
+    }
+
+    void HandleDummy(SpellEffIndex effIndex)
+    {
+        Unit* caster = GetCaster();
+        Unit* hit = GetHitUnit();
+        if (!caster || !hit)
+            return;
+
+        if (Aura* aura = hit->GetAura(SPELL_ASHVANES_RAZOR_CORAL_STACK, caster->GetGUID()))
+        {
+            uint32 stacks = aura->GetStackAmount();
+            PreventHitDefaultEffect(effIndex);
+            hit->RemoveAura(SPELL_ASHVANES_RAZOR_CORAL_STACK, caster->GetGUID());
+            caster->RemoveAura(SPELL_ASHVANES_RAZOR_CORAL_PROC);
+            int32 amount = ITMCalcEffectValue(SPELL_ASHVANES_RAZOR_CORAL_CRIT_AURA, EFFECT_0, caster) * int32(stacks);
+            if (amount < 0)
+                amount = 0;
+            caster->CastCustomSpell(caster, SPELL_ASHVANES_RAZOR_CORAL_CRIT, &amount, nullptr, nullptr, true);
+            caster->Variables.Remove(ITM_RAZOR_CORAL_TARGET);
+            return;
+        }
+
+        PreventHitDefaultEffect(effIndex);
+        ObjectGuid stored = caster->Variables.GetValue<ObjectGuid>(ITM_RAZOR_CORAL_TARGET, ObjectGuid::Empty);
+        if (!stored.IsEmpty())
+        {
+            if (Unit* old = ObjectAccessor::GetUnit(*caster, stored))
+            {
+                if (old != hit && old->HasAura(SPELL_ASHVANES_RAZOR_CORAL_STACK, caster->GetGUID()))
+                    old->RemoveAura(SPELL_ASHVANES_RAZOR_CORAL_STACK, caster->GetGUID());
+            }
+        }
+
+        int32 dmg = ITMCalcEffectValue(SPELL_ASHVANES_RAZOR_CORAL_DAMAGE_AURA, EFFECT_0, caster);
+        if (dmg < 0)
+            dmg = 0;
+        caster->CastCustomSpell(hit, SPELL_ASHVANES_RAZOR_CORAL_DAMAGE, &dmg, nullptr, nullptr, true);
+        caster->CastSpell(hit, SPELL_ASHVANES_RAZOR_CORAL_STACK, true);
+        caster->CastSpell(caster, SPELL_ASHVANES_RAZOR_CORAL_PROC, true);
+        caster->Variables.Set(ITM_RAZOR_CORAL_TARGET, hit->GetGUID());
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_item_ashvanes_razor_coral::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// 303565 Dummy 0. ppm copy 167<-124 rate 6.0 是表，6 不进 Dummy 0。不要写 6.0f。不要自己掷骰。
+class spell_item_ashvanes_razor_coral_proc : public AuraScript
+{
+    PrepareAuraScript(spell_item_ashvanes_razor_coral_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_ASHVANES_RAZOR_CORAL_DAMAGE, SPELL_ASHVANES_RAZOR_CORAL_STACK, SPELL_ASHVANES_RAZOR_CORAL_DAMAGE_AURA });
+    }
+
+    bool CheckProc(ProcEventInfo& /*eventInfo*/)
+    {
+        Unit* caster = GetTarget();
+        if (!caster)
+            return false;
+
+        ObjectGuid guid = caster->Variables.GetValue<ObjectGuid>(ITM_RAZOR_CORAL_TARGET, ObjectGuid::Empty);
+        if (guid.IsEmpty())
+            return false;
+
+        Unit* target = ObjectAccessor::GetUnit(*caster, guid);
+        if (!target || !target->IsAlive())
+            return false;
+
+        if (!target->HasAura(SPELL_ASHVANES_RAZOR_CORAL_STACK, caster->GetGUID()))
+            return false;
+
+        return true;
+    }
+
+    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    {
+        PreventDefaultAction();
+        Unit* caster = GetTarget();
+        if (!caster)
+            return;
+
+        ObjectGuid guid = caster->Variables.GetValue<ObjectGuid>(ITM_RAZOR_CORAL_TARGET, ObjectGuid::Empty);
+        Unit* target = ObjectAccessor::GetUnit(*caster, guid);
+        if (!target)
+            return;
+
+        int32 dmg = ITMCalcEffectValue(SPELL_ASHVANES_RAZOR_CORAL_DAMAGE_AURA, EFFECT_0, caster);
+        if (dmg < 0)
+            dmg = 0;
+        caster->CastCustomSpell(target, SPELL_ASHVANES_RAZOR_CORAL_DAMAGE, &dmg, nullptr, nullptr, true);
+        caster->CastSpell(target, SPELL_ASHVANES_RAZOR_CORAL_STACK, true);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_item_ashvanes_razor_coral_proc::CheckProc);
+        OnProc += AuraProcFn(spell_item_ashvanes_razor_coral_proc::HandleProc);
+    }
+};
+
+// 313948 Dummy 8 百分、Dummy 5 上限。金额读 EFFECT_4 CalcValue。Dummy 8 不是码。
+class spell_item_manifesto_of_madness : public AuraScript
+{
+    PrepareAuraScript(spell_item_manifesto_of_madness);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MANIFESTO_OF_MADNESS_CHAPTER_TWO });
+    }
+
+    void HandleApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        SpellInfo const* info = GetSpellInfo();
+        if (!info)
+            return;
+
+        SpellEffectInfo const* dummy8 = info->GetEffect(EFFECT_2);
+        SpellEffectInfo const* dummy5 = info->GetEffect(EFFECT_3);
+        SpellEffectInfo const* coefEff = info->GetEffect(EFFECT_4);
+        if (!dummy8 || !dummy5 || !coefEff)
+            return;
+
+        int32 pct = dummy8->BasePoints;
+        int32 cap = dummy5->BasePoints;
+        caster->Variables.Set(ITM_MANIFESTO_ALLY_CAP, cap);
+
+        float yards = ITMGetManifestoAllyYards(info);
+        uint32 allyCount = ITMCountManifestoAllies(caster, yards, cap);
+        int32 base = coefEff->CalcValue(caster);
+        int32 amount = int32(float(base) * (1.0f - (float(pct) / 100.0f) * float(allyCount)));
+        if (amount < 0)
+            amount = 0;
+        const_cast<AuraEffect*>(aurEff)->ChangeAmount(amount);
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes mode)
+    {
+        if (mode != AURA_EFFECT_HANDLE_REAL)
+            return;
+
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        caster->CastSpell(caster, SPELL_MANIFESTO_OF_MADNESS_CHAPTER_TWO, true);
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_item_manifesto_of_madness::HandleApply, EFFECT_1, SPELL_AURA_MOD_RATING, AURA_EFFECT_HANDLE_REAL);
+        OnEffectRemove += AuraEffectRemoveFn(spell_item_manifesto_of_madness::HandleRemove, EFFECT_1, SPELL_AURA_MOD_RATING, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 314040 金额 ITMCalcEffectValue(..., EFFECT_2)。ChangeAmount 打 EFFECT_1 Aura 189。不要 PreventDefault AT。禁止单人 ×5。
+class spell_item_manifesto_of_madness_chapter_two : public AuraScript
+{
+    PrepareAuraScript(spell_item_manifesto_of_madness_chapter_two);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_MANIFESTO_OF_MADNESS });
+    }
+
+    void HandleApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        float yards = ITMGetManifestoAllyYards(GetSpellInfo());
+        int32 cap = caster->Variables.GetValue<int32>(ITM_MANIFESTO_ALLY_CAP, 0);
+        if (SpellInfo const* ch1 = sSpellMgr->GetSpellInfo(SPELL_MANIFESTO_OF_MADNESS))
+            if (SpellEffectInfo const* dummy5 = ch1->GetEffect(EFFECT_3))
+                cap = dummy5->BasePoints;
+
+        uint32 allyCount = ITMCountManifestoAllies(caster, yards, cap);
+        int32 amount = ITMCalcEffectValue(SPELL_MANIFESTO_OF_MADNESS_CHAPTER_TWO, EFFECT_2, caster) * int32(allyCount + 1);
+        if (amount < 0)
+            amount = 0;
+        const_cast<AuraEffect*>(aurEff)->ChangeAmount(amount);
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_item_manifesto_of_madness_chapter_two::HandleApply, EFFECT_1, SPELL_AURA_MOD_RATING, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 314042 Dummy 1 装备钩子。1 不得改成码。不要改半径、不要 Cast 314040。
+class spell_item_manifesto_of_madness_equip : public AuraScript
+{
+    PrepareAuraScript(spell_item_manifesto_of_madness_equip);
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        // Dummy 1 装备钩子。1 不得改成码。不要 Cast 314040。
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        // Dummy 1 装备钩子。1 不得改成码。不要 Cast 314040。
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_item_manifesto_of_madness_equip::HandleApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        OnEffectRemove += AuraEffectRemoveFn(spell_item_manifesto_of_madness_equip::HandleRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
 void AddSC_item_spell_scripts()
 {
     // 23074 Arcanite Dragonling
@@ -4966,6 +5266,11 @@ void AddSC_item_spell_scripts()
     new spell_item_brutal_kinship();
     RegisterAuraScript(aura_item_burning_essence);
     RegisterAuraScript(spell_item_heart_of_azeroth);
+    RegisterSpellScript(spell_item_ashvanes_razor_coral);
+    RegisterAuraScript(spell_item_ashvanes_razor_coral_proc);
+    RegisterAuraScript(spell_item_manifesto_of_madness);
+    RegisterAuraScript(spell_item_manifesto_of_madness_chapter_two);
+    RegisterAuraScript(spell_item_manifesto_of_madness_equip);
     RegisterAuraScript(spell_item_demon_hunters_aspect);
     RegisterAuraScript(spell_item_faded_wizard_hat);
     RegisterAuraScript(aura_item_avalanche_elixir);
