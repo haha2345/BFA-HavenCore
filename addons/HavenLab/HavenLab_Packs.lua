@@ -8225,6 +8225,37 @@ HL.PACKS = {
         end,
     },
 
+    itm_manifesto_dummy8_5 = {
+        key = "itm_manifesto_dummy8_5",
+        title = "ITM宣言-穿174103_Dummy8百分Dummy5上限_Dummy1不得改成码",
+        order = 281,
+        hint = "物品 174103 ON_USE 313948 Dummy 8/5/0。ON_EQUIP 314042 Dummy 1。第一章结束 Cast 314040。Dummy 8 是百分不是码。Dummy 5 是人数上限不是码。Dummy 1 不得改成码。Coef 2.759/0.551 不是 Dummy。allies_end=4 不得进 Dummy。单人桩 allyCount=0，禁止单人 x5。人测完成定义是穿 174103 再使用。不允许 .aura 代替穿脱。绿勾只证出手。不要 Learn 别的号。173944 不验收。",
+        startText = "【宣言Dummy8/5】120 任意输出单人桩 131989，不组队。.additem 174103 穿上见 314042 Dummy 1。使用 313948。第一章后应出 314040（10 秒是 DurationIndex 1，不是 Dummy）。不要 Learn 别的号。Dummy 8/5 保持。1 不得改成码。2.759/0.551/allies_end=4 不得进 Dummy。不允许 .aura 代替穿脱。绿勾只证出手。禁止 want=aura。",
+        startPrint = "请穿 174103 打桩用宣言。见 314042，用 313948，第一章后出 314040。不要用 .aura 当闭环。Dummy 8 不是码。单人不要 x5。",
+        ids = { 313948, 314040, 314042, 174103, 173944, 277253 },
+        labels = {
+            [313948] = "宣言第一章_Dummy8百分_Dummy5上限",
+            [314040] = "宣言第二章_Coef不是Dummy",
+            [314042] = "宣言装备钩子_Dummy1不得改成码",
+            [174103] = "物品_穿脱完成定义",
+            [173944] = "不验收",
+            [277253] = "项链Dummy0_不要重写",
+        },
+        chain = {
+            { id = 314042, role = "宣言装备Dummy1", want = "aura-self",
+              hintFail = "没有 314042。穿物品 174103。Dummy 1 不得改成码。自动判定只证明光环在，绿勾不能代替穿脱完成定义。不允许 .aura 代替穿脱。禁止 want=aura。" },
+            { id = 313948, role = "宣言第一章", want = "aura-self",
+              hintFail = "没有 313948。穿 174103 使用 313948。Dummy 8 是百分不是码。Dummy 5 是人数上限。单人 allyCount=0。2.759 不得进 Dummy。禁止 want=aura。" },
+            { id = 314040, role = "宣言第二章", want = "aura-self",
+              hintFail = "没有 314040。等第一章结束（DurationIndex 1=10 秒不是 Dummy）。不要 SetDuration(10000)。不要 Learn 别的号。0.551/allies_end=4 不得进 Dummy。单人倍率是 allyCount+1=1，禁止 x5。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "书面完成定义是穿 174103 再使用 313948。见 314042 Dummy 1。第一章后出 314040。不允许 .aura 代替穿脱。绿勾只证出手/光环，不证公式。Dummy 8 保持百分，不得改成码。Dummy 5 保持人数上限。Dummy 1 不得改成码。2.759/0.551/allies_end=4 不得进 Dummy。单人桩不组队。不要 Learn 别的号。173944 不验收。不要重写 277253。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
