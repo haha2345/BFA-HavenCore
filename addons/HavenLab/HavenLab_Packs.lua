@@ -7936,6 +7936,146 @@ HL.PACKS = {
         end,
     },
 
+    rac_troll_berserking_table_only = {
+        key = "rac_troll_berserking_table_only",
+        title = "RAC狂暴-无Dummy走表不包空_Aura193_BP10_12秒",
+        order = 269,
+        hint = "26297 无 Dummy。Aura 193 BP 10。DurationIndex 29=12秒。Rec=180000。禁止 INSERT。10 不得进 Dummy。wiki 15%/10秒弃用。",
+        startText = "【狂暴走表】120 巨魔放 26297。加速约 10% / 12 秒。不要勾已写狂暴脚本。不要 15%/10秒。",
+        startPrint = "请巨魔放狂暴。走表不包空。",
+        ids = { 26297, 106951 },
+        labels = {
+            [26297] = "种族狂暴无Dummy走表",
+            [106951] = "德鲁伊狂暴不是种族_不要当本条",
+        },
+        chain = {
+            { id = 26297, role = "狂暴", want = "aura-self",
+              hintFail = "没有 26297。120 巨魔放。走表不包空。禁止 INSERT。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "无 Dummy。不要勾已写狂暴脚本。106951 不是种族。本包只勾走表。",
+            }
+        end,
+    },
+
+    rac_orc_blood_fury_table_only = {
+        key = "rac_orc_blood_fury_table_only",
+        title = "RAC血性狂怒-无Dummy走表_三号按职业学会不要合成",
+        order = 270,
+        hint = "20572/33697/33702 无 Dummy。Coef 1.286 不是 Dummy。禁止 INSERT。不要合成一个号。自动判定只盯 20572；本职业是 33697/33702 时不要当 RAC 失败，也不要 INSERT / 合成一个号。",
+        startText = "【血性狂怒走表】120 兽人按职业放 20572 或 33697 或 33702。约 15 秒。自动判定只盯 20572。本职业是 33697/33702 时不要当 RAC 失败，也不要 INSERT / 合成一个号。不要勾已写脚本。",
+        startPrint = "请兽人放血性狂怒。走表。三号不要合成。自动判定只盯 20572。",
+        ids = { 20572, 33697, 33702 },
+        labels = {
+            [20572] = "血性狂怒AP_无Dummy",
+            [33697] = "血性狂怒双_无Dummy",
+            [33702] = "血性狂怒SP_无Dummy",
+        },
+        chain = {
+            { id = 20572, role = "血性狂怒", want = "aura-self",
+              hintFail = "自动判定只盯 20572。本职业是 33697/33702 时不要当 RAC 失败，也不要 INSERT / 合成一个号。走表不包空。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "自动判定只盯 20572。本职业是 33697/33702 时不要当 RAC 失败，也不要 INSERT / 合成一个号。无 Dummy。1.286 不是 Dummy。本包只勾走表。",
+            }
+        end,
+    },
+
+    rac_zandalari_regeneratin_table_only = {
+        key = "rac_zandalari_regeneratin_table_only",
+        title = "RAC再生-Dummy100是tooltip_Aura20_BP16.5走表_6秒不是260369",
+        order = 271,
+        hint = "291944 Dummy 100 tooltip。Aura 20 BP 16.5 不是 Dummy。DurationIndex 32=6秒。禁止 INSERT。不要和 260369 12秒互填。",
+        startText = "【再生走表】120 赞达拉放 291944。约 6 秒回复。不要写脚本。6 秒是再生/裂隙，不是奥术脉冲减速。",
+        startPrint = "请赞达拉放再生。走表。Dummy 100 是 tooltip。",
+        ids = { 291944, 260369, 256948 },
+        labels = {
+            [291944] = "再生Dummy100tooltip_6秒",
+            [260369] = "奥术脉冲减速12秒不要互填",
+            [256948] = "裂隙也是6秒不要互填进260369",
+        },
+        chain = {
+            { id = 291944, role = "再生", want = "aura-self",
+              hintFail = "没有 291944。120 赞达拉放。走表不 INSERT。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 100 是 tooltip。16.5 不是 Dummy。不要勾已写再生脚本。本包只勾走表。",
+            }
+        end,
+    },
+
+    rac_register_not_accept_lang_prof_mount_hs = {
+        key = "rac_register_not_accept_lang_prof_mount_hs",
+        title = "RAC语言专业坐骑炉石营地-登记家不验收",
+        order = 272,
+        hint = "Languages/专业加速/坐骑/炉石/营地/钻探机/翼手龙降落登记家、不验收。spell_make_camp/spell_back_camp 不改。不要勾本包完成当 RAC 收口。空 chain。禁止 want=cast 盯 312370。",
+        startText = "【登记不验收】不要测语言、珠宝加工、工程专精、坐骑、炉石、312370/312372 营地、265225 钻探机、281954 翼手龙。本包不要勾完成。",
+        startPrint = "本包只登记不验收。不要勾完成。",
+        ids = { 312370, 312372, 265225, 281954, 259930, 20593, 28875 },
+        labels = {
+            [312370] = "扎营不验收",
+            [312372] = "回营不验收",
+            [265225] = "钻探机不验收",
+            [281954] = "翼手龙降落不验收",
+            [259930] = "圣光熔炉不验收",
+            [20593] = "工程专精不验收",
+            [28875] = "宝石切割不验收",
+        },
+        chain = {
+        },
+        extraVerdict = function()
+            return {
+                "语言/专业/坐骑/炉石/营地登记不验收。不要勾本包完成。不要改 make_camp。不要当 RAC 收口。禁止 want=cast 盯 312370。空 chain：没有 312370 不是 RAC 失败。",
+            }
+        end,
+    },
+
+    rac_affix_not_in_rac = {
+        key = "rac_affix_not_in_rac",
+        title = "RAC词缀不进本条-挑战者之力火山血池禁止勾完成",
+        order = 273,
+        hint = "spell_challengers_might / npc_volcanic_plume_105877 / challange_player_instance_handler / at_challenge_sanguine_ichor 是大秘境。家碰巧同文件。禁止改、禁止勾 RAC 已修词缀。空 chain。禁止 want=cast 盯 206150。",
+        startText = "【词缀不进RAC】不要测挑战者之力、火山、血池。不要勾本包完成。不要改 AddSC 开头四条。",
+        startPrint = "词缀不进 RAC。不要勾完成。",
+        ids = { 206150 },
+        labels = {
+            [206150] = "挑战者之力_词缀不进RAC",
+        },
+        chain = {
+        },
+        extraVerdict = function()
+            return {
+                "词缀不进 RAC。不要勾完成。不要改 spell_challengers_might / 火山 / 血池。禁止 want=cast 盯 206150。空 chain：没有 206150 不是 RAC 失败。本包只登记边界。",
+            }
+        end,
+    },
+
+    rac_voidelf_entropic_embrace_dummy5 = {
+        key = "rac_voidelf_entropic_embrace_dummy5",
+        title = "RAC熵能拥抱-只勾Dummy5光环能挂_不要勾已写复制伤害",
+        order = 275,
+        hint = "256374 Dummy Aura 5。255669 Aura 42 Trigger 256374 无 Dummy。本波不写复制伤害脚本。不要改 Dummy 5。8.3 是复制 5% Shadowfrost，11.0.7 才改成提高 5%，零售弃用。",
+        startText = "【熵能Dummy5】120 虚空精灵进战挂 256374。只勾 Dummy 5 能挂。不要勾已写复制伤害。不要改 Dummy 5。",
+        startPrint = "请虚空精灵进战看熵能拥抱。只勾 Dummy 5 光环能挂。",
+        ids = { 255669, 256374 },
+        labels = {
+            [255669] = "熵能拥抱学会_无Dummy",
+            [256374] = "熵能拥抱Dummy5",
+        },
+        chain = {
+            { id = 256374, role = "熵能拥抱Dummy5", want = "aura-self",
+              hintFail = "没有 256374。120 虚空精灵进战。只勾 Dummy 5 能挂。不要勾已写复制伤害。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "只勾 Dummy 5 能挂。不要勾已写复制伤害。不要改 Dummy 5。本波不写复制伤害脚本。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 
