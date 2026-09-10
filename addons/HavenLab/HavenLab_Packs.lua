@@ -7199,6 +7199,120 @@ HL.PACKS = {
         end,
     },
 
+    mas_mage_ignite_dummy75_phoenix_meteor = {
+        key = "mas_mage_ignite_dummy75_phoenix_meteor",
+        title = "MAS点燃-Dummy75在EFFECT1_凤凰257541流星153564必须绑ignite",
+        order = 241,
+        hint = "12846 Dummy 0/75。Dummy 75 在 EFFECT_1。masteryValue=Mastery*Dummy75/100。禁止 masteryValue=75。BonusCoef 0.75 不是 Dummy。257541/153564 必须绑 spell_mastery_ignite。BFA 贡献点燃不是 9.0 凤凰蔓延。不要改 spell_mage.cpp 当搬家。",
+        startText = "【点燃Dummy75/凤凰/流星】120 火焰打 131989。火球 133 上 12654。点 257541 也要上 12654。流星 153561 出 153564 后目标有 12654。Dummy 75 在 EFFECT_1。0.75/8/78 不得进 Dummy 75。不要勾 9.0 凤凰蔓延。",
+        startPrint = "请火焰法师打桩上点燃，再放凤凰和流星。Dummy 75 在 EFFECT_1。",
+        ids = { 12846, 12654, 133, 257541, 153561, 153564, 194466, 2120 },
+        labels = {
+            [12846] = "点燃Dummy0/75(EFFECT1是75)",
+            [12654] = "点燃光环PeriodicDummy0",
+            [133] = "火球(已绑ignite)",
+            [257541] = "凤凰必须绑ignite",
+            [153561] = "流星施放",
+            [153564] = "流星伤必须绑ignite",
+            [194466] = "神器凤凰(不加厚)",
+            [2120] = "烈焰风暴(已绑ignite)",
+        },
+        chain = {
+            { id = 133, role = "火球", want = "cast",
+              hintFail = "没有 133。120 火焰对 131989 打火球。Dummy 75 在 12846 EFFECT_1。禁止 masteryValue=75。禁止 want=aura。" },
+            { id = 12654, role = "点燃光环", want = "damage-aura",
+              hintFail = "没有 12654。点燃没挂上。257541/153564 必须绑 spell_mastery_ignite。不是 9.0 凤凰蔓延。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 75 在 EFFECT_1。0.75/8/78 不得进 Dummy 75。257541/153564 必须绑 ignite。不要 DELETE phoenix_flames。194466 不加厚。本包勾 MAS 点燃。",
+            }
+        end,
+    },
+
+    mas_mage_ignite_spread_8yd_level78 = {
+        key = "mas_mage_ignite_spread_8yd_level78",
+        title = "MAS点燃-蔓延8码观察窗口_学会78保留不得进Dummy75",
+        order = 242,
+        hint = "半径列空。脚本保持 8.0f 观察窗口非 Dummy。getLevel()>=78 保留。9.0.1 学会 10 弃用。8/78 不得进 Dummy 75。",
+        startText = "【蔓延8码/78级】两只敌对假人约 8 码。主目标 12654 可蔓延到第二只。角色必须 >=78（120 即可）。不要把 8 或 78 写进 Dummy 75。不要 9.0 凤凰蔓延。",
+        startPrint = "请两只桩测点燃蔓延。8 码是观察窗口。78 级保留。",
+        ids = { 12846, 12654, 133 },
+        labels = {
+            [12846] = "点燃Dummy75(8码不是Dummy)",
+            [12654] = "点燃光环",
+            [133] = "火球",
+        },
+        chain = {
+            { id = 12654, role = "点燃光环", want = "damage-aura",
+              hintFail = "没有 12654。蔓延 8.0f 是观察窗口不是 Dummy 75。78 级保留。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "8 码 / 78 级不得进 Dummy 75。蔓延保持 8.0f。getLevel()>=78 保留。本包勾 MAS 蔓延观察窗口。",
+            }
+        end,
+    },
+
+    mas_mage_icicles_dummy5_stop_artifact20 = {
+        key = "mas_mage_icicles_dummy5_stop_artifact20",
+        title = "MAS冰刺-Dummy5槽上限_停神器20不是Dummy5_泻冰刺不搬家",
+        order = 243,
+        hint = "76613 Dummy 0/5。5=槽上限。Coef 0.019/1.9 走表。Ice Nine 214664 / Black Ice 195615 的 20 不是 Dummy。停 roll_chance_i(20)。泻冰刺 spell_mage_ice_lance 不搬家。",
+        startText = "【冰刺Dummy5】120 冰霜寒冰箭存刺，最多 5 根（Dummy 5）。冰枪 30455 泻刺（不搬家）。不要靠 Ice Nine 20% 出第六根。20 不得进 Dummy 5。0.019/1.9 不是 Dummy。",
+        startPrint = "请冰霜法师存刺再冰枪泻刺。Dummy 5 是槽上限。不要神器 20%。",
+        ids = { 76613, 148022, 148023, 30455, 116, 214664, 195615, 199786 },
+        labels = {
+            [76613] = "冰刺Dummy0/5槽上限",
+            [148022] = "冰刺伤害",
+            [148023] = "泻刺周期Dummy0",
+            [30455] = "冰枪(泻刺不搬家)",
+            [116] = "寒冰箭存刺",
+            [214664] = "IceNine(20不是Dummy,停roll)",
+            [195615] = "BlackIce(20不是Dummy,停roll)",
+            [199786] = "冰川尖刺吃刺",
+        },
+        chain = {
+            { id = 116, role = "寒冰箭", want = "cast",
+              hintFail = "没有 116。120 冰霜打寒冰箭存刺。Dummy 5 是槽上限。禁止 want=aura。" },
+            { id = 30455, role = "冰枪泻刺", want = "cast",
+              hintFail = "没有 30455。泻冰刺家在 spell_mage_ice_lance，不搬家。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 5 是槽上限。20 不是 Dummy 5。停神器 roll。0.019/1.9 不得进 Dummy。泻冰刺不搬家。本包勾 MAS 冰刺。",
+            }
+        end,
+    },
+
+    mas_monk_combo_ondamage_include_sck = {
+        key = "mas_monk_combo_ondamage_include_sck",
+        title = "MAS连击-Dummy0_不扩自动攻击_纳入神鹤乱舞101546_删SpellTaken双乘",
+        order = 244,
+        hint = "115636 Dummy 0。Coef 1.25 不是 Dummy。OnDamage：spellProto==nullptr 跳过自动攻击；非空含 101546 纳入。删除 ModifySpellDamageTaken 避免双乘。1.25 不得填 Dummy 0。",
+        startText = "【连击Dummy0】120 踏风对 131989。虎掌 100780 接旭日 107428，第二下应吃精通。神鹤乱舞 101546 应吃。自动攻击不应因「上一个技能」涨。不要 1.25 当 Dummy。",
+        startPrint = "请踏风交替技能打桩，再放神鹤乱舞。不要用自动攻击验收精通。",
+        ids = { 115636, 100780, 107428, 101546, 100784 },
+        labels = {
+            [115636] = "连击Dummy0(1.25不是Dummy)",
+            [100780] = "虎掌",
+            [107428] = "旭日东升踢",
+            [101546] = "神鹤乱舞(纳入)",
+            [100784] = "幻灭踢",
+        },
+        chain = {
+            { id = 100780, role = "虎掌", want = "cast",
+              hintFail = "没有 100780。120 踏风打桩。连击 Dummy 0。禁止 want=aura。" },
+            { id = 107428, role = "旭日", want = "damage",
+              hintFail = "没有 107428 伤害。交替技能应吃精通。自动攻击不扩。" },
+        },
+        extraVerdict = function()
+            return {
+                "Dummy 0 保持。1.25 不是 Dummy。不扩自动攻击。神鹤乱舞纳入。不要双乘 SpellTaken。本包勾 MAS 连击。",
+            }
+        end,
+    },
+
     -- 引擎回归用：只靠数据出结论，不改 Verdict.lua。
 
 

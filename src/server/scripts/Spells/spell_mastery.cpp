@@ -79,11 +79,12 @@ class spell_mastery_icicles_proc : public AuraScript
         {
             bool icilesAddSecond = false;
 
-            if (caster->HasAura(SPELL_MAGE_ICE_NINE))
-            {
-                if (roll_chance_i(20))
-                    icilesAddSecond = true;
-            }
+            // 8.3 icicle loop must not rely on artifact Ice Nine 20%; 20 is not Dummy 5
+            // if (caster->HasAura(SPELL_MAGE_ICE_NINE))
+            // {
+            //     if (roll_chance_i(20))
+            //         icilesAddSecond = true;
+            // }
 
             float masteryCoef = 0.0f;
             if (SpellEffectInfo const* aura107 = GetSpellInfo()->GetEffect(EFFECT_2))
@@ -141,11 +142,12 @@ class spell_mastery_icicles_proc : public AuraScript
                     {
                         int32 basePoints = currentIcicleAuraEffect->GetAmount();
 
-                        if (caster->HasAura(SPELL_MAGE_BLACK_ICE))
-                        {
-                            if (roll_chance_i(20))
-                                basePoints *= 2;
-                        }
+                        // artifact Black Ice 20% is not Dummy 5; 8.3 icicle loop must not rely on it
+                        // if (caster->HasAura(SPELL_MAGE_BLACK_ICE))
+                        // {
+                        //     if (roll_chance_i(20))
+                        //         basePoints *= 2;
+                        // }
 
                         player->CastSpell(target, IcicleHits[smallestIcicle], true);
                         player->CastCustomSpell(target, SPELL_MAGE_ICICLE_DAMAGE, &basePoints, NULL, NULL, true);
@@ -209,11 +211,12 @@ class spell_mastery_icicles_proc : public AuraScript
                         {
                             int32 basePoints = currentIcicleAuraEffect->GetAmount();
 
-                            if (caster->HasAura(SPELL_MAGE_BLACK_ICE))
-                            {
-                                if (roll_chance_i(20))
-                                    basePoints *= 2;
-                            }
+                            // artifact Black Ice 20% is not Dummy 5; 8.3 icicle loop must not rely on it
+                            // if (caster->HasAura(SPELL_MAGE_BLACK_ICE))
+                            // {
+                            //     if (roll_chance_i(20))
+                            //         basePoints *= 2;
+                            // }
 
                             player->CastSpell(target, IcicleHits[smallestIcicle], true);
                             player->CastCustomSpell(target, SPELL_MAGE_ICICLE_DAMAGE, &basePoints, NULL, NULL, true);
@@ -321,11 +324,12 @@ class spell_mastery_icicles_periodic : public AuraScript
                         {
                             int32 basePoints = currentIcicleAura->GetEffect(0)->GetAmount();
 
-                            if (caster->HasAura(SPELL_MAGE_BLACK_ICE))
-                            {
-                                if (roll_chance_i(20))
-                                    basePoints *= 2;
-                            }
+                            // artifact Black Ice 20% is not Dummy 5; 8.3 icicle loop must not rely on it
+                            // if (caster->HasAura(SPELL_MAGE_BLACK_ICE))
+                            // {
+                            //     if (roll_chance_i(20))
+                            //         basePoints *= 2;
+                            // }
 
                             caster->CastSpell(target, IcicleHits[amount], true);
                             caster->CastCustomSpell(target, SPELL_MAGE_ICICLE_DAMAGE, &basePoints, NULL, NULL, true);
@@ -459,7 +463,7 @@ enum
 };
 
 // 12846 - Mastery : Ignite
-// Called by Fireball - 133, Inferno Blast - 108853, Scorch - 2948, Pyroblast - 11366, Meteor - 153564, Flamestrike - 2120
+// Called by Fireball - 133, Inferno Blast - 108853, Scorch - 2948, Pyroblast - 11366, Meteor - 153564, Phoenix Flames - 257541, Flamestrike - 2120
 class spell_mastery_ignite : public SpellScriptLoader
 {
 public:
@@ -694,6 +698,7 @@ public:
         SPELL_WARLOCK_CHAOTIC_ENERGIES_MASTERY  = 77220
     };
 
+    // non-DBC observation window; Dummy is 0/0; do not write /2 rng as Dummy
     void ModifySpellDamageTaken(Unit* /*target*/, Unit* attacker, int32& damage, SpellInfo const* /*spellInfo*/)
     {
         if (Aura* aura = attacker->GetAura(SPELL_WARLOCK_CHAOTIC_ENERGIES_MASTERY))
@@ -712,22 +717,28 @@ public:
 
     enum UsedSpells
     {
-        SPELL_MONK_MASTERY_COMBO_STRIKE = 115636
+        SPELL_MONK_MASTERY_COMBO_STRIKE = 115636,
+        SPELL_MONK_SPINNING_CRANE_KICK  = 101546
     };
 
-    void ModifySpellDamageTaken(Unit* /*target*/, Unit* attacker, int32& damage, SpellInfo const* spellInfo)
+    void OnDamage(Unit* attacker, Unit* /*victim*/, uint32& damage, SpellInfo const* spellProto) override
     {
-        if (!spellInfo)
+        if (!attacker)
             return;
 
-        if (Aura* aura = attacker->GetAura(SPELL_MONK_MASTERY_COMBO_STRIKE))
+        Aura* aura = attacker->GetAura(SPELL_MONK_MASTERY_COMBO_STRIKE);
+        if (!aura)
+            return;
+
+        // auto-attack DealDamage(..., nullptr) must not consume combo; 1.25 is not Dummy 0
+        if (spellProto == nullptr)
+            return;
+
+        uint32 lastUsedSpellId = attacker->Variables.GetValue<uint32>("monk_mastery_combo_strike", uint32(0));
+        if (lastUsedSpellId != spellProto->Id)
         {
-            uint32 lastUsedSpellId = attacker->Variables.GetValue<uint32>("monk_mastery_combo_strike", uint32(0));
-            if (lastUsedSpellId != spellInfo->Id)
-            {
-                AddPct(damage, aura->GetEffect(EFFECT_0)->GetAmount());
-                attacker->Variables.Set("monk_mastery_combo_strike", spellInfo->Id);
-            }
+            AddPct(damage, aura->GetEffect(EFFECT_0)->GetAmount());
+            attacker->Variables.Set("monk_mastery_combo_strike", spellProto->Id);
         }
     }
 };
