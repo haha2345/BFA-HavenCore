@@ -24,8 +24,8 @@
 
 enum FreeHoldTrashSpells
 {
-    ///Irontide Enforcer
-    BrutalBackhand = 257246,
+    ///Irontide Enforcer 129602 — SAI casts 257426. 257246 is Reincarnation in 35662.
+    BrutalBackhand = 257426,
     ShateringToss = 274860,
     ///Irontide Mastiff
     CripplingBite = 257478,
@@ -48,16 +48,17 @@ enum FreeHoldTrashSpells
     PlagueStep = 257775,
     ///Cutwater Knife Juggler
     RicochetingThrow = 272402,
-    ///Vermin Trapper
+    ///Vermin Trapper 130404 — 274383 is DUMMY; soak/root aura is 274389
     RatTraps = 274383,
+    RatTrapsRoot = 274389,
     ///Soggy Shiprat
     ScabrousBite = 274555,
     ///BlacktoothKnuckleduster
     ShatteringBellow = 257732,
     ///Blacktooth Scrapper
     BlindRage = 257739,
-    ///Cutwater Harpooner
-    DraggingHarpoon = 272413, ///Casted by Irontide Crusher to
+    ///Cutwater Harpooner 129601 — SAI casts 272412 (272413 is a different 35662 spell)
+    DraggingHarpoon = 272412,
     ///Irontide Crusher
     BoulderThrow = 258181,
     GroundShatter = 258199,
@@ -65,9 +66,12 @@ enum FreeHoldTrashSpells
     OiledBlade = 257908,
     ///Irontide Ravager
     PainfulMotivation = 257899,
+    ///Irontide Stormcaller 126919
     LightningBolt = 259092,
-    ///Irontide Stormcaller
     ThunderingSquall = 257736,
+    ///Bilge Rat Brinescale 129600 — dump SAI already casts both
+    WaterBolt = 281420,
+    FrostBlast = 257784,
     ///Irontide Buccaneers
     BladeBarrage = 257870,
 };

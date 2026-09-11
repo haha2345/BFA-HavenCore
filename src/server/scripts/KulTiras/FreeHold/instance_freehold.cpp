@@ -15,16 +15,47 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "AreaBoundary.h"
 #include "Creature.h"
+#include "CellImpl.h"
 #include "GameEventMgr.h"
+#include "GridNotifiersImpl.h"
 #include "Group.h"
 #include "Player.h"
 #include "ScriptedGossip.h"
 #include "ScriptMgr.h"
+#include "SpellInfo.h"
+#include "SpellScript.h"
 #include "World.h"
 #include "InstanceScript.h"
 #include "freehold.h"
 #include <list>
+
+// Dump spawn coords (map 1754): Kragg ship, council bar, ring pit, Harlan deck.
+// Circle + Z-range are AND-ed by BossAI::CheckBoundary / CanAIAttack.
+BossBoundaryData const freeholdBoundaries =
+{
+    { FreeholdData::DataSkycapKragg,      new CircleBoundary(Position(-1778.22f, -994.856f), 55.0) },
+    { FreeholdData::DataSkycapKragg,      new ZRangeBoundary(70.0f, 120.0f) },
+    { FreeholdData::DataCounciloCaptains, new CircleBoundary(Position(-1778.89f, -685.425f), 32.0) },
+    { FreeholdData::DataCounciloCaptains, new ZRangeBoundary(30.0f, 52.0f) },
+    { FreeholdData::DataRingOfBooty,      new CircleBoundary(Position(-1813.17f, -491.82f), 40.0) },
+    { FreeholdData::DataRingOfBooty,      new ZRangeBoundary(28.0f, 48.0f) },
+    { FreeholdData::DataHarlanSweete,     new CircleBoundary(Position(-1587.22f, -562.097f), 55.0) },
+    { FreeholdData::DataHarlanSweete,     new ZRangeBoundary(55.0f, 90.0f) },
+};
+
+static bool ShouldDisableGravityForFreeholdSpawn(uint32 entry)
+{
+    switch (entry)
+    {
+    case uint32(FreeholdCreature::NpcIrontideCrackshot):
+    case uint32(FreeholdCreature::NpcIrontideCorsair):
+        return true;
+    default:
+        return false;
+    }
+}
 
 struct instance_free_hold : public InstanceScript
 {
@@ -47,6 +78,7 @@ struct instance_free_hold : public InstanceScript
         captainsControllerGuid = ObjectGuid::Empty;
         SetHeaders(DataHeader);
         SetBossNumber(FreeholdData::DataMaxEncounters);
+        LoadBossBoundaries(freeholdBoundaries);
     }
 
     void OnCreatureCreate(Creature* creature) override
@@ -61,12 +93,15 @@ struct instance_free_hold : public InstanceScript
             break;
         case uint32(FreeholdCreature::NpcCaptainJolly):
             jollyGuid = creature->GetGUID();
+            ApplyWeeklyCouncilAlliance();
             break;
         case uint32(FreeholdCreature::NpcCaptainEudora):
             eudoraGuid = creature->GetGUID();
+            ApplyWeeklyCouncilAlliance();
             break;
         case uint32(FreeholdCreature::NpcCaptainRaoul):
             raoulGuid = creature->GetGUID();
+            ApplyWeeklyCouncilAlliance();
             break;
         case uint32(FreeholdCreature::NpcGukguk):
             gukgukGuid = creature->GetGUID();
@@ -96,36 +131,70 @@ struct instance_free_hold : public InstanceScript
             break;
         }
 
-        Position const home = creature->GetHomePosition();
-        creature->Relocate(home);
-        creature->SetDisableGravity(true);
+        // Task 13 tent stalls only. Whole-map DisableGravity let bosses walk off decks.
+        if (ShouldDisableGravityForFreeholdSpawn(creature->GetEntry()))
+        {
+            Position const home = creature->GetHomePosition();
+            creature->Relocate(home);
+            creature->SetDisableGravity(true);
+        }
     }
 
     void OnPlayerEnter(Player* /*player*/) override
     {
+        ApplyWeeklyCouncilAlliance();
+    }
+
+    uint32 GetEffectiveFriendlyCaptainEntry() const
+    {
+        if (GetData(uint32(FreeholdData::DataCrewEventDone)) != 0)
+        {
+            uint32 const saved = GetData(uint32(FreeholdData::DataFriendlyCaptain));
+            if (saved)
+                return saved;
+        }
+
+        switch (GetActiveFreeholdCrewWeek())
+        {
+        case CrewWeekBlacktooth:
+            return uint32(FreeholdCreature::NpcCaptainRaoul);
+        case CrewWeekBilgeRats:
+            return uint32(FreeholdCreature::NpcCaptainEudora);
+        case CrewWeekCutwater:
+        case CrewWeekNone:
+        default:
+            return uint32(FreeholdCreature::NpcCaptainJolly);
+        }
+    }
+
+    void ApplyWeeklyCouncilAlliance()
+    {
         if (GetBossState(FreeholdData::DataCounciloCaptains) == DONE)
             return;
 
-        if (GetData(FreeholdData::DataCrewEventDone) == 0)
-            return;
-
-        switch (GetData(FreeholdData::DataFriendlyCaptain))
+        uint32 const friendlyEntry = GetEffectiveFriendlyCaptainEntry();
+        Creature* captain = nullptr;
+        int32 action = 0;
+        switch (friendlyEntry)
         {
         case uint32(FreeholdCreature::NpcCaptainJolly):
-            if (Creature* jolly = instance->GetCreature(jollyGuid))
-                jolly->AI()->DoAction(FreeholdAction::ActionSelectCaptainJolly);
+            captain = instance->GetCreature(jollyGuid);
+            action = FreeholdAction::ActionSelectCaptainJolly;
             break;
         case uint32(FreeholdCreature::NpcCaptainRaoul):
-            if (Creature* raoul = instance->GetCreature(raoulGuid))
-                raoul->AI()->DoAction(FreeholdAction::ActionSelectCaptainRaoul);
+            captain = instance->GetCreature(raoulGuid);
+            action = FreeholdAction::ActionSelectCaptainRaoul;
             break;
         case uint32(FreeholdCreature::NpcCaptainEudora):
-            if (Creature* eudora = instance->GetCreature(eudoraGuid))
-                eudora->AI()->DoAction(FreeholdAction::ActionSelectCaptainEudora);
+            captain = instance->GetCreature(eudoraGuid);
+            action = FreeholdAction::ActionSelectCaptainEudora;
             break;
         default:
             break;
         }
+
+        if (captain && captain->AI())
+            captain->AI()->DoAction(action);
     }
 
     ObjectGuid GetGuidData(uint32 type) const override
@@ -338,14 +407,50 @@ FreeholdCrewWeek GetActiveFreeholdCrewWeek(InstanceScript const* instance)
     return CrewWeekNone;
 }
 
+uint32 GetEffectiveFriendlyCaptainEntry(InstanceScript const* instance)
+{
+    if (instance_free_hold const* fh = dynamic_cast<instance_free_hold const*>(instance))
+        return fh->GetEffectiveFriendlyCaptainEntry();
+    return uint32(FreeholdCreature::NpcCaptainJolly);
+}
+
 void NotifyCrewEventComplete(InstanceScript* instance, uint32 captainEntry)
 {
     if (instance_free_hold* fh = dynamic_cast<instance_free_hold*>(instance))
         fh->NotifyCrewEventComplete(captainEntry);
 }
 
+enum FreeholdInstanceSpells
+{
+    SpellRatTrapsRoot = 274389
+};
+
+class spell_freehold_rat_traps : public SpellScript
+{
+    PrepareSpellScript(spell_freehold_rat_traps);
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        std::list<Player*> players;
+        caster->GetPlayerListInGrid(players, 12.0f);
+        for (Player* player : players)
+            if (player->IsAlive() && caster->IsWithinDistInMap(player, 8.0f))
+                player->CastSpell(player, FreeholdInstanceSpells::SpellRatTrapsRoot, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_freehold_rat_traps::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
 void AddSC_instance_freehold()
 {
     RegisterInstanceScript(instance_free_hold, 1754);
     new npc_free_hold_entrance_teleporter();
+    RegisterSpellScript(spell_freehold_rat_traps);
 }

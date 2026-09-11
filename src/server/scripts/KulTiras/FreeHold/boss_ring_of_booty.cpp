@@ -856,14 +856,20 @@ struct boss_trothak : public BossAI
                     me->AttackStop();
                     me->CastStop();
                     me->SetReactState(REACT_PASSIVE);
-                    me->GetMotionMaster()->MoveCharge(shark->GetPositionX(), shark->GetPositionY(), shark->GetPositionZ(), 30.0f);
+                    Position dest = shark->GetPosition();
+                    if (dest.GetExactDist2d(&midleArenaPos) > 32.0f)
+                        dest.Relocate(midleArenaPos);
+                    me->GetMotionMaster()->MoveCharge(dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), 30.0f);
                 }
                 events.ScheduleEvent(RingOfBootyEvents::EventsSharkToss, 10000);
                 break;
             }
             case RingOfBootyEvents::EventsThrowChum:
             {
-                me->CastSpell(me, RingOfBootySpells::ThrowChumMissile, true);
+                Unit* chumCaster = me;
+                if (Creature* fanatic = me->FindNearestCreature(uint32(FreeholdCreature::NpcBootyFanatic), 80.0f))
+                    chumCaster = fanatic;
+                chumCaster->CastSpell(chumCaster, RingOfBootySpells::ThrowChumMissile, true);
                 events.Repeat(10000);
                 break;
             }

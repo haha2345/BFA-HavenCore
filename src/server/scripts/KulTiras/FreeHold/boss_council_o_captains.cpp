@@ -20,7 +20,9 @@
 #include "freehold.h"
 #include "AreaTrigger.h"
 #include "AreaTriggerAI.h"
+#include "CellImpl.h"
 #include "GameObject.h"
+#include "GridNotifiersImpl.h"
 #include "InstanceScript.h"
 #include "Map.h"
 #include "MotionMaster.h"
@@ -36,7 +38,7 @@
 
 enum CouncilCaptainSpells
 {
-    UnderOneBanner = 257821, ///Cast if you fight with the 3 boss
+    UnderOneBanner = 257821, /// Hostile captains keep this even when one captain is friendly
     BilgeRatBrew = 281357, ///This will get players drunk for 1 minute
     ///Captain Raoul Fight
     BlackoutBarrel = 258338,
@@ -57,9 +59,14 @@ enum CouncilCaptainSpells
     TappedKegBuff = 272900,
     TradeWindsVigor = 281329, /// Casted by Captain Jolly if he is Allied
     ///Heroic Mode
-    ConfidenceBoostingFreeholdBrew = 265086, ///On Heroic difficulty, the nearby bartender Rummy Mancomb will throw beverages 
-    InvigoratingFreeholdBrew = 264715, ///to the location of a randomly selected boss. These beverages will apply a buff 
-    CausticFreeholdBrew = 265171  ///to any boss or player that stands within them.
+    /// CLEU IDs from BFA S4 WCL report Dvw9JfgPNaVTMCRx fight 1 + LittleWigs v8.3.
+    /// 265086 / 264715 / 265171 are same-name 35662 spells but that log never fired them.
+    ConfidenceBoostingFreeholdBrew = 265088, /// Crit brew; aura 265085
+    InvigoratingFreeholdBrew = 264608, /// Haste brew; aura 265056
+    CausticFreeholdBrew = 265168, /// Bad brew; aura 278467
+    ConfidenceBoostingFreeholdBrewAura = 265085,
+    InvigoratingFreeholdBrewAura = 265056,
+    CausticFreeholdBrewAura = 278467
 };
 
 uint32 HeroicSpell[3]{ ConfidenceBoostingFreeholdBrew, InvigoratingFreeholdBrew, CausticFreeholdBrew };
@@ -254,13 +261,17 @@ struct boss_council_captain : public BossAI
 
         me->SetReactState(REACT_DEFENSIVE);
         me->SetFaction(FreeHoldFaction::FactionEnemy);
+        if (instance && GetEffectiveFriendlyCaptainEntry(instance) == me->GetEntry())
+        {
+            me->SetFaction(FreeHoldFaction::FactionFriendlyFake);
+            me->RemoveAura(CouncilCaptainSpells::UnderOneBanner);
+        }
 
         AddTimedDelayedOperation(3 * TimeConstants::IN_MILLISECONDS, [this]() -> void
             {
-                // Reset always sets FactionEnemy first; restore friendly from instance GetData
-                // (same memory-only source OnPlayerEnter uses). Not a Raoul-only bool.
-                if (instance && instance->GetData(uint32(FreeholdData::DataCrewEventDone)) != 0
-                    && instance->GetData(uint32(FreeholdData::DataFriendlyCaptain)) == me->GetEntry())
+                // Always one friendly captain from the weekly rotation. Skipping the rum
+                // alley event no longer leaves all three hostile.
+                if (instance && GetEffectiveFriendlyCaptainEntry(instance) == me->GetEntry())
                 {
                     me->SetFaction(FreeHoldFaction::FactionFriendlyFake);
                     me->RemoveAura(CouncilCaptainSpells::UnderOneBanner);
@@ -615,22 +626,25 @@ private:
 
     void checkFaction()
     {
+        auto syncBanner = [](Creature* captain)
+        {
+            if (!captain)
+                return;
+            if (captain->getFaction() == FreeHoldFaction::FactionEnemy)
+                captain->CastSpell(captain, CouncilCaptainSpells::UnderOneBanner, true);
+            else
+                captain->RemoveAura(CouncilCaptainSpells::UnderOneBanner);
+        };
+
         if (Creature* jolly = m_Instance->instance->GetCreature(m_Instance->GetGuidData(FreeholdCreature::NpcCaptainJolly)))
         {
             if (Creature* raoul = m_Instance->instance->GetCreature(m_Instance->GetGuidData(FreeholdCreature::NpcCaptainRaoul)))
             {
                 if (Creature* eudora = m_Instance->instance->GetCreature(m_Instance->GetGuidData(FreeholdCreature::NpcCaptainEudora)))
                 {
-                    if (jolly->getFaction() == FreeHoldFaction::FactionEnemy && raoul->getFaction() == FreeHoldFaction::FactionEnemy && eudora->getFaction() == FreeHoldFaction::FactionEnemy)
-                    {
-                        me->CastSpell(me, CouncilCaptainSpells::UnderOneBanner, true);
-                    }
-                    else
-                    {
-                        jolly->RemoveAura(CouncilCaptainSpells::UnderOneBanner);
-                        raoul->RemoveAura(CouncilCaptainSpells::UnderOneBanner);
-                        eudora->RemoveAura(CouncilCaptainSpells::UnderOneBanner);
-                    }
+                    syncBanner(jolly);
+                    syncBanner(raoul);
+                    syncBanner(eudora);
                 }
             }
         }
@@ -683,25 +697,28 @@ private:
 
     Position GetRandomPositionAround()
     {
-        float distMin = 18.0f;
-        float distMax = 20.0f;
-        double angle = rand_norm() * 2.0 * M_PI;
-        float x = me->GetPositionX() + (float)(frand(distMin, distMax) * std::sin(angle));
-        float y = me->GetPositionY() + (float)(frand(distMin, distMax) * std::cos(angle));
-        float z = me->GetPositionZ();
-        return { x, y, z };
+        // Home-relative hop on the rum bar. 18–20 yards from *current* position
+        // compounded off the wooden deck (dump bar ~ -1779, -685, z 40).
+        Position const home = me->GetHomePosition();
+        float const dist = frand(6.0f, 10.0f);
+        double const angle = rand_norm() * 2.0 * M_PI;
+        float const x = home.GetPositionX() + dist * float(std::sin(angle));
+        float const y = home.GetPositionY() + dist * float(std::cos(angle));
+        return { x, y, home.GetPositionZ() };
     }
 };
 
 /// 133219 - Npc Rummy Mancomb
 struct npc_rummy_mancomb : public ScriptedAI
 {
-    npc_rummy_mancomb(Creature* creature) : ScriptedAI(creature) { }
+    npc_rummy_mancomb(Creature* creature) : ScriptedAI(creature), brewStarted(false) { }
 
     void Reset()
     {
         me->SetReactState(REACT_PASSIVE);
         me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+        brewStarted = false;
+        events.Reset();
     }
 
     void DoAction(int32 const action) override
@@ -710,6 +727,9 @@ struct npc_rummy_mancomb : public ScriptedAI
         {
         case CouncilCaptainAction::ActionStartLaunchBrew:
         {
+            if (brewStarted)
+                break;
+            brewStarted = true;
             events.ScheduleEvent(CouncilCaptainEvents::EventLaunchBrew, 8000);
             break;
         }
@@ -717,6 +737,7 @@ struct npc_rummy_mancomb : public ScriptedAI
         {
             me->SetReactState(REACT_PASSIVE);
             me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+            brewStarted = false;
             events.Reset();
             me->DeleteThreatList();
             break;
@@ -737,34 +758,44 @@ struct npc_rummy_mancomb : public ScriptedAI
             {
             case CouncilCaptainEvents::EventLaunchBrew:
             {
-                std::list<Unit*> targetList;
-                Trinity::AnyUnitInObjectRangeCheck check(me, 50.0f);
-                Trinity::UnitListSearcher<Trinity::AnyUnitInObjectRangeCheck> searcher(me, targetList, check);
-                Cell::VisitGridObjects(me, searcher, 50.0f);
-
-                if (targetList.empty())
-                    return;
-
-                targetList.remove_if([this](Unit* unit) -> bool
-                    {
-                        if (!unit)
-                            return true;
-
-                        if (unit->GetEntry() == FreeholdCreature::NpcCaptainRaoul || unit->GetEntry() == FreeholdCreature::NpcCaptainEudora || unit->GetEntry() == FreeholdCreature::NpcCaptainJolly)
-                            return false;
-
-                        return true;
-                    });
-
-                if (Unit* target = Trinity::Containers::SelectRandomContainerElement(targetList))
-                    me->CastSpell(target, HeroicSpell[urand(0, 2)], true);
-
                 events.Repeat(5000);
+
+                std::list<Unit*> soakList;
+                if (Map* map = me->GetMap())
+                {
+                    Map::PlayerList const& players = map->GetPlayers();
+                    for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+                    {
+                        Player* player = itr->GetSource();
+                        if (player && player->IsAlive() && me->IsWithinDistInMap(player, 50.0f))
+                            soakList.push_back(player);
+                    }
+                }
+
+                uint32 const captains[] =
+                {
+                    uint32(FreeholdCreature::NpcCaptainJolly),
+                    uint32(FreeholdCreature::NpcCaptainRaoul),
+                    uint32(FreeholdCreature::NpcCaptainEudora)
+                };
+                for (uint32 entry : captains)
+                    if (Creature* captain = me->FindNearestCreature(entry, 50.0f))
+                        if (captain->IsAlive())
+                            soakList.push_back(captain);
+
+                if (soakList.empty())
+                    break;
+
+                if (Unit* target = Trinity::Containers::SelectRandomContainerElement(soakList))
+                    me->CastSpell(target, HeroicSpell[urand(0, 2)], true);
                 break;
             }
             }
         }
     }
+
+private:
+    bool brewStarted;
 };
 
 /// 130896 - Blackout Barrel
@@ -836,6 +867,63 @@ class spell_trade_winds_vigor : public SpellScript
     void Register() override
     {
         OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_trade_winds_vigor::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+    }
+};
+
+class spell_freehold_rummy_brew : public SpellScript
+{
+    PrepareSpellScript(spell_freehold_rummy_brew);
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        SpellInfo const* info = GetSpellInfo();
+        if (!caster || !info)
+            return;
+
+        uint32 auraId = 0;
+        switch (info->Id)
+        {
+        case CouncilCaptainSpells::ConfidenceBoostingFreeholdBrew:
+            auraId = CouncilCaptainSpells::ConfidenceBoostingFreeholdBrewAura;
+            break;
+        case CouncilCaptainSpells::InvigoratingFreeholdBrew:
+            auraId = CouncilCaptainSpells::InvigoratingFreeholdBrewAura;
+            break;
+        case CouncilCaptainSpells::CausticFreeholdBrew:
+            auraId = CouncilCaptainSpells::CausticFreeholdBrewAura;
+            break;
+        default:
+            return;
+        }
+
+        Position dest = caster->GetPosition();
+        if (Unit* target = GetExplTargetUnit())
+            dest.Relocate(*target);
+        else if (WorldLocation const* expl = GetExplTargetDest())
+            dest.Relocate(*expl);
+
+        std::list<Player*> players;
+        caster->GetPlayerListInGrid(players, 80.0f);
+        for (Player* player : players)
+            if (player->IsAlive() && player->GetExactDist(&dest) <= 6.0f)
+                player->CastSpell(player, auraId, true);
+
+        uint32 const captains[] =
+        {
+            uint32(FreeholdCreature::NpcCaptainJolly),
+            uint32(FreeholdCreature::NpcCaptainRaoul),
+            uint32(FreeholdCreature::NpcCaptainEudora)
+        };
+        for (uint32 entry : captains)
+            if (Creature* captain = caster->FindNearestCreature(entry, 80.0f))
+                if (captain->IsAlive() && captain->GetExactDist(&dest) <= 6.0f)
+                    captain->CastSpell(captain, auraId, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_freehold_rummy_brew::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
@@ -1017,6 +1105,7 @@ void AddSC_boss_council_o_captains()
     ///Spell
     RegisterSpellScript(spell_blackout_vehicle);
     RegisterSpellScript(spell_trade_winds_vigor);
+    RegisterSpellScript(spell_freehold_rummy_brew);
     ///Areatrigger
     RegisterAreaTriggerAI(at_tapped_keg);
     RegisterAreaTriggerAI(at_whirlpool_of_blades);

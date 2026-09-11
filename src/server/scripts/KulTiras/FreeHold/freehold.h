@@ -58,6 +58,7 @@ enum FreeholdCreature
     NpcHammerShark = 129448,
     NpcSawtoothShark = 129359,
     NpcGurgthock = 129350,
+    NpcBootyFanatic = 136539, /// WCL: casts Throw Chum 272534 on heroic+
 
     ///Harlan Sweete
     NpcHarlanSweete = 126983,
@@ -146,4 +147,5 @@ enum FreeholdCrewWeek : uint32
 };
 
 FreeholdCrewWeek GetActiveFreeholdCrewWeek(InstanceScript const* instance);
+uint32 GetEffectiveFriendlyCaptainEntry(InstanceScript const* instance);
 void NotifyCrewEventComplete(InstanceScript* instance, uint32 captainEntry);
