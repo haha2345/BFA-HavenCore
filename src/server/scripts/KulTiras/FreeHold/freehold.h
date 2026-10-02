@@ -106,6 +106,12 @@ enum FreeholdAction
     ActionSelectCaptainEudora
 };
 
+enum CouncilCaptainAction
+{
+    ActionResetRummy = 0,
+    ActionStartLaunchBrew = 1
+};
+
 enum FreeholdData
 {
     DataSkycapKragg,

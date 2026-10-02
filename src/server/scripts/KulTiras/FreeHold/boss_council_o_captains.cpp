@@ -91,11 +91,15 @@ enum CouncilCaptainEvents
     EventCheckPlayers /// wipe: evade if no living players remain in combat
 };
 
-enum CouncilCaptainAction
+static void StopCouncilBrew(InstanceScript* script)
 {
-    ActionResetRummy,
-    ActionStartLaunchBrew
-};
+    if (!script)
+        return;
+
+    if (Creature* rummy = script->instance->GetCreature(script->GetGuidData(FreeholdCreature::NpcRummyMancomb)))
+        if (rummy->AI())
+            rummy->AI()->DoAction(CouncilCaptainAction::ActionResetRummy);
+}
 
 enum CouncilCaptainMovementPoint
 {
@@ -216,6 +220,7 @@ struct boss_council_captain : public BossAI
 
     void Reset() override
     {
+        StopCouncilBrew(instance);
         reset = false;
         grapershotcount = 0;
         resetFight = true;
@@ -284,6 +289,10 @@ struct boss_council_captain : public BossAI
 
     void EnterEvadeMode(EvadeReason /*why*/) override
     {
+        StopCouncilBrew(instance);
+        if (instance && instance->GetBossState(FreeholdData::DataCounciloCaptains) == IN_PROGRESS)
+            instance->SetBossState(FreeholdData::DataCounciloCaptains, FAIL);
+
         ///Avoid enter two time here
         if (evadeModeActivated || !reset)
             return;
@@ -305,6 +314,7 @@ struct boss_council_captain : public BossAI
 
     void JustReachedHome() override
     {
+        StopCouncilBrew(instance);
         _JustReachedHome();
         instance->SetBossState(FreeholdData::DataCounciloCaptains, FAIL);
         Reset();
@@ -713,12 +723,9 @@ struct npc_rummy_mancomb : public ScriptedAI
 {
     npc_rummy_mancomb(Creature* creature) : ScriptedAI(creature), brewStarted(false) { }
 
-    void Reset()
+    void Reset() override
     {
-        me->SetReactState(REACT_PASSIVE);
-        me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
-        brewStarted = false;
-        events.Reset();
+        StopBrew();
     }
 
     void DoAction(int32 const action) override
@@ -727,19 +734,19 @@ struct npc_rummy_mancomb : public ScriptedAI
         {
         case CouncilCaptainAction::ActionStartLaunchBrew:
         {
+            if (!instance || !me->IsInWorld() || !me->IsAlive() || !IsFreeholdHeroicPlus(me->GetMap()) ||
+                instance->GetBossState(FreeholdData::DataCounciloCaptains) != IN_PROGRESS)
+                return;
             if (brewStarted)
-                break;
+                return;
+            events.Reset();
             brewStarted = true;
             events.ScheduleEvent(CouncilCaptainEvents::EventLaunchBrew, 8000);
             break;
         }
         case CouncilCaptainAction::ActionResetRummy:
         {
-            me->SetReactState(REACT_PASSIVE);
-            me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
-            brewStarted = false;
-            events.Reset();
-            me->DeleteThreatList();
+            StopBrew();
             break;
         }
         }
@@ -747,54 +754,78 @@ struct npc_rummy_mancomb : public ScriptedAI
 
     void UpdateAI(uint32 diff) override
     {
+        if (!instance || !me->IsInWorld() || !me->IsAlive() || !IsFreeholdHeroicPlus(me->GetMap()) ||
+            instance->GetBossState(FreeholdData::DataCounciloCaptains) != IN_PROGRESS)
+        {
+            StopBrew();
+            return;
+        }
+        if (!brewStarted)
+            return;
+
         events.Update(diff);
 
         if (me->HasUnitState(UNIT_STATE_CASTING))
             return;
 
-        while (uint32 eventId = events.ExecuteEvent())
+        if (events.ExecuteEvent() != CouncilCaptainEvents::EventLaunchBrew)
+            return;
+
+        std::list<Unit*> soakList;
+        if (Map* map = me->GetMap())
         {
-            switch (eventId)
+            Map::PlayerList const& players = map->GetPlayers();
+            for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
             {
-            case CouncilCaptainEvents::EventLaunchBrew:
-            {
-                events.Repeat(5000);
-
-                std::list<Unit*> soakList;
-                if (Map* map = me->GetMap())
-                {
-                    Map::PlayerList const& players = map->GetPlayers();
-                    for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
-                    {
-                        Player* player = itr->GetSource();
-                        if (player && player->IsAlive() && me->IsWithinDistInMap(player, 50.0f))
-                            soakList.push_back(player);
-                    }
-                }
-
-                uint32 const captains[] =
-                {
-                    uint32(FreeholdCreature::NpcCaptainJolly),
-                    uint32(FreeholdCreature::NpcCaptainRaoul),
-                    uint32(FreeholdCreature::NpcCaptainEudora)
-                };
-                for (uint32 entry : captains)
-                    if (Creature* captain = me->FindNearestCreature(entry, 50.0f))
-                        if (captain->IsAlive())
-                            soakList.push_back(captain);
-
-                if (soakList.empty())
-                    break;
-
-                if (Unit* target = Trinity::Containers::SelectRandomContainerElement(soakList))
-                    me->CastSpell(target, HeroicSpell[urand(0, 2)], true);
-                break;
-            }
+                Player* player = itr->GetSource();
+                if (player && player->IsAlive() && me->IsWithinDistInMap(player, 50.0f))
+                    soakList.push_back(player);
             }
         }
+
+        uint32 const captains[] =
+        {
+            uint32(FreeholdCreature::NpcCaptainJolly),
+            uint32(FreeholdCreature::NpcCaptainRaoul),
+            uint32(FreeholdCreature::NpcCaptainEudora)
+        };
+        for (uint32 entry : captains)
+            if (Creature* captain = me->FindNearestCreature(entry, 50.0f))
+                if (captain->IsAlive())
+                    soakList.push_back(captain);
+
+        if (!soakList.empty())
+            if (Unit* target = Trinity::Containers::SelectRandomContainerElement(soakList))
+            {
+                uint32 const brewId = HeroicSpell[urand(0, 2)];
+                bool const castAccepted = me->CastSpell(target, brewId, false);
+                // Either prepare result uses the same next opportunity; acceptance is not completion.
+                (void)castAccepted;
+            }
+
+        if (!brewStarted || !instance || !me->IsInWorld() || !me->IsAlive() || !IsFreeholdHeroicPlus(me->GetMap()) ||
+            instance->GetBossState(FreeholdData::DataCounciloCaptains) != IN_PROGRESS)
+        {
+            StopBrew();
+            return;
+        }
+
+        // WCL begin cadence, not a DBC duration or a wait after spell completion.
+        events.ScheduleEvent(CouncilCaptainEvents::EventLaunchBrew, 8000);
     }
 
 private:
+    void StopBrew()
+    {
+        brewStarted = false;
+        events.Reset();
+        for (uint32 brewId : HeroicSpell)
+            me->InterruptNonMeleeSpells(true, brewId, true);
+        me->SetReactState(REACT_PASSIVE);
+        me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+        me->DeleteThreatList();
+    }
+
     bool brewStarted;
 };
 

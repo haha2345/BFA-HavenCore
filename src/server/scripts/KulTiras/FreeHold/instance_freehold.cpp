@@ -68,6 +68,7 @@ struct instance_free_hold : public InstanceScript
         jollyGuid = ObjectGuid::Empty;
         eudoraGuid = ObjectGuid::Empty;
         raoulGuid = ObjectGuid::Empty;
+        rummyGuid = ObjectGuid::Empty;
         lightningGuid = ObjectGuid::Empty;
         tortollanGuid = ObjectGuid::Empty;
         trothakGuid = ObjectGuid::Empty;
@@ -102,6 +103,9 @@ struct instance_free_hold : public InstanceScript
         case uint32(FreeholdCreature::NpcCaptainRaoul):
             raoulGuid = creature->GetGUID();
             ApplyWeeklyCouncilAlliance();
+            break;
+        case uint32(FreeholdCreature::NpcRummyMancomb):
+            rummyGuid = creature->GetGUID();
             break;
         case uint32(FreeholdCreature::NpcGukguk):
             gukgukGuid = creature->GetGUID();
@@ -138,6 +142,34 @@ struct instance_free_hold : public InstanceScript
             creature->Relocate(home);
             creature->SetDisableGravity(true);
         }
+    }
+
+    void OnCreatureRemove(Creature* creature) override
+    {
+        if (creature->GetEntry() == uint32(FreeholdCreature::NpcRummyMancomb) && creature->GetGUID() == rummyGuid)
+        {
+            if (creature->AI())
+                creature->AI()->DoAction(CouncilCaptainAction::ActionResetRummy);
+            rummyGuid = ObjectGuid::Empty;
+        }
+        InstanceScript::OnCreatureRemove(creature);
+    }
+
+    bool SetBossState(uint32 id, EncounterState state) override
+    {
+        if (id != FreeholdData::DataCounciloCaptains)
+            return InstanceScript::SetBossState(id, state);
+
+        if (GetBossState(id) == DONE && state != DONE)
+        {
+            StopRummyBrew();
+            return false;
+        }
+
+        bool const changed = InstanceScript::SetBossState(id, state);
+        if (GetBossState(id) != IN_PROGRESS)
+            StopRummyBrew();
+        return changed;
     }
 
     void OnPlayerEnter(Player* /*player*/) override
@@ -216,6 +248,8 @@ struct instance_free_hold : public InstanceScript
         case uint32(FreeholdCreature::NpcCaptainRaoul):
             return raoulGuid;
             break;
+        case uint32(FreeholdCreature::NpcRummyMancomb):
+            return rummyGuid;
         case uint32(FreeholdCreature::NpcGukguk):
             return gukgukGuid;
             break;
@@ -336,6 +370,7 @@ struct instance_free_hold : public InstanceScript
     ObjectGuid jollyGuid;
     ObjectGuid eudoraGuid;
     ObjectGuid raoulGuid;
+    ObjectGuid rummyGuid;
     ObjectGuid lightningGuid;
     ObjectGuid tortollanGuid;
     ObjectGuid trothakGuid;
@@ -344,6 +379,14 @@ struct instance_free_hold : public InstanceScript
     ObjectGuid gurgthockGuid;
     ObjectGuid daveyGuid;
     ObjectGuid captainsControllerGuid;
+
+private:
+    void StopRummyBrew()
+    {
+        if (Creature* rummy = instance->GetCreature(rummyGuid))
+            if (rummy->AI())
+                rummy->AI()->DoAction(CouncilCaptainAction::ActionResetRummy);
+    }
 };
 
 // 9000000 - NPC Teleporter Free Hold
