@@ -1,6 +1,18 @@
 #ifndef OPERATION_MECHAGON_H
 #define OPERATION_MECHAGON_H
 
+class Player;
+class Creature;
+class Map;
+class InstanceScript;
+
+// Task0 scaffolding; lifecycle forwarding is connected only after the later tasks.
+void GunkerPlayerGoopPlayerLeaving(InstanceScript*, Map*, Player*);
+void GunkerPlayerGoopPlayerDied(InstanceScript*, Player*);
+void GunkerPlayerGoopEncounterReset(InstanceScript*);
+void GunkerPlayerGoopCreatureRemoved(InstanceScript*, Creature*);
+void GunkerPlayerGoopUpdate(InstanceScript*);
+
 #define DataHeader "OM"
 
 uint32 const EncounterCount = 8;
@@ -16,6 +28,8 @@ enum EncounterData
     DATA_HEAD_MACHINIST_SPARKFLUX = 6,
     DATA_KING_MECHAGON = 7
 };
+
+uint32 const DATA_SQUIRT_RELEASE_MASK = 8;
 
 enum Conversations
 {
@@ -53,7 +67,9 @@ enum Creatures
     NPC_AERIEL_UNIT = 150396,
     NPC_PLASMA_ORB = 150485,
     NPC_OMEGA_BUSTER = 144249,
-    NPC_SQUIRT_BOT = 154746
+    NPC_SQUIRT_BOT_154741 = 154741,
+    NPC_SQUIRT_BOT = 154746,
+    NPC_SQUIRT_BOT_154759 = 154759
 };
 
 enum Gameobjects
