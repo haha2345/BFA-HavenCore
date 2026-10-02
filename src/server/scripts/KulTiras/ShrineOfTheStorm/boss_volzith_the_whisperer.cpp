@@ -404,7 +404,7 @@ public:
             }
         }
 
-        void DamageTaken(Unit* attacker, uint32& damage)
+        void DamageTaken(Unit* /*attacker*/, uint32& damage)
         {
             if (me->HasAura(SPELL_GRASP_OF_THE_SUNKEN_CITY_CHANNEL))
             {
@@ -449,7 +449,7 @@ public:
             _JustDied();
         }
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/)
         {
             SelectSoundAndText(me, 2);
 
@@ -457,7 +457,7 @@ public:
             dpsAdd = 0;
             endPhaseCheck = 0;
 
-            _EnterCombat();
+            _JustEngagedWith();
 
             events.ScheduleEvent(EVENT_ADD_POWER, TIMER_ADD_POWER);
             events.ScheduleEvent(EVENT_YAWNING_GATE, TIMER_YAWNING_GATE);
@@ -590,7 +590,7 @@ public:
                 case EVENT_TENTACLE_SUMMON:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 1, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 1, SELECT_TARGET_RANDOM, 0, 500.0f, true);
 
                     if (!targets.empty())
                         if (targets.size() >= 1)
@@ -644,7 +644,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/)
         {
             events.ScheduleEvent(EVENT_TENTACLE_SLAM, TIMER_TENTACLE_SLAM);
         }
@@ -665,7 +665,7 @@ public:
                 {
                 case EVENT_TENTACLE_SLAM:
                 {
-                    if (Unit* target = SelectTarget(SELECT_TARGET_NEAREST, 0, 100.0f))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, 100.0f))
                     {
                         me->CastSpell(target, SPELL_TENTACLE_SLAM_DMG);
                     }
@@ -773,7 +773,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             events.ScheduleEvent(EVENT_CONSUME_ESSENCE, 3000);
         }
@@ -888,7 +888,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_call_the_abyss_AuraScript);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             Position const dest = manifestSpawnPoints[urand(0, 14)];
             GetCaster()->CastSpell(dest, SPELL_CALL_THE_ABYSS_SUMMON, true);

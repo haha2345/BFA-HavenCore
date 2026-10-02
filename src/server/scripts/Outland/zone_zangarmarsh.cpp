@@ -188,7 +188,7 @@ public:
                 me->SetFaction(m_uiNormFaction);
         }
 
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
 
         void UpdateAI(uint32 diff) override
         {
@@ -383,7 +383,7 @@ public:
         return true;
     }
 
-    bool OnGossipSelect(Player* player, Creature* /*creature*/, uint32 /*sender*/, uint32 action) override
+    bool OnGossipSelect(Player* player, Creature* /*creature*/, uint32 /*sender*/, uint32 /*action*/) override
     {
         player->PlayerTalkClass->ClearMenus();
         //if (action == GOSSIP_ACTION_TRADE)

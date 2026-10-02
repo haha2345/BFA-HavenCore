@@ -1404,7 +1404,7 @@ class spell_sha_nature_guardian : public SpellScriptLoader
                 GetTarget()->CastCustomSpell(GetTarget(), SPELL_SHAMAN_NATURE_GUARDIAN, &basePoints0, nullptr, nullptr, true);
 
                 if (eventInfo.GetProcTarget() && eventInfo.GetProcTarget()->IsAlive())
-                    eventInfo.GetProcTarget()->getThreatManager().modifyThreatPercent(GetTarget(), -10);
+                    eventInfo.GetProcTarget()->GetThreatManager().ModifyThreatByPercent(GetTarget(), -10);
 
                 // ICD 45 秒观察窗口非 DBC。禁止 GetEffect(EFFECT_1)。
                 GetTarget()->GetSpellHistory()->AddCooldown(GetSpellInfo()->Id, 0, std::chrono::seconds(45));
@@ -3739,7 +3739,7 @@ public:
                 GetCaster()->CastSpell(GetCaster(), triggerSpell, true);
         }
 
-        void Register()
+        void Register() override
         {
             OnEffectHitTarget += SpellEffectFn(spell_shaman_generic_summon_elemental_SpellScript::HandleSummon, EFFECT_0, SPELL_EFFECT_DUMMY);
         }
@@ -3858,7 +3858,7 @@ public:
 
             caster->CastSpell(target, SPELL_FROSTBRAND_SLOW, true);
         }
-        void Register()
+        void Register() override
         {
             OnHit += SpellHitFn(bfa_spell_frostbrand_SpellScript::HandleOnHit);
         }
@@ -3927,7 +3927,7 @@ public:
             if (caster->HasAura(SPELL_SEARING_ASSAULT_TALENT))
                 caster->CastSpell(target, SPELL_SEARING_ASSULAT_TALENT_PROC, true);
         }
-        void Register()
+        void Register() override
         {
             OnHit += SpellHitFn(bfa_spell_flametongue_SpellScript::HandleOnHit);
         }
@@ -4052,7 +4052,7 @@ public:
             if (caster->HasAura(SPELL_SHAMAN_CRASHING_STORM_DUMMY))
                 caster->CastSpell(nullptr, SPELL_CRASHING_STORM_TALENT_AT, true);
         }
-        void Register()
+        void Register() override
         {
             OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(bfa_spell_crash_lightning_SpellScript::CheckTargets, EFFECT_0, TARGET_UNIT_CONE_ENEMY_104);
             AfterCast += SpellCastFn(bfa_spell_crash_lightning_SpellScript::HandleAfterCast);

@@ -26,6 +26,7 @@ EndScriptData */
 #include "Chat.h"
 #include "DB2Stores.h"
 #include "Language.h"
+#include "Log.h"
 #include "ObjectMgr.h"
 #include "Pet.h"
 #include "Player.h"
@@ -33,6 +34,8 @@ EndScriptData */
 #include "SpellMgr.h"
 #include "SpellInfo.h"
 #include "WorldSession.h"
+#include <algorithm>
+#include <cctype>
 
 class learn_commandscript : public CommandScript
 {
@@ -120,16 +123,54 @@ public:
 
     static bool HandleLearnAllGMCommand(ChatHandler* handler, char const* /*args*/)
     {
-        for (uint32 i = 0; i < sSpellMgr->GetSpellInfoStoreSize(); ++i)
+        Player* player = handler->GetSession()->GetPlayer();
+
+        // Confirmed useful/working BFA 8.3.7 GM spell list.
+        static uint32 const confirmedGMSpells[] =
         {
-            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(i);
-            if (!spellInfo || !SpellMgr::IsSpellValid(spellInfo, handler->GetSession()->GetPlayer(), false))
+            1234,    // Joe's God Mode
+            265,     // Area Death (TEST)
+            5,       // Death Touch
+            160040,  // Freeze - explicit Blizzard GM tool
+            1852,    // Silenced - explicit Blizzard GM tool
+            9454,    // Freeze - targeted
+            43489,   // Grasp of the Lich King - pacify/silence + root
+
+            142653,  // Teleport Target to Self
+            21463,   // Teleport to Player
+            36967,   // Teleport to Player
+            267414,  // Teleport Target to Self
+            319517,  // Teleport Target to Self
+
+            20279,   // Summon Player
+            20477,   // Summon Player
+            223562,  // Summon Player
+
+            309787,  // _JKL - Instant Cast
+
+            23965,   // Instant Heal
+            67891,   // Full Heal
+            69693,   // Full Heal
+            72423,   // Mass Resurrection
+            62856,   // Detect Invisibility
+
+            37800,   // Transparency
+            134001   // Cooldown Reset
+        };
+
+        // Keep one concise audit log entry that the command was used.
+        TC_LOG_INFO("commands.gm",
+            "GM %s (GUID: " UI64FMTD ") executed .learn all gm",
+            player->GetName().c_str(), player->GetGUID().GetCounter());
+
+        for (uint32 spellId : confirmedGMSpells)
+        {
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+            if (!spellInfo || !SpellMgr::IsSpellValid(spellInfo, player, false))
                 continue;
 
-            if (!spellInfo->IsAbilityOfSkillType(SKILL_INTERNAL))
-                continue;
-
-            handler->GetSession()->GetPlayer()->LearnSpell(i, false);
+            if (!player->HasSpell(spellId))
+                player->LearnSpell(spellId, false);
         }
 
         handler->SendSysMessage(LANG_LEARNING_GM_SKILLS);

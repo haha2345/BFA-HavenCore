@@ -47,9 +47,10 @@ enum Spells
 
 enum Misc
 {
-    CREATURE_TREANT    = 19949,
-    TREANT_SPAWN_DIST  = 50 //50 yards from Warp Splinter's spawn point
+    CREATURE_TREANT    = 19949
 };
+
+static constexpr float TREANT_SPAWN_DIST = 50.0f; //50 yards from Warp Splinter's spawn point
 
 float treant_pos[6][3] =
 {
@@ -92,7 +93,7 @@ class npc_warp_splinter_treant : public CreatureScript
                 Initialize();
             }
 
-            void EnterCombat(Unit* /*who*/) override { }
+            void JustEngagedWith(Unit* /*who*/) override { }
 
             void MoveInLineOfSight(Unit* /*who*/) override { }
 
@@ -172,7 +173,7 @@ class boss_warp_splinter : public CreatureScript
                 me->SetSpeedRate(MOVE_RUN, 0.7f);
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
                 Talk(SAY_AGGRO);
             }

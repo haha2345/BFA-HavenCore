@@ -1,13 +1,12 @@
-# Set build-directive (used in core to tell which buildtype we used)
-target_compile_definitions(trinity-compile-option-interface
-  INTERFACE
-    -D_BUILD_DIRECTIVE="$<CONFIG>")
-
-set(GCC_EXPECTED_VERSION 7.1.0)
+set(GCC_EXPECTED_VERSION 11.1.0)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS GCC_EXPECTED_VERSION)
   message(FATAL_ERROR "GCC: BfaCore requires version ${GCC_EXPECTED_VERSION} to build but found ${CMAKE_CXX_COMPILER_VERSION}")
 endif()
+
+target_compile_options(trinity-compile-option-interface
+  INTERFACE
+    -fno-delete-null-pointer-checks)
 
 if(PLATFORM EQUAL 32)
   # Required on 32-bit systems to enable SSE2 (standard on x64)
@@ -16,13 +15,16 @@ if(PLATFORM EQUAL 32)
       -msse2
       -mfpmath=sse)
 endif()
-target_compile_definitions(trinity-compile-option-interface
-  INTERFACE
-    -DHAVE_SSE2
-    -D__SSE2__)
-message(STATUS "GCC: SFMT enabled, SSE2 flags forced")
 
-if( WITH_WARNINGS )
+if(TRINITY_SYSTEM_PROCESSOR MATCHES "x86|amd64")
+  target_compile_definitions(trinity-compile-option-interface
+    INTERFACE
+      HAVE_SSE2
+      __SSE2__)
+  message(STATUS "GCC: SFMT enabled, SSE2 flags forced")
+endif()
+
+if(WITH_WARNINGS)
   target_compile_options(trinity-warning-interface
     INTERFACE
       -W
@@ -35,18 +37,35 @@ if( WITH_WARNINGS )
 
   target_compile_options(trinity-warning-interface
     INTERFACE
-      -Wno-error=unused-parameter
-      -Wno-deprecated-copy) # warning in g3d
+      -Wno-error=unused-parameter)
 
   message(STATUS "GCC: All warnings enabled")
 endif()
 
-if( WITH_COREDEBUG )
+if(WITH_COREDEBUG)
   target_compile_options(trinity-compile-option-interface
     INTERFACE
       -g3)
 
   message(STATUS "GCC: Debug-flags set (-g3)")
+endif()
+
+if(ASAN)
+  target_compile_options(trinity-compile-option-interface
+    INTERFACE
+      -fno-omit-frame-pointer
+      -fsanitize=address
+      -fsanitize-recover=address
+      -fsanitize-address-use-after-scope)
+
+  target_link_options(trinity-compile-option-interface
+    INTERFACE
+      -fno-omit-frame-pointer
+      -fsanitize=address
+      -fsanitize-recover=address
+      -fsanitize-address-use-after-scope)
+
+  message(STATUS "GCC: Enabled Address Sanitizer")
 endif()
 
 if (BUILD_SHARED_LIBS)

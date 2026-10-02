@@ -34,6 +34,7 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include <chrono>
 #include <zlib.h>
 
 #pragma pack(push, 1)
@@ -452,6 +453,9 @@ WorldSocket::ReadDataHandlerResult WorldSocket::ReadDataHandler()
             break;
         default:
         {
+            if (opcode == CMSG_TIME_SYNC_RESPONSE)
+                packet.SetReceiveTime(std::chrono::steady_clock::now());
+
             sessionGuard.lock();
 
             LogOpcodeText(opcode, sessionGuard);
@@ -1029,7 +1033,6 @@ bool WorldSocket::HandlePing(WorldPackets::Auth::Ping& ping)
         if (_worldSession)
         {
             _worldSession->SetLatency(ping.Latency);
-            _worldSession->ResetClientTimeDelay();
         }
         else
         {

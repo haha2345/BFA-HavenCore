@@ -1,0 +1,3 @@
+INSERT INTO `quest_offer_reward` (`ID`, `RewardText`) 
+VALUES (25133, 'Hm... your report comes at a bad time. The Burning Blade is not seen here in Sen\'jin, but their evil has taken seed off the coast, on the Echo Isles.\n\nThe orcs are friends of the Darkspear Trolls. Honorable friends. We want to help the orcs, but... we need help too.')
+ON DUPLICATE KEY UPDATE `RewardText` = VALUES(`RewardText`);

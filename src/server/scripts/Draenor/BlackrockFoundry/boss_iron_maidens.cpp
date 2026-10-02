@@ -208,7 +208,7 @@ class boss_admiral_garan : public CreatureScript
                 }
             }
 
-            void SetGUID(ObjectGuid p_Guid, int32 /*p_ID*/ /*= 0*/)
+            void SetGUID(ObjectGuid p_Guid, int32 /*p_ID*/ /*= 0*/) override
             {
                 m_TrashesGuids.erase(p_Guid);
 
@@ -235,7 +235,7 @@ class boss_admiral_garan : public CreatureScript
                 }
             }
 
-            uint32 GetData(uint32 p_ID) const
+            uint32 GetData(uint32 p_ID) const override
             {
                 switch (p_ID)
                 {
@@ -270,11 +270,11 @@ class boss_admiral_garan : public CreatureScript
                     Talk(eTalks::TalkSlay);
             }
 
-            void EnterCombat(Unit* p_Attacker) override
+            void JustEngagedWith(Unit* p_Attacker) override
             {
                 StartMaidens(m_Instance, me, p_Attacker);
 
-                _EnterCombat();
+                _JustEngagedWith();
 
                 m_Events.ScheduleEvent(eEvents::EventRapidFire, eTimers::TimerRapidFire);
 
@@ -330,7 +330,7 @@ class boss_admiral_garan : public CreatureScript
                 RemoveCombatAuras();
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -494,7 +494,7 @@ class boss_admiral_garan : public CreatureScript
 
                       //  AddTimedDelayedOperation(10, [this]() -> void
                       //  {
-                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 0.0f, true))
+                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 0.0f, true))
                             {
                                 AttackStart(l_Target);
                                 me->GetMotionMaster()->MoveChase(l_Target);
@@ -508,7 +508,7 @@ class boss_admiral_garan : public CreatureScript
                 }
             }
 
-            void RegeneratePower(Powers /*p_Power*/, int32& p_Value)
+            void RegeneratePower(Powers /*p_Power*/, int32& p_Value) override
             {
                 /// Iron Maidens only regens by script
                 p_Value = 0;
@@ -553,13 +553,13 @@ class boss_admiral_garan : public CreatureScript
                 }
             }
 
-            void OnSpellCasted(SpellInfo const* p_SpellInfo)
+            void OnSpellCasted(SpellInfo const* p_SpellInfo) override
             {
                 switch (p_SpellInfo->Id)
                 {
                     case eSpells::SpellDeployTurretSummon:
                     {
-                        if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 0.0f, true))
+                        if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 0.0f, true))
                             me->GetMotionMaster()->MoveChase(l_Target);
 
                         m_DeployTurret = false;
@@ -968,7 +968,7 @@ class boss_enforcer_sorka : public CreatureScript
                 m_ShipAdds.clear();
             }
 
-            uint32 GetData(uint32 p_ID) const
+            uint32 GetData(uint32 p_ID) const override
             {
                 switch (p_ID)
                 {
@@ -1003,11 +1003,11 @@ class boss_enforcer_sorka : public CreatureScript
                     Talk(eTalks::TalkSlay);
             }
 
-            void EnterCombat(Unit* p_Attacker) override
+            void JustEngagedWith(Unit* p_Attacker) override
             {
                 StartMaidens(m_Instance, me, p_Attacker);
 
-                _EnterCombat();
+                _JustEngagedWith();
 
                 m_Events.ScheduleEvent(eEvents::EventBladeDash, eTimers::TimerBladeDash);
 
@@ -1144,7 +1144,7 @@ class boss_enforcer_sorka : public CreatureScript
 
                        // AddTimedDelayedOperation(10, [this]() -> void
                        // {
-                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 0.0f, true))
+                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 0.0f, true))
                             {
                                 AttackStart(l_Target);
                                 me->GetMotionMaster()->MoveChase(l_Target);
@@ -1158,7 +1158,7 @@ class boss_enforcer_sorka : public CreatureScript
                 }
             }
 
-            void RegeneratePower(Powers /*p_Power*/, int32& p_Value)
+            void RegeneratePower(Powers /*p_Power*/, int32& p_Value) override
             {
                 /// Iron Maidens only regens by script
                 p_Value = 0;
@@ -1208,7 +1208,7 @@ class boss_enforcer_sorka : public CreatureScript
                           //  AddTimedDelayedOperation(10, [this]() -> void
                           //  {
                                // std::vector<int32> l_ExcludeAuras = { -int32(eIronMaidensSpells::OnABoatPeriodic), -int32(eIronMaidensSpells::RideLoadingChain) };
-                                if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0))
+                                if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0))
                                 {
                                     AttackStart(l_Target);
 
@@ -1242,7 +1242,7 @@ class boss_enforcer_sorka : public CreatureScript
                         {
                             m_IsInBladeDash = false;
 
-                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 0.0f, true))
+                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 0.0f, true))
                                 DashToTarget(l_Target);
 
                             break;
@@ -1605,7 +1605,7 @@ class boss_marak_the_blooded : public CreatureScript
                 m_ShipAdds.clear();
             }
 
-            uint32 GetData(uint32 p_ID)const
+            uint32 GetData(uint32 p_ID)const override
             {
                 switch (p_ID)
                 {
@@ -1640,11 +1640,11 @@ class boss_marak_the_blooded : public CreatureScript
                     Talk(eTalks::TalkSlay);
             }
 
-            void EnterCombat(Unit* p_Attacker) override
+            void JustEngagedWith(Unit* p_Attacker) override
             {
                 StartMaidens(m_Instance, me, p_Attacker);
 
-                _EnterCombat();
+                _JustEngagedWith();
 
                 m_Events.ScheduleEvent(eEvents::EventBloodRitual, eTimers::TimerBloodRitual);
 
@@ -1699,7 +1699,7 @@ class boss_marak_the_blooded : public CreatureScript
                 RemoveCombatAuras();
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -1807,7 +1807,7 @@ class boss_marak_the_blooded : public CreatureScript
 
                       //  AddTimedDelayedOperation(10, [this]() -> void
                        // {
-                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 0.0f, true))
+                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 0.0f, true))
                             {
                                 AttackStart(l_Target);
                                 me->GetMotionMaster()->MoveChase(l_Target);
@@ -1821,7 +1821,7 @@ class boss_marak_the_blooded : public CreatureScript
                 }
             }
 
-            void RegeneratePower(Powers /*p_Power*/, int32& p_Value)
+            void RegeneratePower(Powers /*p_Power*/, int32& p_Value) override
             {
                 /// Iron Maidens only regens by script
                 p_Value = 0;
@@ -1863,7 +1863,7 @@ class boss_marak_the_blooded : public CreatureScript
                 }
             }
 
-            void OnSpellCasted(SpellInfo const* p_SpellInfo)
+            void OnSpellCasted(SpellInfo const* p_SpellInfo) override
             {
                 switch (p_SpellInfo->Id)
                 {
@@ -2243,7 +2243,7 @@ class npc_foundry_loading_chain : public CreatureScript
                 }
             }
 
-            uint32 GetData(uint32 p_ID = 0)const
+            uint32 GetData(uint32 p_ID = 0)const override
             {
                 switch (p_ID)
                 {
@@ -2256,7 +2256,7 @@ class npc_foundry_loading_chain : public CreatureScript
                 }
             }
 
-            void OnSpellClick(Unit* p_Clicker, bool& /*result*/)
+            void OnSpellClick(Unit* p_Clicker, bool& /*result*/) override
             {
                 if (!m_IsAvailable || m_IsOnBoat/* || p_Clicker->HasAura(eIronMaidensSpells::RideLoadingChain)*/)
                     return;
@@ -2271,7 +2271,7 @@ class npc_foundry_loading_chain : public CreatureScript
                     if (Creature* l_Maiden = ObjectAccessor::GetCreature(*me, m_Instance->GetGuidData(g_IronMaidensEntries[l_I])))
                     {
                         if (ScriptedAI* l_AI = CAST_AI(ScriptedAI, l_Maiden->AI()))
-                            l_AI->DoModifyThreatPercent(p_Clicker, -100);
+                            l_AI->ModifyThreatByPercent(p_Clicker, -100);
                     }
                 }
 
@@ -2292,7 +2292,7 @@ class npc_foundry_loading_chain : public CreatureScript
                         if (Creature* l_Maiden = ObjectAccessor::GetCreature(*me, m_Instance->GetGuidData(g_IronMaidensEntries[l_I])))
                         {
                             if (ScriptedAI* l_AI = CAST_AI(ScriptedAI, l_Maiden->AI()))
-                                l_AI->DoModifyThreatPercent(p_Passenger, -100);
+                                l_AI->ModifyThreatByPercent(p_Passenger, -100);
                         }
                     }
 
@@ -2392,7 +2392,7 @@ class npc_foundry_ukurogg : public CreatureScript
                 me->CastSpell(me, eSpells::BloodCorruptionAura, true);
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
                 me->SetWalk(false);
 
@@ -2406,7 +2406,7 @@ class npc_foundry_ukurogg : public CreatureScript
                 m_Events.ScheduleEvent(eEvent::EventCorruptedBlood, 2 * TimeConstants::IN_MILLISECONDS);
             }
 
-            void SpellHit(Unit* /*p_Attacker*/, SpellInfo const* p_SpellInfo)
+            void SpellHit(Unit* /*p_Attacker*/, SpellInfo const* p_SpellInfo) override
             {
                 if (p_SpellInfo->Id == eSpells::CarryingCrate)
                 {
@@ -2460,7 +2460,7 @@ class npc_foundry_ukurogg : public CreatureScript
 
                 m_Engaged = true;
 
-                EnterCombat(p_Attacker);
+                JustEngagedWith(p_Attacker);
             }
 
             void JustDied(Unit* /*p_Killer*/) override
@@ -2667,12 +2667,12 @@ class npc_foundry_rapid_fire_stalker : public CreatureScript
 
             ObjectGuid m_TargetGUID;
 
-            void SetGUID(ObjectGuid p_Guid, int32 /*p_ID*/ /*= 0*/)
+            void SetGUID(ObjectGuid p_Guid, int32 /*p_ID*/ /*= 0*/) override
             {
                 m_TargetGUID = p_Guid;
             }
 
-            void UpdateAI(uint32 p_Diff) override
+            void UpdateAI(uint32 /*p_Diff*/) override
             {
                 if (Unit* l_Target = ObjectAccessor::GetUnit(*me, m_TargetGUID))
                 {
@@ -2794,7 +2794,7 @@ class npc_foundry_iron_cannon : public CreatureScript
                 }
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -2970,7 +2970,7 @@ class npc_foundry_uktar : public CreatureScript
                 if (me->HasUnitState(UnitState::UNIT_STATE_CASTING))
                     return;
 
-                if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 0.0f, true, eIronMaidensSpells::OnABoatPeriodic))
+                if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 0.0f, true, true, eIronMaidensSpells::OnABoatPeriodic))
                     me->CastSpell(l_Target, eSpell::SpellGrapeshotBlastCast, false);
             }
         };
@@ -3023,7 +3023,7 @@ class npc_foundry_battle_medic_rogg : public CreatureScript
                 m_Engaged = false;
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
                 if (!m_Engaged)
                     return;
@@ -3042,10 +3042,10 @@ class npc_foundry_battle_medic_rogg : public CreatureScript
 
                 m_Engaged = true;
 
-                EnterCombat(p_Attacker);
+                JustEngagedWith(p_Attacker);
             }
 
-            void UpdateAI(uint32 p_Diff)
+            void UpdateAI(uint32 p_Diff) override
             {
                 if (!UpdateVictim())
                     return;
@@ -3083,7 +3083,7 @@ class npc_foundry_battle_medic_rogg : public CreatureScript
                     }
                     case eEvents::EventChainLightning:
                     {
-                        if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 0.0f, true, eIronMaidensSpells::OnABoatPeriodic))
+                        if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 0.0f, true, true, eIronMaidensSpells::OnABoatPeriodic))
                             me->CastSpell(l_Target, eSpells::SpellChainLightning, false);
                         m_Events.ScheduleEvent(eEvents::EventChainLightning, 10 * TimeConstants::IN_MILLISECONDS);
                         break;
@@ -3144,7 +3144,7 @@ class npc_foundry_gorak : public CreatureScript
                 m_Engaged = false;
             }
 
-            void EnterCombat(Unit* /*unit*/) override
+            void JustEngagedWith(Unit* /*unit*/) override
             {
                 if (!m_Engaged)
                     return;
@@ -3161,7 +3161,7 @@ class npc_foundry_gorak : public CreatureScript
 
                 m_Engaged = true;
 
-                EnterCombat(p_Attacker);
+                JustEngagedWith(p_Attacker);
             }
 
             void JustDied(Unit* /*killer*/) override
@@ -3187,7 +3187,7 @@ class npc_foundry_gorak : public CreatureScript
                 {
                     case eEvent::EventDeadlyThrow:
                     {
-                        if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 0.0f, true, eIronMaidensSpells::OnABoatPeriodic))
+                        if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 0.0f, true, true, eIronMaidensSpells::OnABoatPeriodic))
                             me->CastSpell(l_Target, eSpell::DeadlyThrow, false);
                         m_Events.ScheduleEvent(eEvent::EventDeadlyThrow, 14 * TimeConstants::IN_MILLISECONDS);
                         break;
@@ -3250,7 +3250,7 @@ class npc_foundry_iron_eviscerator : public CreatureScript
               //  m_FixateTarget = 0;
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
                 if (!m_Engaged)
                     return;
@@ -3270,7 +3270,7 @@ class npc_foundry_iron_eviscerator : public CreatureScript
 
                 m_Engaged = true;
 
-                EnterCombat(p_Attacker);
+                JustEngagedWith(p_Attacker);
             }
 
             void SpellHitTarget(Unit* p_Target, SpellInfo const* p_SpellInfo) override
@@ -3286,10 +3286,12 @@ class npc_foundry_iron_eviscerator : public CreatureScript
 
                         me->SetInCombatWithZone();
 
-                        me->getThreatManager().clearReferences();
-                        me->getThreatManager().addThreat(p_Target, std::numeric_limits<float>::max());
+                        me->GetThreatManager().ClearAllThreat();
+                        me->GetThreatManager().AddThreat(p_Target, std::numeric_limits<float>::max());
 
-                        me->TauntApply(p_Target);
+                        // Unit::TauntApply was removed by the threat rewrite; force the retarget it used to do
+                        me->SetInFront(p_Target);
+                        AttackStart(p_Target);
 
                         me->ClearUnitState(UnitState::UNIT_STATE_CASTING);
 
@@ -3378,7 +3380,7 @@ class npc_foundry_cluster_bomb_alpha : public CreatureScript
                // });
             }
 
-            void OnSpellCasted(SpellInfo const* p_SpellInfo)
+            void OnSpellCasted(SpellInfo const* p_SpellInfo) override
             {
                 if (p_SpellInfo->Id == eSpells::DetonationSequenceTriggered && m_Instance != nullptr)
                 {

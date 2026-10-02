@@ -266,8 +266,8 @@ class TC_GAME_API InstanceScript : public ZoneScript
         virtual void OnCompletedCriteriaTree(CriteriaTree const* /*tree*/) { }
 
         // Handle open / close objects
-        virtual void OnGameObjectCreateForScript(GameObject* go);
-        virtual void OnGameObjectRemoveForScript(GameObject* go);
+        virtual void OnGameObjectCreateForScript(GameObject* go) override;
+        virtual void OnGameObjectRemoveForScript(GameObject* go) override;
         // * use HandleGameObject(0, boolen, GO); in OnObjectCreate in instance scripts
         // * use HandleGameObject(GUID, boolen, nullptr); in any other script
         void HandleGameObject(ObjectGuid guid, bool open, GameObject* go = nullptr);
@@ -462,6 +462,8 @@ class TC_GAME_API InstanceScript : public ZoneScript
 
         bool IsChallengeModeStarted() const { return _challengeModeStarted; }
         uint8 GetChallengeModeLevel() const { return _challengeModeLevel; }
+        // Keystone upgrades earned by the completed run (0 = depleted / not timed, 1-3).
+        uint8 GetChallengeModeUpgrades() const { return _challengeModeUpgrades; }
         uint32 GetChallengeModeCurrentDuration() const;
 
         void SendChallengeModeStart(Player* player = nullptr) const;
@@ -580,6 +582,7 @@ class TC_GAME_API InstanceScript : public ZoneScript
 
         bool _challengeModeStarted;
         uint8 _challengeModeLevel;
+        uint8 _challengeModeUpgrades = 0;
         uint32 _challengeModeStartTime;
         uint32 _challengeModeDeathCount;
         Optional<uint32> _challengeModeScenario;

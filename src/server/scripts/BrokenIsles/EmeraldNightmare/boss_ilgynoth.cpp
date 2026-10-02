@@ -189,9 +189,9 @@ struct boss_ilgynoth : public BossAI
           //  at->Despawn();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
-        _EnterCombat();
+        _JustEngagedWith();
         me->SummonCreature(NPC_EYE_OF_ILGYNOTH, true);
         me->SummonCreature(NPC_DOMINATOR_TENTACLE, true);
         DoCast(me, SPELL_DARKEST_NIGHTMARE_AT, true);
@@ -371,10 +371,10 @@ struct boss_ilgynoth : public BossAI
                     TeleportPlayer();
 
                 bool closestPlayers = false;
-                std::list<HostileReference*> threatlist = me->getThreatManager().getThreatList();
+                std::vector<ThreatReference*> threatlist = me->GetThreatManager().GetModifiableThreatList();
                 for (auto ref : threatlist)
                 {
-                  if (auto target = me->GetUnit(*me, ref->getUnitGuid()))
+                  if (auto target = me->GetUnit(*me, ref->GetVictim()->GetGUID()))
                     {
                         if (me->GetDistance(target) < 150.0f)
                         {
@@ -421,7 +421,7 @@ struct npc_eye_of_ilgynoth : public ScriptedAI
 
     void Reset() override {}
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         DoZoneInCombat();
         events.RescheduleEvent(1, 2000);
@@ -451,7 +451,7 @@ struct npc_eye_of_ilgynoth : public ScriptedAI
         instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
     }
 
-    void DoAction(int32 const action) override
+    void DoAction(int32 const /*action*/) override
     {
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
     }
@@ -473,8 +473,8 @@ struct npc_eye_of_ilgynoth : public ScriptedAI
             case 1:
                 if (Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 120.0f, true))
                 {
-                    DoResetThreat();
-                    me->AddThreat(pTarget, 100000.0f);
+                    ResetThreatList();
+                    me->GetThreatManager().AddThreat(pTarget, 100000.0f);
                     DoCast(pTarget, SPELL_NIGHTMARE_GAZE);
                 }
                 events.RescheduleEvent(1, 2000);
@@ -529,7 +529,7 @@ struct npc_ilgynoth_tentacles : public ScriptedAI
 
     void Reset() override {}
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         DoZoneInCombat();
 
@@ -568,13 +568,13 @@ struct npc_ilgynoth_tentacles : public ScriptedAI
             instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
     }
 
-    void DoAction(int32 const action) override
+    void DoAction(int32 const /*action*/) override
     {
         if (me->GetEntry() == NPC_DOMINATOR_TENTACLE)
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
     }
 
-    void IsSummonedBy(Unit* summoner) override
+    void IsSummonedBy(Unit* /*summoner*/) override
     {
         if (me->GetEntry() != NPC_DOMINATOR_TENTACLE)
             DoZoneInCombat();
@@ -596,7 +596,7 @@ struct npc_ilgynoth_tentacles : public ScriptedAI
             {
                 rupturingRoarTimer = 3000;
 
-                if (auto target = SelectTarget(SELECT_TARGET_NEAREST, 0, 100.0f, true))
+                if (auto target = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, 100.0f, true))
                 {
                     if (!me->IsWithinMeleeRange(target))
                     {
@@ -674,7 +674,7 @@ struct npc_ilgynoth_nightmare_horror : public ScriptedAI
         tickPower_Timer = 1000;
     }
 
-    void IsSummonedBy(Unit* summoner) override
+    void IsSummonedBy(Unit* /*summoner*/) override
     {
         DoZoneInCombat(me, 120.0f);
         events.RescheduleEvent(1, 5000);
@@ -755,7 +755,7 @@ struct npc_ilgynoth_nightmare_ichor : public ScriptedAI
 
     void Reset() override {}
 
-    void IsSummonedBy(Unit* summoner) override
+    void IsSummonedBy(Unit* /*summoner*/) override
     {
         DoZoneInCombat(me, 120.0f);
         events.RescheduleEvent(1, 1000);
@@ -767,8 +767,8 @@ struct npc_ilgynoth_nightmare_ichor : public ScriptedAI
         if (spell->Id == SPELL_FIXATE)
         {
             me->SetReactState(REACT_PASSIVE);
-            DoResetThreat();
-            me->AddThreat(target, 100000.0f);
+            ResetThreatList();
+            me->GetThreatManager().AddThreat(target, 100000.0f);
             AttackStart(target);
         }
     }
@@ -864,7 +864,7 @@ class spell_ilgynoth_cursed_blood : public AuraScript
 {
     PrepareAuraScript(spell_ilgynoth_cursed_blood);
 
-    void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
      //   if (!GetCaster() || !GetTarget() || GetTargetApplication()->GetRemoveMode() != AURA_REMOVE_BY_EXPIRE)
        //     return;
@@ -902,7 +902,7 @@ class spell_ilgynoth_nightmare_explosion_pct : public SpellScript
 
     uint8 dmgPct = 0;
 
-    void HandleDamage(SpellEffIndex effIndex)
+    void HandleDamage(SpellEffIndex /*effIndex*/)
     {
         if (GetHitUnit())
         {

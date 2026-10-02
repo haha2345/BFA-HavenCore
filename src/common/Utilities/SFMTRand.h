@@ -18,6 +18,7 @@
 #ifndef SFMTRand_h__
 #define SFMTRand_h__
 
+#include "Define.h"
 #include <SFMT.h>
 #include <new>
 
@@ -26,22 +27,14 @@
  */
 class SFMTRand {
 public:
-    SFMTRand();
-    void RandomInit(uint32_t seed); // Re-seed
-    int32_t IRandom(int32_t min, int32_t max); // Output random integer
-    uint32_t URandom(uint32_t min, uint32_t max);
-    double Random(); // Output random floating point number
-    uint32_t BRandom(); // Output random bits
-    void* operator new(size_t size, std::nothrow_t const&);
-    void operator delete(void* ptr, std::nothrow_t const&);
-    void* operator new(size_t size);
-    void operator delete(void* ptr);
-    void* operator new[](size_t size, std::nothrow_t const&);
-    void operator delete[](void* ptr, std::nothrow_t const&);
-    void* operator new[](size_t size);
-    void operator delete[](void* ptr);
+    SFMTRand() noexcept;
+    uint32 RandomUInt32() noexcept; // Output random bits
+    void* operator new(size_t size) noexcept { return ::operator new (size, std::align_val_t(alignof(SFMTRand)), std::nothrow); }
+    void operator delete(void* ptr) noexcept { ::operator delete (ptr, std::align_val_t(alignof(SFMTRand)), std::nothrow); }
+    void* operator new[](size_t size) noexcept { return ::operator new[](size, std::align_val_t(alignof(SFMTRand)), std::nothrow); }
+    void operator delete[](void* ptr) noexcept { ::operator delete[](ptr, std::align_val_t(alignof(SFMTRand)), std::nothrow); }
 private:
-    sfmt_t state;
+    sfmt_t _state;
 };
 
 #endif // SFMTRand_h__

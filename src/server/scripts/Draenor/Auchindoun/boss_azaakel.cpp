@@ -138,7 +138,7 @@ struct boss_azaakel : public BossAI
             DespawnCreaturesInArea(l_Entry, me);
     }
 
-    void MoveInLineOfSight(Unit* p_Who)
+    void MoveInLineOfSight(Unit* p_Who) override
     {
         if (p_Who && p_Who->IsInWorld() && p_Who->GetTypeId() == TypeID::TYPEID_PLAYER && me->IsWithinDistInMap(p_Who, 18.0f) && !m_Intro)
         {
@@ -147,7 +147,7 @@ struct boss_azaakel : public BossAI
         }
     }
 
-    void DoAction(int32 p_Action)
+    void DoAction(int32 p_Action) override
     {
         switch (p_Action)
         {
@@ -173,7 +173,7 @@ struct boss_azaakel : public BossAI
             events.ScheduleEvent(eAzzakelEvents::EventClawsOfArgus, 45 * TimeConstants::IN_MILLISECONDS);
             events.ScheduleEvent(eAzzakelEvents::EventCurtainOfFlame, 14 * TimeConstants::IN_MILLISECONDS);
             events.ScheduleEvent(eAzzakelEvents::EventMalevolentCrush01, 20 * TimeConstants::IN_MILLISECONDS);
-            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
                 AttackStart(l_Target);
             break;
         }
@@ -185,7 +185,7 @@ struct boss_azaakel : public BossAI
         }
     }
 
-    void JustReachedHome()
+    void JustReachedHome() override
     {
         _JustReachedHome();
         HandleDoors(me);
@@ -229,7 +229,7 @@ struct boss_azaakel : public BossAI
             instance->SendEncounterUnit(EncounterFrameType::ENCOUNTER_FRAME_ENGAGE, me);
     }
 
-    void MovementInform(uint32 /*p_Type*/, uint32 p_ID)
+    void MovementInform(uint32 /*p_Type*/, uint32 p_ID) override
     {
         if (p_ID == eAzzakelMovements::MovementAzzakelMalevolentCrash)
         {
@@ -241,7 +241,7 @@ struct boss_azaakel : public BossAI
             Talk(eAzzakelTalks::AzzakelSpell02);
             me->SetReactState(ReactStates::REACT_AGGRESSIVE);
 
-            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
             {
                 me->GetMotionMaster()->MoveChase(l_Target, 0.0f, 0.0f);
                 me->Attack(l_Target, true);
@@ -249,7 +249,7 @@ struct boss_azaakel : public BossAI
         }
     }
 
-    void JustDied(Unit* /*p_Killer*/)
+    void JustDied(Unit* /*p_Killer*/) override
     {
         _JustDied();
         Talk(eAzzakelTalks::AzzakelDeath);
@@ -388,7 +388,7 @@ struct auchindoun_azzakel_mob_controller : public ScriptedAI
     bool m_Summoned;
     bool m_First;
 
-    void Reset()
+    void Reset() override
     {
         if (m_First)
         {
@@ -405,7 +405,7 @@ struct auchindoun_azzakel_mob_controller : public ScriptedAI
         }
     }
 
-    void JustSummoned(Creature* p_Summon)
+    void JustSummoned(Creature* p_Summon) override
     {
         if (p_Summon)
         {
@@ -423,7 +423,7 @@ struct auchindoun_azzakel_mob_controller : public ScriptedAI
         }
     }
 
-    void DoAction(int32 p_Action)
+    void DoAction(int32 p_Action) override
     {
         switch (p_Action)
         {
@@ -570,7 +570,7 @@ public:
         bool m_First;
         InstanceScript* m_Instance;
 
-        void Reset()
+        void Reset() override
         {
             if (m_First)
             {
@@ -747,7 +747,7 @@ public:
                             l_Azzakel->GetAI()->DoAction(eAzzakelActions::ActionMalevolentCrash);
                         else
                         {
-                            if (Unit* l_Target = GetCaster()->GetAI()->SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+                            if (Unit* l_Target = GetCaster()->GetAI()->SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
                             {
                                 GetCaster()->GetMotionMaster()->MoveChase(l_Target, 0.0f, 0.0f);
                                 GetCaster()->Attack(l_Target, true);

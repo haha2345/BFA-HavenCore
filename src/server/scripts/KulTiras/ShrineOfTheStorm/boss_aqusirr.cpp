@@ -103,7 +103,7 @@ public:
             Reset();
         }
 
-        void SummonedCreatureDies(Creature* summon, Unit* /*killer*/)
+        void SummonedCreatureDies(Creature* summon, Unit* /*killer*/) override
         {
             switch (summon->GetEntry())
             {
@@ -127,14 +127,14 @@ public:
             me->SetHealth(me->CountPctFromMaxHealth(15));
         }
 
-        void JustDied(Unit*)
+        void JustDied(Unit*) override
         {
             summons.DespawnAll();
             events.Reset();
             _JustDied();
         }
         
-        void JustSummoned(Creature* summon)
+        void JustSummoned(Creature* summon) override
         {
             summons.Summon(summon);
 
@@ -147,7 +147,7 @@ public:
             }
         }
 
-        void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/)
+        void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/) override
         {
             if (me->HealthBelowPct(50) && !splitPhase2)
             {
@@ -162,10 +162,10 @@ public:
             }
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*) override
         {
             ROOT;
-            _EnterCombat();
+            _JustEngagedWith();
             HandleNormalEvents();
         }
 
@@ -228,8 +228,8 @@ public:
 
             me->GetScheduler().Schedule(4s, [this](TaskContext /*context*/)
                 {
-                    float x;
-                    float y;
+                    float x = 3929.14f;
+                    float y = -1262.38f;
 
                     switch (rand() % 5)
                     {
@@ -263,7 +263,7 @@ public:
 
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             events.Update(diff);
 
@@ -343,7 +343,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             events.ScheduleEvent(EVENT_SEA_BLAST_CAST, TIMER_SEA_BLAST_CAST);
         }

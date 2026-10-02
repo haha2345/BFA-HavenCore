@@ -38,7 +38,7 @@ WorldPacket const* WorldPackets::Island::IslandCompleted::Write()
 {
     _worldPacket << MapID;
     _worldPacket << Winner;
-    _worldPacket << DisplayInfos.size();
+    _worldPacket << uint32(DisplayInfos.size());
     
     return &_worldPacket;
 }

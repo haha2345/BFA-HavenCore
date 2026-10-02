@@ -59,9 +59,9 @@ struct boss_hadal_darkfathom : public BossAI
 		me->SetPower(POWER_MAELSTROM, 0);
 	}
 
-	void EnterCombat(Unit* /*unit*/) override
+	void JustEngagedWith(Unit* /*unit*/) override
 	{
-		_EnterCombat();
+		_JustEngagedWith();
 		Talk(SAY_AGGRO);
 		events.ScheduleEvent(EVENT_BREAK_WATER, 5s);
 		events.ScheduleEvent(EVENT_CRASHING_TIDE, 8s); // min-playable, not plugin CD 12.5
@@ -82,7 +82,7 @@ struct boss_hadal_darkfathom : public BossAI
 		{
 			DoCast(BREAK_WATER_SS);
 			UnitList tarlist;
-			SelectTargetList(tarlist, 5, SELECT_TARGET_RANDOM, 100.0f, true);
+			SelectTargetList(tarlist, 5, SELECT_TARGET_RANDOM, 0, 100.0f, true);
 			for (Unit* tar : tarlist)
 			DoCast(tar, BREAK_WATER_MISSILE, true);
 			events.Repeat(15s);

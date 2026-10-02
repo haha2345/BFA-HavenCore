@@ -229,7 +229,7 @@ class iron_docks_grimrail_mob_train : public CreatureScript
             me->AddUnitFlag(UnitFlags(UNIT_FLAG_IMMUNE_TO_PC  | UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE));
         }
 
-        void DoAction(const int32 p_Action)
+        void DoAction(const int32 p_Action) override
         {
             switch (p_Action)
             {
@@ -367,9 +367,9 @@ class boss_grimrail_duguru : public CreatureScript
             me->AddUnitFlag(UnitFlags(UNIT_FLAG_REMOVE_CLIENT_CONTROL));
         }
 
-        void EnterCombat(Unit* /*p_Attacker*/) override
+        void JustEngagedWith(Unit* /*p_Attacker*/) override
         {
-            _EnterCombat();
+            _JustEngagedWith();
             if (m_Instance != nullptr)
                 GrimailEnforcersStart(m_Instance, me);
 
@@ -515,7 +515,7 @@ class boss_grimrail_makogg : public CreatureScript
                         {
                             p_Summon->AddAura(eMakoggSpells::SpellLavaWaveCosmetic, p_Summon);
                             p_Summon->AddAura(eMakoggSpells::SpellLavaSweepDamage, p_Summon);
-                            if (Unit* l_Target = SelectTarget(SELECT_TARGET_FARTHEST, 0, 100.0F, true))
+                            if (Unit* l_Target = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 100.0F, true))
                                 p_Summon->GetMotionMaster()->MovePoint(0, l_Target->GetPositionX(), l_Target->GetPositionY(), l_Target->GetPositionZ());
                             break;
                         }
@@ -525,11 +525,11 @@ class boss_grimrail_makogg : public CreatureScript
                 }
             }
 
-            void OnSpellCasted(SpellInfo const* p_SpellInfo) override
+            void OnSpellCasted(SpellInfo const* /*p_SpellInfo*/) override
             {
                 AddTimedDelayedOperation(2 * TimeConstants::IN_MILLISECONDS, [this]() -> void
                 {
-                    if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 200.0f, true))
+                    if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 200.0f, true))
                         me->GetMotionMaster()->MoveChase(l_Target, 0, 0);
                 });
             }
@@ -542,7 +542,7 @@ class boss_grimrail_makogg : public CreatureScript
                     me->RemoveAura(eMakoggSpells::SpellFlamingSlashUnkAura);
                     me->RemoveAura(eMakoggSpells::SpellFlamingSlashDummy);
 
-                    if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 40.0f, true))
+                    if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 40.0f, true))
                     {
                         me->Attack(l_Target, true);
                         me->GetMotionMaster()->MoveChase(l_Target);
@@ -554,9 +554,9 @@ class boss_grimrail_makogg : public CreatureScript
                 }
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
-                _EnterCombat();
+                _JustEngagedWith();
                 if (m_Instance != nullptr)
                     GrimailEnforcersStart(m_Instance, me);
              
@@ -603,7 +603,7 @@ class boss_grimrail_makogg : public CreatureScript
                 }
             }
             */
-            void DoAction(const int32 p_Action)
+            void DoAction(const int32 p_Action) override
             {
                 if (p_Action == eActions::ActionMakoggWinCheck)
                 {
@@ -734,9 +734,9 @@ class boss_grimrail_noxx : public CreatureScript
                 me->AddUnitFlag(UnitFlags(UNIT_FLAG_REMOVE_CLIENT_CONTROL));
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
-                _EnterCombat();
+                _JustEngagedWith();
                 if (m_Instance != nullptr)
                     GrimailEnforcersStart(m_Instance, me);
 
@@ -885,7 +885,7 @@ class iron_docks_grimrail_mob_ogre_trap : public CreatureScript
                 me->AddUnitFlag(UnitFlags(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC));
             }
 
-            void UpdateAI(uint32 const p_Diff) override
+            void UpdateAI(uint32 const /*p_Diff*/) override
             {
                 if (!m_Activated)
                 {
@@ -986,7 +986,7 @@ class iron_docks_grimrail_spell_sanguine_sphere : public SpellScriptLoader
         {
             PrepareAuraScript(iron_docks_grimrail_spell_sanguine_sphere_AuraScript);
 
-            void OnRemove(AuraEffect const* p_AurEff, AuraEffectHandleModes p_Mode)
+            void OnRemove(AuraEffect const* /*p_AurEff*/, AuraEffectHandleModes /*p_Mode*/)
             {
                 AuraRemoveMode l_RemoveMode = GetTargetApplication()->GetRemoveMode();
                 if (l_RemoveMode != AuraRemoveMode::AURA_REMOVE_BY_ENEMY_SPELL)
@@ -1094,7 +1094,7 @@ class iron_docks_grimrail_spell_flaming_slash : public SpellScriptLoader
     {
         PrepareSpellScript(iron_docks_grimrail_spell_flaming_slash_SpellScript);
 
-        void HandleAfterCast(SpellMissInfo missInfo)
+        void HandleAfterCast(SpellMissInfo /*missInfo*/)
         {
             if (!GetCaster())
                 return;
@@ -1124,7 +1124,7 @@ class iron_docks_grimrail_at_event : public AreaTriggerScript
 
     iron_docks_grimrail_at_event() : AreaTriggerScript("iron_docks_grimrail_at_event")  {  }
 
-    void OnEnter(Player* p_Player, AreaTriggerEntry const* p_AreaTrigger) 
+    void OnEnter(Player* p_Player, AreaTriggerEntry const* /*p_AreaTrigger*/) 
     {
         if (p_Player)
         {

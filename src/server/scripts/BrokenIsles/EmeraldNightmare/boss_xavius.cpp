@@ -222,10 +222,10 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             Talk(SAY_AGGRO);
-            _EnterCombat();
+            _JustEngagedWith();
             ClearPlayerAuras();
             DoCast(me, SPELL_XAVIUS_ENERGIZE_PHASE_1, true);
             DoCast(me, SPELL_UNFATHOMABLE_REALITY, true);
@@ -358,7 +358,7 @@ public:
         {
             if (spell->Id == SPELL_NIGHTMARE_BLADES_MARK)
             {
-                if (Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, checkPlayers(), 150.0f, true, -SPELL_NIGHTMARE_BLADES_MARK))
+                if (Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, checkPlayers(), 150.0f, true, true, -SPELL_NIGHTMARE_BLADES_MARK))
                     DoCast(pTarget, SPELL_NIGHTMARE_BLADES_MARK_2, true);
                 Talk(SAY_NIGHTMARE_BLADES);
             }
@@ -393,7 +393,7 @@ public:
 
         bool checkPlayers()
         {
-            std::list<HostileReference*> threatList = me->getThreatManager().getThreatList();
+            std::vector<ThreatReference*> threatList = me->GetThreatManager().GetModifiableThreatList();
             if (threatList.size() > 1)
                 return true;
 
@@ -431,7 +431,7 @@ public:
                         Talk(SAY_DARKENING_SOUL);
                     break;
                 case EVENT_NIGHTMARE_BLADES:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, checkPlayers(), 150.0f, true, -SPELL_NIGHTMARE_BLADES_MARK_2))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, checkPlayers(), 150.0f, true, true, -SPELL_NIGHTMARE_BLADES_MARK_2))
                     {
                         DoCast(target, SPELL_NIGHTMARE_BLADES_MARK, true);
                         DoCast(target, SPELL_NIGHTMARE_BLADES_MARK_2, true);
@@ -465,12 +465,12 @@ public:
                 case EVENT_BONDS_OF_TERROR:
                 {
                     uint8 freePlayerCount = 0;
-                    std::list<HostileReference*> threatlist = me->getThreatManager().getThreatList();
+                    std::vector<ThreatReference*> threatlist = me->GetThreatManager().GetModifiableThreatList();
 
                     if (!threatlist.empty())
                     {
-                        for (std::list<HostileReference*>::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
-                            if (Player* player = ObjectAccessor::GetPlayer(*me, (*itr)->getUnitGuid()))
+                        for (std::vector<ThreatReference*>::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
+                            if (Player* player = ObjectAccessor::GetPlayer(*me, (*itr)->GetVictim()->GetGUID()))
                                 if (!player->HasAura(SPELL_BONDS_OF_TERROR_AURA) && !player->HasAura(SPELL_BONDS_OF_TERROR_AURA_2) &&
                                     (me->GetVictim() && me->GetVictim()->GetGUID() != player->GetGUID()))
                                 {
@@ -564,7 +564,7 @@ public:
 
         void Reset() override {}
 
-        void DoAction(int32 const action) override
+        void DoAction(int32 const /*action*/) override
         {
             events.ScheduleEvent(1, 100);
         }
@@ -573,11 +573,11 @@ public:
         {
             if (Unit* owner = me->GetOwner())
             {
-                std::list<HostileReference*> threatlist = owner->getThreatManager().getThreatList();
+                std::vector<ThreatReference*> threatlist = owner->GetThreatManager().GetModifiableThreatList();
                 if (!threatlist.empty())
                 {
-                    for (std::list<HostileReference*>::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
-                        if (Player* player = ObjectAccessor::GetPlayer(*me, (*itr)->getUnitGuid()))
+                    for (std::vector<ThreatReference*>::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
+                        if (Player* player = ObjectAccessor::GetPlayer(*me, (*itr)->GetVictim()->GetGUID()))
                         {
                             if (player->HasAura(SPELL_INSANITY_LEVEL_1)) // anon_me enemy cannot determine friend from foe ignore player if aura activated
                                 return false;
@@ -649,7 +649,7 @@ public:
 
         void Reset() override {}
 
-        void IsSummonedBy(Unit* summoner) override
+        void IsSummonedBy(Unit* /*summoner*/) override
         {
             events.ScheduleEvent(1, 2000);
             events.ScheduleEvent(3, 3000);
@@ -723,13 +723,13 @@ public:
 
         void Reset() override {}
 
-        void IsSummonedBy(Unit* summoner) override
+        void IsSummonedBy(Unit* /*summoner*/) override
         {
             DoCast(me, SPELL_CORRUPTION_HORROR_BIRTH, true);
             DoZoneInCombat(me, 100.0f);
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             events.ScheduleEvent(1, 9000);
             events.ScheduleEvent(2, 14000);
@@ -787,7 +787,7 @@ public:
 
         void Reset() override {}
 
-        void IsSummonedBy(Unit* summoner) override
+        void IsSummonedBy(Unit* /*summoner*/) override
         {
             listGuid.clear();
             events.ScheduleEvent(1, 200);
@@ -815,15 +815,13 @@ public:
                 case 1:
                 {
                     if (Unit* owner = me->GetOwner())
-                        if (Unit* target = owner->GetAI()->SelectTarget(SELECT_TARGET_RANDOM, 0, 150.0f, true, SPELL_NIGHTMARE_BLADES_MARK))
+                        if (Unit* target = owner->GetAI()->SelectTarget(SELECT_TARGET_RANDOM, 0, 150.0f, true, true, SPELL_NIGHTMARE_BLADES_MARK))
                         {
                             Position pos;
                             float angle = target->GetRelativeAngle(me);
                             float dist = me->GetDistance(target) + 20.0f;
                             target->GetNearPosition(dist, angle);
 
-                            float angle2 = pos.GetRelativeAngle(target);
-                            float dist2 = 8.0f;
                             for (uint8 i = 0; i < 18; i++)
                             {
                                 // pos.SimplePosXYRelocationByAngle(pos, dist2, angle2);
@@ -862,7 +860,7 @@ public:
 
         void Reset() override {}
 
-        void IsSummonedBy(Unit* summoner) override
+        void IsSummonedBy(Unit* /*summoner*/) override
         {
             events.ScheduleEvent(1, 1000);
         }
@@ -933,7 +931,7 @@ public:
 
         void Reset() override {}
 
-        void IsSummonedBy(Unit* summoner) override
+        void IsSummonedBy(Unit* /*summoner*/) override
         {
             events.ScheduleEvent(1, 500);
         }
@@ -1146,7 +1144,7 @@ public:
         uint8 castCount = 0;
         bool hightTick = false;
 
-        void OnTick(AuraEffect const* aurEff)
+        void OnTick(AuraEffect const* /*aurEff*/)
         {
             Creature* caster = GetCaster()->ToCreature();
             if (!caster || !caster->IsInCombat())
@@ -1221,7 +1219,7 @@ public:
     {
         PrepareAuraScript(spell_xavius_dream_simulacrum_AuraScript);
 
-        void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             /*if (Player* player = GetTarget()->ToPlayer())
             {
@@ -1243,7 +1241,7 @@ public:
             }*/
         }
 
-        void OnAbsorb(AuraEffect* aurEff, DamageInfo& dmgInfo, uint32 & absorbAmount)
+        void OnAbsorb(AuraEffect* /*aurEff*/, DamageInfo& dmgInfo, uint32 & absorbAmount)
         {
             if (!GetTarget())
                 return;
@@ -1279,7 +1277,7 @@ public:
 
         bool madnes = false;
 
-        void OnTick(AuraEffect const* aurEff)
+        void OnTick(AuraEffect const* /*aurEff*/)
         {
             if (!GetCaster())
                 return;
@@ -1309,12 +1307,12 @@ public:
             }
         }
 
-        void CalculateAmount(AuraEffect const* aurEff, int32 & amount, bool& /*canBeRecalculated*/)
+        void CalculateAmount(AuraEffect const* /*aurEff*/, int32 & amount, bool& /*canBeRecalculated*/)
         {
             amount = 1;
         }
 
-        void Absorb(AuraEffect* /*AuraEffect**/, DamageInfo& dmgInfo, uint32& absorbAmount)
+        void Absorb(AuraEffect* /*AuraEffect**/, DamageInfo& /*dmgInfo*/, uint32& absorbAmount)
         {
             absorbAmount = 0;
         }
@@ -1378,7 +1376,7 @@ public:
     {
         PrepareAuraScript(spell_xavius_unfathomable_reality_AuraScript);
 
-        void OnTick(AuraEffect const* aurEff)
+        void OnTick(AuraEffect const* /*aurEff*/)
         {
             if (!GetCaster())
                 return;
@@ -1410,7 +1408,7 @@ public:
     {
         PrepareAuraScript(spell_xavius_descent_into_madness_AuraScript);
 
-        void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Player* player = GetTarget()->ToPlayer())
             {
@@ -1455,7 +1453,7 @@ public:
         bool remove = false;
         bool dispel = false;
 
-        void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (!GetCaster() || !GetTarget() || GetTargetApplication()->GetRemoveMode() != AURA_REMOVE_BY_ENEMY_SPELL || remove)
                 return;
@@ -1510,7 +1508,7 @@ public:
     {
         PrepareAuraScript(spell_xavius_nightmare_blades_AuraScript);
 
-        void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (!GetCaster() || !GetTarget())
                 return;
@@ -1541,20 +1539,20 @@ public:
     {
         PrepareSpellScript(spell_xavius_nightmare_blades_dmg_filter_SpellScript);
 
-        void FilterTargets(std::list<WorldObject*>& targets)
-        {
-            if (Unit* caster = GetCaster())
-            {
+        //void FilterTargets(std::list<WorldObject*>& targets)
+        //{
+        //    if (Unit* caster = GetCaster())
+        //    {
                 /*for (std::list<WorldObject*>::const_iterator itr = targets.begin(); itr != targets.end(); ++itr)
                     if (caster->GetAI()->GetObjectData((*itr)->GetGUID()))
                         targets.remove(*itr++);*/
-            }
-        }
+        //    }
+        //}
 
         void Register() override
         {
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_xavius_nightmare_blades_dmg_filter_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_xavius_nightmare_blades_dmg_filter_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
+            //OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_xavius_nightmare_blades_dmg_filter_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+            //OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_xavius_nightmare_blades_dmg_filter_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
         }
     };
 
@@ -1574,7 +1572,7 @@ public:
     {
         PrepareAuraScript(spell_xavius_bonds_of_terror_AuraScript);
 
-        void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (GetCaster() && GetCaster()->HasAura(SPELL_BONDS_OF_TERROR_AURA))
                 GetCaster()->RemoveAurasDueToSpell(SPELL_BONDS_OF_TERROR_AURA);
@@ -1610,8 +1608,6 @@ public:
             {
                 Position pos;
                 caster->GetNearPosition(frand(15.0f, 25.0f), (urand(0, 6)));
-                uint32 spellId = GetSpellInfo()->GetEffect(effIndex)->TriggerSpell;
-                uint32 delay = GetSpellInfo()->GetEffect(effIndex)->MiscValue;
                // caster->m_Events.AddEvent(new DelayDestCastEvent(*caster, pos, spellId, true), caster->m_Events.CalculateTime(delay));
             }
         }
@@ -1641,7 +1637,7 @@ public:
     {
         PrepareSpellScript(spell_xavius_corrupting_nova_SpellScript);
 
-        void HandleScriptEffect(SpellEffIndex effIndex)
+        void HandleScriptEffect(SpellEffIndex /*effIndex*/)
         {
             PreventHitDefaultEffect(EFFECT_1);
 
@@ -1761,7 +1757,7 @@ public:
     {
         PrepareAuraScript(spell_teleport_to_rift_AuraScript);
 
-        void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+        void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (!GetTarget())
                 return;
@@ -1774,7 +1770,7 @@ public:
             }
         }
 
-        void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (GetTarget())
                 if (GetTarget()->GetTypeId() == TYPEID_PLAYER)

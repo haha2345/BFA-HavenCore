@@ -141,7 +141,7 @@ struct boss_skycap_kragg : public BossAI
                 mountGUID = mount->GetGUID();
                 me->EnterVehicle(mount);
                 mount->AI()->SetData(KraggDatas::DataMountInCombat, false);
-                mount->DeleteThreatList();
+                mount->GetThreatManager().ClearAllThreat();
             }
         }
     }
@@ -153,7 +153,7 @@ struct boss_skycap_kragg : public BossAI
             fightStarted = false;
             me->InterruptNonMeleeSpells(true);
             me->SetReactState(ReactStates::REACT_PASSIVE);
-            me->DeleteThreatList();
+            me->GetThreatManager().ClearAllThreat();
             me->CombatStop();
             me->CastStop();
             me->GetMotionMaster()->Clear();
@@ -168,7 +168,7 @@ struct boss_skycap_kragg : public BossAI
         Reset();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (instance)
         {
@@ -199,7 +199,7 @@ struct boss_skycap_kragg : public BossAI
         events.ScheduleEvent(KraggEvents::EventChaaarrge, 8000);
     }
 
-    void OnSpellCastInterrupt(SpellInfo const* spell)
+    void OnSpellCastInterrupt(SpellInfo const* spell) override
     {
         if (spell->Id == KraggSpells::RevitalizingBrewSkyCap)
         {
@@ -253,7 +253,7 @@ struct boss_skycap_kragg : public BossAI
         }
     }
 
-    void SetData(uint32 id, uint32 value)
+    void SetData(uint32 id, uint32 value) override
     {
         if (id == KraggDatas::DataCharge)
             charge = value;
@@ -390,7 +390,7 @@ struct npc_sharkbait : public ScriptedAI
         me->DespawnOrUnsummon();
     }
 
-    void SetData(uint32 id, uint32 value)
+    void SetData(uint32 id, uint32 value) override
     {
         if (id == KraggDatas::DataMountInCombat)
             InCombat = value;
@@ -406,7 +406,7 @@ struct npc_sharkbait : public ScriptedAI
         InCombat = false;
         me->RemoveAllAreaTriggers();
         me->CombatStop(true);
-        me->DeleteThreatList();
+        me->GetThreatManager().ClearAllThreat();
         me->GetMotionMaster()->Clear();
     }
 
@@ -462,7 +462,7 @@ struct npc_sharkbait : public ScriptedAI
                     if (me->IsInCombat())
                     {
                         me->CombatStop(true);
-                        me->DeleteThreatList();
+                        me->GetThreatManager().ClearAllThreat();
                     }
                     return;
                 }

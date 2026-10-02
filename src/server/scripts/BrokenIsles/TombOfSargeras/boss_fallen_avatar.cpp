@@ -22,6 +22,7 @@
 #include "SpellAuras.h"
 #include "SpellScript.h"
 #include "tomb_of_sargeras.h"
+#include <algorithm>
 
 enum Says
 {
@@ -308,10 +309,10 @@ struct boss_fallen_avatar : BossAI
         m_ruptureRealisticTimers = (IsHeroic() ? ruptureRealisticTimersHeroic : MySpecialList<uint32>({ 60000 }));
     }
 
-    void EnterCombat(Unit* who) override
+    void JustEngagedWith(Unit* who) override
     {
         Talk(SAY_AGGRO);
-        _EnterCombat();
+        _JustEngagedWith();
 
         me->SetPower(me->GetPowerType(), 0);
 
@@ -654,11 +655,11 @@ struct boss_fallen_avatar : BossAI
                 Talk(SAY_BLADES);
                 DoCast(SPELL_SHADOWY_BLADES);
 
-                auto threatlist = me->getThreatManager().getThreatList();
-                threatlist.remove_if([](HostileReference* ref)
+                auto threatlist = me->GetThreatManager().GetModifiableThreatList();
+                threatlist.erase(std::remove_if(threatlist.begin(), threatlist.end(), [](ThreatReference* ref)
                 {
-                    return !ref->getTarget()->IsPlayer();
-                });
+                    return !ref->GetVictim()->IsPlayer();
+                }), threatlist.end());
 
                 for (uint8 i = 0; i < (IsMythic() ? 5 : 3); ++i)
                 {
@@ -668,7 +669,7 @@ struct boss_fallen_avatar : BossAI
                     auto itr = threatlist.begin();
                     std::advance(itr, urand(0, threatlist.size() - 1));
 
-                  //  if (Unit* target = (*itr)->getTarget())
+                  //  if (Unit* target = (*itr)->GetVictim())
                        // me->SummonCreature(NPC_CORRUPTED_BLADE, bladesPositions[i], target->GetGUID(), TEMPSUMMON_TIMED_DESPAWN, 11000);
 
                 //    threatlist.remove(*itr);
@@ -856,7 +857,7 @@ struct npc_avatara_maiden : public ScriptedAI
         me->SetPower(me->GetPowerType(), 0);
     }
 
-    void EnterCombat(Unit* who) override
+    void JustEngagedWith(Unit* who) override
     {
         me->SetReactState(REACT_DEFENSIVE);
         me->SetPower(me->GetPowerType(), 0);
@@ -1087,7 +1088,7 @@ struct npc_tos_touch_of_sargeras : public ScriptedAI
 
     EventMap events;
 
-    void IsSummonedBy(Unit* owner) override
+    void IsSummonedBy(Unit* /*owner*/) override
     {
         me->SetReactState(REACT_PASSIVE);
         DoCast(SPELL_TOUCH_OF_SARGERAS_AT);
@@ -1135,7 +1136,7 @@ struct npc_tos_rain_of_destroyer : public ScriptedAI
 
     EventMap events;
 
-    void IsSummonedBy(Unit* owner) override
+    void IsSummonedBy(Unit* /*owner*/) override
     {
         me->SetReactState(REACT_PASSIVE);
         me->CastSpell(me, SPELL_RAIN_OF_THE_DESTROYER_AT);

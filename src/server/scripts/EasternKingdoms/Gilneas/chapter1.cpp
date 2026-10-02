@@ -19,6 +19,7 @@
 #include "ScriptMgr.h"
 #include "CreatureTextMgr.h"
 #include "CombatAI.h"
+#include "DB2Stores.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "GameObject.h"
@@ -46,6 +47,8 @@ enum FrightenedCitizen
     NPC_EVACUATION_STALKER_FIRST    = 35830,
     NPC_EVACUATION_STALKER_NEAR     = 35010,
     NPC_EVACUATION_STALKER_FAR      = 35011,
+    NPC_FRIGHTENED_CITIZEN          = 34981,
+    NPC_FRIGHTENED_CITIZEN_CHASED   = 35836,
     NPC_RAMPAGING_WORGEN            = 35660,
     NPC_DARK_RANGER_THYALA          = 36312,
     NPC_GENERIC_TRIGGER_LAB_MP      = 35374, // target on ship
@@ -65,6 +68,7 @@ enum FrightenedCitizen
     //NPC_ASHLEY_CREDIT               = 36289, handled with smartai
     NPC_LUCIUS                      = 36461,
     //NPC_CYNTIA_CREDIT               = 36287, handled with smartai
+    GO_MERCHANT_SQUARE_DOOR         = 195327,
     GO_BALL_AND_CHAIN               = 201775,
     NPC_FORSAKEN_MACHINIST          = 36292,
     NPC_QUEST_14348_KILL_CREDIT     = 36233,
@@ -77,8 +81,6 @@ enum FrightenedCitizen
     NPC_GENERIC_TRIGGER_LAB_AOI     = 36286, // target on land
     NPC_HORRID_ABOMINATION          = 36231,
 
-    CREDIT_35830                    = 35830,
-
     POINT_STALKER_FIRST             = 1,
     POINT_STALKER_NEAR              = 2,
     POINT_STALKER_FAR               = 3,
@@ -87,6 +89,11 @@ enum FrightenedCitizen
     EVENT_MOVE_TO_NEAR_STALKER      = 2,
     EVENT_MOVE_TO_FAR_STALKER       = 3,
     EVENT_DESPAWN                   = 4,
+
+    SPELL_KNOCKING                  = 67869,
+    EVACUATE_DOOR_OPEN_DELAY        = 1000,
+    EVACUATE_WORGEN_SPAWN_DELAY     = 1000,
+    EVACUATE_DOOR_RESET_DELAY       = 60000,
 
     QUEST_INVASION                = 14321,
     QUEST_LAST_CHANCE_AT_HUMANITY = 14375,
@@ -149,6 +156,8 @@ enum FrightenedCitizen
     SPELL_RIDE_VEHICLE_72764 = 72764,
     SPELL_SUMMON_CARRIAGE = 72767,
     SPELL_THROW_BOULDER = 72768,
+    // 72788 teleports to Duskhaven stocks; 72799 is the racials/hearth follow-up.
+    SPELL_LAST_STAND_COMPLETE_TELEPORT = 72788,
     SPELL_LAST_STAND_COMPLETE = 72799,
     SPELL_CATACLYSM_3 = 80133,
     SPELL_CATACLYSM_2 = 80134,
@@ -160,6 +169,9 @@ enum FrightenedCitizen
     SPELL_FORCECAST_UPDATE_ZONE_AURAS = 94828,
     SPELL_LAUNCH4 = 96185,
 
+    MOVIE_WORGEN_INTRO = 21,
+    PHASE_ID_DUSKHAVEN_STOCKS = 182,
+
     SPELL_PHASE_QUEST_ZONE_SPECIFIC_06 = 68481, // 181
     SPELL_PHASE_QUEST_ZONE_SPECIFIC_07 = 68482, // 182
     SPELL_PHASE_QUEST_ZONE_SPECIFIC_08 = 68483, // 183
@@ -168,6 +180,40 @@ enum FrightenedCitizen
     SPELL_PHASE_QUEST_ZONE_SPECIFIC_11 = 69484, // 186
     SPELL_PHASE_QUEST_ZONE_SPECIFIC_12 = 69485, // 187
     SPELL_PHASE_QUEST_ZONE_SPECIFIC_19 = 74096, // 194
+};
+
+class player_gilneas_last_stand : public PlayerScript
+{
+public:
+    player_gilneas_last_stand() : PlayerScript("player_gilneas_last_stand") { }
+
+    void OnQuestReward(Player* player, Quest const* quest) override
+    {
+        if (quest->GetQuestId() != QUEST_LAST_STAND)
+            return;
+
+        if (!sMovieStore.LookupEntry(MOVIE_WORGEN_INTRO))
+            FinishLastStand(player);
+    }
+
+    void OnMovieComplete(Player* player, uint32 movieId) override
+    {
+        if (movieId != MOVIE_WORGEN_INTRO)
+            return;
+
+        if (player->GetQuestStatus(QUEST_LAST_STAND) != QUEST_STATUS_REWARDED)
+            return;
+
+        FinishLastStand(player);
+    }
+
+private:
+    static void FinishLastStand(Player* player)
+    {
+        player->CastSpell(player, SPELL_LAST_STAND_COMPLETE_TELEPORT, true);
+        player->CastSpell(player, SPELL_PHASE_QUEST_ZONE_SPECIFIC_07, true);
+        PhasingHandler::AddPhase(player, PHASE_ID_DUSKHAVEN_STOCKS, true);
+    }
 };
 
 class npc_frightened_citizen : public CreatureScript
@@ -181,16 +227,47 @@ public:
 
         void IsSummonedBy(Unit* /*summoner*/) override
         {
+            if (me->GetEntry() == NPC_RAMPAGING_WORGEN)
+            {
+                me->SetReactState(REACT_PASSIVE);
+
+                if (Creature* stalkerNear = me->FindNearestCreature(NPC_EVACUATION_STALKER_FIRST, 20.0f))
+                    me->GetMotionMaster()->MovePoint(POINT_STALKER_FIRST, stalkerNear->GetPosition(), true);
+                else if (TempSummon* summon = me->ToTempSummon())
+                    if (Unit* summoner = summon->GetSummoner())
+                        if (Player* player = summoner->ToPlayer())
+                        {
+                            me->SetReactState(REACT_AGGRESSIVE);
+                            AttackStart(player);
+                        }
+                return;
+            }
+
             me->SetReactState(REACT_PASSIVE);
 
             if (Creature* stalkerNear = me->FindNearestCreature(NPC_EVACUATION_STALKER_FIRST, 20.0f))
                 me->GetMotionMaster()->MovePoint(POINT_STALKER_FIRST, stalkerNear->GetPosition(), true);
+            else
+                _events.ScheduleEvent(EVENT_TALK_FRIGHTENED, Seconds(1));
         }
 
         void MovementInform(uint32 type, uint32 id) override
         {
             if (type != POINT_MOTION_TYPE)
                 return;
+
+            if (me->GetEntry() == NPC_RAMPAGING_WORGEN)
+            {
+                if (id != POINT_STALKER_FIRST)
+                    return;
+
+                me->SetReactState(REACT_AGGRESSIVE);
+                if (TempSummon* summon = me->ToTempSummon())
+                    if (Unit* summoner = summon->GetSummoner())
+                        if (Player* player = summoner->ToPlayer())
+                            AttackStart(player);
+                return;
+            }
 
             switch (id)
             {
@@ -210,6 +287,9 @@ public:
 
         void UpdateAI(uint32 diff) override
         {
+            if (me->GetEntry() == NPC_RAMPAGING_WORGEN)
+                return;
+
             _events.Update(diff);
 
             while (uint32 eventId = _events.ExecuteEvent())
@@ -217,21 +297,13 @@ public:
                 switch (eventId)
                 {
                 case EVENT_TALK_FRIGHTENED:
-                    if (!_creditGiven)
-                    {
-                        if (TempSummon* summon = me->ToTempSummon())
+                    if (TempSummon* summon = me->ToTempSummon())
+                        if (Unit* summoner = summon->GetSummoner())
                         {
-                            if (Unit* summoner = summon->GetSummoner())
-                            {
-                                if (Player* player = summoner->ToPlayer())
-                                {
-                                    player->KilledMonsterCredit(CREDIT_35830);
-                                    Talk(SAY_FRIGHTENED_CITIZEN_RESCUE, summoner);
-                                }
-                            }
+                            Talk(SAY_FRIGHTENED_CITIZEN_RESCUE, summoner);
+                            if (Player* player = summoner->ToPlayer())
+                                player->KillCreditGO(GO_MERCHANT_SQUARE_DOOR);
                         }
-                        _creditGiven = true; // mark credit as already given
-                    }
                     _events.ScheduleEvent(EVENT_MOVE_TO_NEAR_STALKER, Seconds(2));
                     break;
                 case EVENT_MOVE_TO_NEAR_STALKER:
@@ -255,7 +327,6 @@ public:
 
     private:
         EventMap _events;
-        bool _creditGiven = false; // tracks whether KilledMonsterCredit was already awarded
     };
 
     CreatureAI* GetAI(Creature* creature) const override
@@ -263,49 +334,6 @@ public:
         return new npc_frightened_citizenAI(creature);
     }
 };
-
-// 67869 - Knocking
-class spell_gilneas_knocking : public SpellScriptLoader
-{
-public:
-    spell_gilneas_knocking() : SpellScriptLoader("spell_gilneas_knocking") {}
-
-    class spell_gilneas_knocking_SpellScript : public SpellScript
-    {
-        PrepareSpellScript(spell_gilneas_knocking_SpellScript);
-
-        bool Validate(SpellInfo const* spellInfo) override
-        {
-            return ValidateSpellInfo(
-                {
-                    uint32(spellInfo->GetEffect(EFFECT_1)->CalcValue()),
-                    uint32(spellInfo->GetEffect(EFFECT_2)->CalcValue())
-                });
-        }
-
-        void HandleEffect()
-        {
-            if (SpellInfo const* spellInfo = GetSpellInfo())
-                GetCaster()->CastSpell(GetCaster(), spellInfo->GetEffect(RAND(EFFECT_1, EFFECT_2))->CalcValue(), true);
-        }
-
-        void Register() override
-        {
-            OnCast += SpellCastFn(spell_gilneas_knocking_SpellScript::HandleEffect);
-        }
-    };
-
-    SpellScript* GetSpellScript() const override
-    {
-        return new spell_gilneas_knocking_SpellScript();
-    }
-};
-
-void AddSC_gilneas_chapter_1()
-{
-    new npc_frightened_citizen();
-    new spell_gilneas_knocking();
-}
 
 /*######
 ## Quest 14159 - The Rebel Lord's Arsenal
@@ -316,6 +344,7 @@ enum TheRebelLordsArsena
     PHASE_ID_SUMMON         = 170,
     PHASE_ID_WOUND          = 171,
     NPC_GENERIC_TRIGGER_LAB = 35374,
+    NPC_LORNA_CELLAR        = 35378,
 
     SPELL_SHOOT_INSTAKILL   = 67593,
     SPELL_COSMETIC_ATTACK   = 42880,
@@ -362,7 +391,7 @@ class npc_josiah_avery : public CreatureScript
                             if (Player* player = ObjectAccessor::GetPlayer(*me, _playerGuid))
                             {
                                 DoCast(player, SPELL_COSMETIC_ATTACK);
-                                if (Creature* lorna = me->FindNearestCreature(NPC_LORNA_CROWLEY, 30.0f, true))
+                                if (Creature* lorna = me->FindNearestCreature(NPC_LORNA_CELLAR, 30.0f, true))
                                     if (Creature* labTrigger = lorna->FindNearestCreature(NPC_GENERIC_TRIGGER_LAB, 5.0f, true))
                                         labTrigger->CastSpell(player, SPELL_PULL_TO);
 
@@ -374,7 +403,7 @@ class npc_josiah_avery : public CreatureScript
                             _events.ScheduleEvent(EVENT_SHOOT_JOSIAH, Milliseconds(500));
                             break;
                         case EVENT_SHOOT_JOSIAH:
-                            if (Creature* lorna = me->FindNearestCreature(NPC_LORNA_CROWLEY, 30.0f, true))
+                            if (Creature* lorna = me->FindNearestCreature(NPC_LORNA_CELLAR, 30.0f, true))
                                 lorna->CastSpell(me, SPELL_SHOOT_INSTAKILL, true);
                             break;
                         default:
@@ -405,9 +434,12 @@ enum GreymanesHorse
     EVENT_START_PATH_2,
     EVENT_JUMP_TO_KRENNAN,
     EVENT_ANNOUNCE_RESCUE,
+    EVENT_FINISH_RIDE,
 
     NPC_RESCUED_KRENNAN     = 35907,
     NPC_TRAPPED_KRENNAN     = 35753,
+
+    SAY_RESCUE_KRENNAN      = 0,
 };
 
 class npc_greymanes_horse : public CreatureScript
@@ -417,23 +449,30 @@ class npc_greymanes_horse : public CreatureScript
 
         struct npc_greymanes_horseAI : public VehicleAI
         {
-            npc_greymanes_horseAI(Creature* creature) : VehicleAI(creature){}
+            npc_greymanes_horseAI(Creature* creature) : VehicleAI(creature), _rideEnding(false) { }
 
             void PassengerBoarded(Unit* passenger, int8 /*seatId*/, bool apply) override
             {
-                if (apply && passenger->GetTypeId() == TYPEID_PLAYER)
+                if (apply && passenger->IsPlayer())
                 {
                     me->SetControlled(true, UNIT_STATE_ROOT);
                     _events.ScheduleEvent(EVENT_START_PATH_1, Seconds(1));
                 }
                 else if (apply && passenger->GetEntry() == NPC_RESCUED_KRENNAN)
                     _events.ScheduleEvent(EVENT_START_PATH_2, Seconds(1));
+                else if (!apply && passenger->IsPlayer())
+                    EndRide(passenger->ToPlayer());
             }
 
             void MovementInform(uint32 type, uint32 pointId) override
             {
-                if (type == EFFECT_MOTION_TYPE && pointId == pathSize1)
+                if (type != EFFECT_MOTION_TYPE)
+                    return;
+
+                if (pointId == pathSize1)
                     _events.ScheduleEvent(EVENT_JUMP_TO_KRENNAN, Milliseconds(1));
+                else if (pointId == pathSize2)
+                    _events.ScheduleEvent(EVENT_FINISH_RIDE, Milliseconds(1));
             }
 
             void UpdateAI(uint32 diff) override
@@ -457,19 +496,64 @@ class npc_greymanes_horse : public CreatureScript
                             break;
                         case EVENT_ANNOUNCE_RESCUE:
                             me->SetControlled(true, UNIT_STATE_ROOT);
+                            Talk(SAY_RESCUE_KRENNAN);
                             break;
                         case EVENT_START_PATH_2:
-                            me->SetControlled(true, UNIT_STATE_ROOT);
+                            me->SetControlled(false, UNIT_STATE_ROOT);
                             me->GetMotionMaster()->MoveSmoothPath(pathSize2, greymanesHorsePath2, pathSize2);
                             break;
+                        case EVENT_FINISH_RIDE:
+                        {
+                            Player* player = nullptr;
+                            if (Vehicle* vehicle = me->GetVehicleKit())
+                            {
+                                for (auto const& seat : vehicle->Seats)
+                                {
+                                    if (Unit* passenger = ObjectAccessor::GetUnit(*me, seat.second.Passenger.Guid))
+                                    {
+                                        if (Player* rider = passenger->ToPlayer())
+                                        {
+                                            player = rider;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            EndRide(player);
+                            break;
+                        }
                         default:
                             break;
                     }
                 }
             }
         private:
+            void EndRide(Player* player)
+            {
+                if (_rideEnding)
+                    return;
+                _rideEnding = true;
+
+                if (player)
+                    player->RemoveAllMinionsByEntry(NPC_RESCUED_KRENNAN);
+
+                if (Vehicle* vehicle = me->GetVehicleKit())
+                {
+                    for (auto const& seat : vehicle->Seats)
+                    {
+                        if (Unit* passenger = ObjectAccessor::GetUnit(*me, seat.second.Passenger.Guid))
+                            if (passenger->GetEntry() == NPC_RESCUED_KRENNAN)
+                                if (Creature* krennan = passenger->ToCreature())
+                                    krennan->DespawnOrUnsummon();
+                    }
+                }
+
+                me->RemoveAurasDueToSpell(VEHICLE_SPELL_RIDE_HARDCODED);
+                me->DespawnOrUnsummon(1s);
+            }
+
             EventMap _events;
-            uint32 _currentPath;
+            bool _rideEnding;
         };
 
         CreatureAI* GetAI(Creature* creature) const override
@@ -607,31 +691,860 @@ class npc_crowleys_horse : public CreatureScript
         }
 };
 
-const uint32 WorgenOrCitizen[] =
+float const EvacuateSpawnInsideYards = 5.0f;
+float const EvacuateSpawnZOffset = 0.5f;
+float const EvacuateSpawnZProbe = 3.0f;
+float const EvacuateSpawnZSearchDist = 5.0f;
+float const EvacuateSpawnZBandDown = 0.5f;
+float const EvacuateSpawnZBandUp = 2.5f;
+
+static Position EvacuateMerchantSquareSpawnPos(GameObject* go)
 {
-    34981, 35660, 35836
+    float const intoRoom = go->GetOrientation() + float(M_PI);
+    float const doorZ = go->GetPositionZ();
+    Position spawnPos;
+    spawnPos.m_positionX = go->GetPositionX() + EvacuateSpawnInsideYards * std::cos(intoRoom);
+    spawnPos.m_positionY = go->GetPositionY() + EvacuateSpawnInsideYards * std::sin(intoRoom);
+    spawnPos.m_positionZ = doorZ + EvacuateSpawnZOffset;
+
+    float const floor = go->GetMap()->GetHeight(go->GetPhaseShift(), spawnPos.m_positionX, spawnPos.m_positionY,
+        doorZ + EvacuateSpawnZProbe, true, EvacuateSpawnZSearchDist);
+    if (floor > INVALID_HEIGHT
+        && floor >= doorZ - EvacuateSpawnZBandDown
+        && floor <= doorZ + EvacuateSpawnZBandUp)
+        spawnPos.m_positionZ = floor + EvacuateSpawnZOffset;
+
+    spawnPos.SetOrientation(go->GetOrientation());
+    return spawnPos;
+}
+
+static void EvacuateMerchantSquareTryKnock(Player* player, GameObject* go)
+{
+    if (go->HasFlag(GO_FLAG_NOT_SELECTABLE))
+        return;
+
+    if (player->FindCurrentSpellBySpellId(SPELL_KNOCKING))
+        return;
+
+    player->CastSpell(go, SPELL_KNOCKING, false);
+}
+
+static void EvacuateMerchantSquareDoorOpened(Player* player, GameObject* go)
+{
+    if (go->HasFlag(GO_FLAG_NOT_SELECTABLE))
+        return;
+
+    go->AddFlag(GO_FLAG_NOT_SELECTABLE);
+    ObjectGuid playerGuid = player->GetGUID();
+    go->GetScheduler().CancelAll();
+
+    go->SetGoState(GO_STATE_ACTIVE);
+
+    go->GetScheduler().Schedule(Milliseconds(EVACUATE_DOOR_RESET_DELAY), [go](TaskContext)
+    {
+        go->RemoveFlag(GO_FLAG_NOT_SELECTABLE);
+        go->SetGoState(GO_STATE_READY);
+    });
+
+    go->GetScheduler().Schedule(Milliseconds(EVACUATE_DOOR_OPEN_DELAY), [go, playerGuid](TaskContext)
+    {
+        Player* player = ObjectAccessor::GetPlayer(*go, playerGuid);
+        if (!player)
+            return;
+
+        Position spawnPos = EvacuateMerchantSquareSpawnPos(go);
+
+        uint32 citizen = urand(0, 1) ? NPC_FRIGHTENED_CITIZEN : NPC_FRIGHTENED_CITIZEN_CHASED;
+        player->SummonCreature(citizen, spawnPos, TEMPSUMMON_TIMED_DESPAWN, 60 * IN_MILLISECONDS);
+        if (citizen == NPC_FRIGHTENED_CITIZEN_CHASED)
+        {
+            go->GetScheduler().Schedule(Milliseconds(EVACUATE_WORGEN_SPAWN_DELAY), [go, playerGuid, spawnPos](TaskContext)
+            {
+                Player* player = ObjectAccessor::GetPlayer(*go, playerGuid);
+                if (!player)
+                    return;
+
+                player->SummonCreature(NPC_RAMPAGING_WORGEN, spawnPos, TEMPSUMMON_TIMED_DESPAWN, 60 * IN_MILLISECONDS);
+            });
+        }
+    });
+}
+
+// 67869 - Knocking: cast bar only; door open/spawn on successful AfterCast.
+class spell_gilneas_knocking : public SpellScriptLoader
+{
+public:
+    spell_gilneas_knocking() : SpellScriptLoader("spell_gilneas_knocking") {}
+
+    class spell_gilneas_knocking_SpellScript : public SpellScript
+    {
+        PrepareSpellScript(spell_gilneas_knocking_SpellScript);
+
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo({ SPELL_KNOCKING });
+        }
+
+        void PreventKnockEffects(SpellEffIndex effIndex)
+        {
+            PreventHitDefaultEffect(effIndex);
+        }
+
+        void HandleAfterCast()
+        {
+            Player* player = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+            GameObject* go = GetExplTargetGObj();
+            if (!player || !go || go->GetEntry() != GO_MERCHANT_SQUARE_DOOR)
+                return;
+
+            EvacuateMerchantSquareDoorOpened(player, go);
+        }
+
+        void Register() override
+        {
+            OnEffectHit += SpellEffectFn(spell_gilneas_knocking_SpellScript::PreventKnockEffects, EFFECT_0, SPELL_EFFECT_ANY);
+            OnEffectHit += SpellEffectFn(spell_gilneas_knocking_SpellScript::PreventKnockEffects, EFFECT_1, SPELL_EFFECT_ANY);
+            OnEffectHit += SpellEffectFn(spell_gilneas_knocking_SpellScript::PreventKnockEffects, EFFECT_2, SPELL_EFFECT_ANY);
+            AfterCast += SpellCastFn(spell_gilneas_knocking_SpellScript::HandleAfterCast);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_gilneas_knocking_SpellScript();
+    }
 };
 
-/// 195327
 class go_merchant_square_door : public GameObjectScript
 {
 public:
     go_merchant_square_door() : GameObjectScript("go_merchant_square_door") {}
 
+    struct go_merchant_square_doorAI : public GameObjectAI
+    {
+        explicit go_merchant_square_doorAI(GameObject* go) : GameObjectAI(go) { }
+
+        bool GossipHello(Player* player, bool reportUse) override
+        {
+            if (!reportUse)
+                return false;
+
+            EvacuateMerchantSquareTryKnock(player, go);
+            return true;
+        }
+    };
+
     bool OnGossipHello(Player* player, GameObject* go) override
     {
-        int Random = rand32() % (sizeof(WorgenOrCitizen) / sizeof(uint32));
+        EvacuateMerchantSquareTryKnock(player, go);
+        return true;
+    }
 
-        if (go->GetGoType() == GAMEOBJECT_TYPE_GOOBER)
+    GameObjectAI* GetAI(GameObject* go) const override
+    {
+        return new go_merchant_square_doorAI(go);
+    }
+};
+
+/*######
+## Quest 14154 - By the Skin of His Teeth
+######*/
+
+enum SkinOfHisTeeth
+{
+    QUEST_BY_THE_SKIN_OF_HIS_TEETH      = 14154,
+    NPC_CROWLEY_STONEWARD_PRISON        = 35077,
+    NPC_TOBIAS_MISTMANTLE_PRISON        = 35124,
+    NPC_WORGEN_RUNT_PRISON              = 35456,
+
+    SPELL_BY_THE_SKIN_OF_HIS_TEETH      = 68218,
+    SPELL_REBEL_VALOR                   = 67503,
+    SPELL_WORGEN_RUNT_ENRAGE            = 8599,
+    SPELL_CROWLEY_LEFT_HOOK             = 67825,
+
+    POINT_WORGEN_RUNT_JUMP              = 100,
+    POINT_WORGEN_RUNT_ENGAGE            = 102,
+
+    ACTION_SKIN_EVENT_START             = 1,
+    ACTION_SKIN_EVENT_STOP              = 2,
+
+    EVENT_SKIN_CHECK_RESTART            = 1,
+    EVENT_SKIN_WORGEN_WAVE,
+    EVENT_SKIN_COMPLETE,
+    EVENT_SKIN_CROWLEY_SPELL,
+
+    SKIN_WAVE_INTERVAL                  = 15000,
+    SKIN_EVENT_DURATION                 = 120000,
+    SKIN_FIRST_WAVE_DELAY               = 15000,
+    SKIN_RESTART_CHECK_INTERVAL         = 10000,
+    SKIN_HOUSE_SPAWN_COUNT              = 7,
+    SKIN_CATHEDRAL_SPAWN_BEGIN          = 7,
+    SKIN_CATHEDRAL_SPAWN_END            = 15,
+    SKIN_RUNT_DESPAWN_MS                = 120000,
+    SKIN_CROWLEY_SPELL_FIRST            = 6000,
+    SKIN_CROWLEY_SPELL_REPEAT_MIN       = 15000,
+    SKIN_CROWLEY_SPELL_REPEAT_MAX       = 17000,
+};
+
+float const SkinCreditRange = 100.0f;
+float const SkinAggroRange = 40.0f;
+float const SkinCleanupRange = 150.0f;
+float const SkinJumpZOffset = 0.5f;
+float const SkinAssistRange = 30.0f;
+
+struct WorgenRuntPathEntry
+{
+    Position const* path;
+    uint32 size;
+};
+
+WorgenRuntPathEntry const WorgenRuntPaths[] =
+{
+    { worgenRuntHousePath1, runtHousePathSize1 },
+    { worgenRuntHousePath2, runtHousePathSize2 },
+    { worgenRuntHousePath3, runtHousePathSize3 },
+    { worgenRuntHousePath4, runtHousePathSize4 },
+    { worgenRuntHousePath5, runtHousePathSize5 },
+    { worgenRuntHousePath6, runtHousePathSize6 },
+    { worgenRuntHousePath7, runtHousePathSize7 },
+    { worgenRuntCathedralPath1, runtCathedralPathSize1 },
+    { worgenRuntCathedralPath2, runtCathedralPathSize2 },
+    { worgenRuntCathedralPath3, runtCathedralPathSize3 },
+    { worgenRuntCathedralPath4, runtCathedralPathSize4 },
+    { worgenRuntCathedralPath5, runtCathedralPathSize5 },
+    { worgenRuntCathedralPath6, runtCathedralPathSize6 },
+    { worgenRuntCathedralPath7, runtCathedralPathSize7 },
+    { worgenRuntCathedralPath8, runtCathedralPathSize8 },
+};
+
+class npc_worgen_runt : public CreatureScript
+{
+public:
+    npc_worgen_runt() : CreatureScript("npc_worgen_runt") { }
+
+    struct npc_worgen_runtAI : public ScriptedAI
+    {
+        npc_worgen_runtAI(Creature* creature) : ScriptedAI(creature)
         {
-            if (go->GetGoState() == GO_STATE_READY)
+            me->SetReactState(REACT_PASSIVE);
+            SetCombatMovement(false);
+        }
+
+        void Reset() override
+        {
+            if (!_pathStarted)
             {
-                go->SetGoState(GO_STATE_ACTIVE);
-                player->SummonCreature(WorgenOrCitizen[Random], go->GetPositionX(), go->GetPositionY(), go->GetPositionZ(), go->GetAngle(player), TEMPSUMMON_TIMED_DESPAWN, 30000);
+                _pathId = 0;
+                _enraged = false;
+                _onPrisonRoof = false;
+                _approachingCrowley = false;
+                _combatTarget.Clear();
             }
         }
 
-        return true;
+        void EnterEvadeMode(EvadeReason why) override
+        {
+            // After landing, stay on the roof even if mmap chase fails (hunters/casters).
+            if (_onPrisonRoof && why == EVADE_REASON_NO_PATH)
+            {
+                me->SetCannotReachTarget(false);
+                return;
+            }
+
+            ScriptedAI::EnterEvadeMode(why);
+        }
+
+        void DoAction(int32 action) override
+        {
+            if (action < 0 || action >= int32(std::size(WorgenRuntPaths)))
+                return;
+
+            _pathId = uint8(action);
+            _enraged = false;
+            _onPrisonRoof = false;
+            _approachingCrowley = false;
+            _combatTarget.Clear();
+            _pathStarted = true;
+            me->SetReactState(REACT_PASSIVE);
+            SetCombatMovement(false);
+            me->GetMotionMaster()->Clear();
+
+            WorgenRuntPathEntry const& entry = WorgenRuntPaths[_pathId];
+            me->GetMotionMaster()->MovePoint(1, entry.path[0], false);
+        }
+
+        void MovementInform(uint32 type, uint32 id) override
+        {
+            if (!_pathStarted)
+                return;
+
+            WorgenRuntPathEntry const& entry = WorgenRuntPaths[_pathId];
+
+            if (type == POINT_MOTION_TYPE)
+            {
+                if (id == POINT_WORGEN_RUNT_ENGAGE)
+                {
+                    _approachingCrowley = false;
+                    BeginMeleeOnRoof();
+                    return;
+                }
+
+                if (id < entry.size)
+                    me->GetMotionMaster()->MovePoint(id + 1, entry.path[id], false);
+                else if (id == entry.size)
+                {
+                    Position jumpPos = worgenRuntJumpPos[_pathId];
+                    jumpPos.m_positionZ += SkinJumpZOffset;
+                    me->GetMotionMaster()->MoveJump(jumpPos, 16.0f, 12.0f, POINT_WORGEN_RUNT_JUMP);
+                }
+            }
+            else if (type == EFFECT_MOTION_TYPE && id == POINT_WORGEN_RUNT_JUMP)
+                OnLandedOnPrisonRoof();
+        }
+
+        void DamageTaken(Unit* attacker, uint32& /*damage*/) override
+        {
+            if (!_enraged && !me->HealthAbovePct(30))
+            {
+                _enraged = true;
+                DoCastSelf(SPELL_WORGEN_RUNT_ENRAGE);
+            }
+
+            if (!_onPrisonRoof || !attacker)
+                return;
+
+            me->SetCannotReachTarget(false);
+            me->SetInCombatWith(attacker);
+            attacker->SetInCombatWith(me);
+            if (attacker->IsAlive())
+                _combatTarget = attacker->GetGUID();
+        }
+
+        void UpdateAI(uint32 /*diff*/) override
+        {
+            if (!_onPrisonRoof)
+                return;
+
+            me->SetCannotReachTarget(false);
+
+            if (_approachingCrowley)
+                return;
+
+            Unit* victim = me->GetVictim();
+            if (!victim)
+                victim = SelectRoofVictim();
+
+            if (!victim)
+                return;
+
+            if (!me->IsWithinMeleeRange(victim))
+            {
+                me->GetMotionMaster()->MovePoint(POINT_WORGEN_RUNT_ENGAGE, victim->GetPosition(), false);
+                _approachingCrowley = true;
+                return;
+            }
+
+            if (!me->GetVictim())
+                AttackStartNoMove(victim);
+
+            DoMeleeAttackIfReady();
+        }
+
+    private:
+        void OnLandedOnPrisonRoof()
+        {
+            float z = me->GetPositionZ();
+            me->UpdateAllowedPositionZ(me->GetPositionX(), me->GetPositionY(), z);
+            me->Relocate(me->GetPositionX(), me->GetPositionY(), z, me->GetOrientation());
+
+            _onPrisonRoof = true;
+            me->SetReactState(REACT_AGGRESSIVE);
+            SetCombatMovement(false);
+            me->SetHomePosition(crowleyStonewardHomePos);
+            me->SetCannotReachTarget(false);
+
+            if (Creature* crowley = me->FindNearestCreature(NPC_CROWLEY_STONEWARD_PRISON, 80.0f))
+            {
+                _approachingCrowley = true;
+                me->GetMotionMaster()->MovePoint(POINT_WORGEN_RUNT_ENGAGE, crowley->GetPosition(), false);
+            }
+            else
+            {
+                _approachingCrowley = true;
+                me->GetMotionMaster()->MovePoint(POINT_WORGEN_RUNT_ENGAGE, worgenRuntRallyPos, false);
+            }
+        }
+
+        void BeginMeleeOnRoof()
+        {
+            Unit* victim = SelectRoofVictim();
+            if (!victim)
+                return;
+
+            _combatTarget = victim->GetGUID();
+            AttackStartNoMove(victim);
+
+            if (Creature* crowley = me->FindNearestCreature(NPC_CROWLEY_STONEWARD_PRISON, 20.0f))
+            {
+                crowley->SetInCombatWith(me);
+                me->SetInCombatWith(crowley);
+                crowley->GetThreatManager().AddThreat(me, 10.0f);
+                if (!crowley->GetVictim())
+                    crowley->AI()->AttackStart(me);
+            }
+        }
+
+        Unit* SelectRoofVictim()
+        {
+            if (Unit* stored = ObjectAccessor::GetUnit(*me, _combatTarget))
+                if (stored->IsAlive() && me->IsValidAttackTarget(stored))
+                    return stored;
+
+            if (Player* player = me->SelectNearestPlayer(SkinAggroRange))
+                if (me->IsValidAttackTarget(player))
+                    return player;
+
+            return me->FindNearestCreature(NPC_CROWLEY_STONEWARD_PRISON, 60.0f);
+        }
+
+        uint8 _pathId = 0;
+        bool _enraged = false;
+        bool _pathStarted = false;
+        bool _onPrisonRoof = false;
+        bool _approachingCrowley = false;
+        ObjectGuid _combatTarget;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_worgen_runtAI(creature);
+    }
+};
+
+class npc_tobias_mistmantle_prison : public CreatureScript
+{
+public:
+    npc_tobias_mistmantle_prison() : CreatureScript("npc_tobias_mistmantle_prison") { }
+
+    struct npc_tobias_mistmantle_prisonAI : public ScriptedAI
+    {
+        npc_tobias_mistmantle_prisonAI(Creature* creature) : ScriptedAI(creature)
+        {
+            SetCombatMovement(false);
+        }
+
+        void Reset() override
+        {
+            if (_eventActive)
+                return;
+
+            me->SetHomePosition(tobiasMistmantleHomePos);
+        }
+
+        void DoAction(int32 action) override
+        {
+            if (action == ACTION_SKIN_EVENT_START)
+                _eventActive = true;
+            else if (action == ACTION_SKIN_EVENT_STOP)
+            {
+                _eventActive = false;
+                me->CombatStop(true);
+                me->GetMotionMaster()->Clear();
+            }
+        }
+
+        void EnterEvadeMode(EvadeReason why) override
+        {
+            if (_eventActive && why == EVADE_REASON_NO_PATH)
+            {
+                me->SetCannotReachTarget(false);
+                return;
+            }
+
+            ScriptedAI::EnterEvadeMode(why);
+        }
+
+        void MoveInLineOfSight(Unit* who) override
+        {
+            if (!_eventActive || !who || me->GetVictim())
+                return;
+
+            if (who->GetEntry() != NPC_WORGEN_RUNT_PRISON)
+                return;
+
+            if (!me->IsValidAttackTarget(who) || !me->IsWithinDistInMap(who, SkinAssistRange))
+                return;
+
+            me->SetCannotReachTarget(false);
+            AttackStartNoMove(who);
+        }
+
+        void UpdateAI(uint32 /*diff*/) override
+        {
+            if (!UpdateVictim())
+                return;
+
+            me->SetCannotReachTarget(false);
+            DoMeleeAttackIfReady();
+        }
+
+    private:
+        bool _eventActive = false;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_tobias_mistmantle_prisonAI(creature);
+    }
+};
+
+class npc_lord_darius_crowley : public CreatureScript
+{
+public:
+    npc_lord_darius_crowley() : CreatureScript("npc_lord_darius_crowley") { }
+
+    struct npc_lord_darius_crowleyAI : public ScriptedAI
+    {
+        npc_lord_darius_crowleyAI(Creature* creature) : ScriptedAI(creature)
+        {
+            SetCombatMovement(false);
+        }
+
+        void Reset() override
+        {
+            if (_eventActive)
+                return;
+
+            _events.Reset();
+            summons.DespawnAll();
+            _waveGuids.clear();
+            _aliveWaveCount = 0;
+            _waveHouseNext = true;
+            _finishing = false;
+            _events.ScheduleEvent(EVENT_SKIN_CHECK_RESTART, Seconds(5));
+        }
+
+        void EnterEvadeMode(EvadeReason why) override
+        {
+            if (_eventActive && why == EVADE_REASON_NO_PATH)
+            {
+                me->SetCannotReachTarget(false);
+                return;
+            }
+
+            ScriptedAI::EnterEvadeMode(why);
+        }
+
+        void JustEngagedWith(Unit* /*who*/) override
+        {
+            _events.ScheduleEvent(EVENT_SKIN_CROWLEY_SPELL, Milliseconds(SKIN_CROWLEY_SPELL_FIRST));
+        }
+
+        void JustSummoned(Creature* summon) override
+        {
+            summons.Summon(summon);
+            if (summon->GetEntry() == NPC_WORGEN_RUNT_PRISON)
+            {
+                _waveGuids.insert(summon->GetGUID());
+                ++_aliveWaveCount;
+            }
+        }
+
+        void SummonedCreatureDies(Creature* summon, Unit* /*killer*/) override
+        {
+            OnWaveSummonGone(summon);
+        }
+
+        void SummonedCreatureDespawn(Creature* summon) override
+        {
+            OnWaveSummonGone(summon);
+        }
+
+        void MoveInLineOfSight(Unit* who) override
+        {
+            if (!_eventActive || !who || me->GetVictim())
+                return;
+
+            if (who->GetEntry() != NPC_WORGEN_RUNT_PRISON)
+                return;
+
+            if (!me->IsValidAttackTarget(who) || !me->IsWithinDistInMap(who, SkinAssistRange))
+                return;
+
+            me->SetCannotReachTarget(false);
+            AttackStartNoMove(who);
+        }
+
+        void OnPlayerAcceptedQuest(Player* player)
+        {
+            if (!player)
+                return;
+
+            player->CastSpell(player, SPELL_BY_THE_SKIN_OF_HIS_TEETH, true);
+
+            if (_eventActive)
+                return;
+
+            StartPrisonEvent();
+        }
+
+        void StartPrisonEvent()
+        {
+            if (_eventActive)
+                return;
+
+            _eventActive = true;
+            _finishing = false;
+            _waveHouseNext = true;
+            _aliveWaveCount = 0;
+            _waveGuids.clear();
+            NotifyTobias(ACTION_SKIN_EVENT_START);
+            CastTimerOnNearbyParticipants();
+            _events.ScheduleEvent(EVENT_SKIN_WORGEN_WAVE, Milliseconds(SKIN_FIRST_WAVE_DELAY));
+            _events.ScheduleEvent(EVENT_SKIN_COMPLETE, Milliseconds(SKIN_EVENT_DURATION));
+        }
+
+        void FinishPrisonEvent()
+        {
+            _finishing = true;
+            _events.CancelEvent(EVENT_SKIN_WORGEN_WAVE);
+            _events.CancelEvent(EVENT_SKIN_CROWLEY_SPELL);
+            CleanupEventCreatures();
+            NotifyTobias(ACTION_SKIN_EVENT_STOP);
+            RestoreRoofNpcs();
+
+            std::list<Player*> players;
+            me->GetPlayerListInGrid(players, SkinCreditRange);
+
+            for (Player* player : players)
+            {
+                if (player->GetQuestStatus(QUEST_BY_THE_SKIN_OF_HIS_TEETH) == QUEST_STATUS_INCOMPLETE)
+                    player->AreaExploredOrEventHappens(QUEST_BY_THE_SKIN_OF_HIS_TEETH);
+
+                player->RemoveAurasDueToSpell(SPELL_BY_THE_SKIN_OF_HIS_TEETH);
+                player->RemoveAurasDueToSpell(SPELL_REBEL_VALOR);
+            }
+
+            _eventActive = false;
+            _waveHouseNext = true;
+            _aliveWaveCount = 0;
+            _waveGuids.clear();
+            _finishing = false;
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            _events.Update(diff);
+
+            while (uint32 eventId = _events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                case EVENT_SKIN_CHECK_RESTART:
+                    if (!_eventActive)
+                    {
+                        std::list<Player*> players;
+                        me->GetPlayerListInGrid(players, SkinCreditRange);
+                        for (Player* player : players)
+                        {
+                            if (player->GetQuestStatus(QUEST_BY_THE_SKIN_OF_HIS_TEETH) == QUEST_STATUS_INCOMPLETE)
+                            {
+                                StartPrisonEvent();
+                                break;
+                            }
+                        }
+                    }
+                    _events.ScheduleEvent(EVENT_SKIN_CHECK_RESTART, Milliseconds(SKIN_RESTART_CHECK_INTERVAL));
+                    break;
+                case EVENT_SKIN_WORGEN_WAVE:
+                    if (_eventActive && !_finishing)
+                    {
+                        if (_aliveWaveCount == 0)
+                        {
+                            SpawnWorgenWave(_waveHouseNext);
+                            _waveHouseNext = !_waveHouseNext;
+                        }
+                        _events.ScheduleEvent(EVENT_SKIN_WORGEN_WAVE, Milliseconds(SKIN_WAVE_INTERVAL));
+                    }
+                    break;
+                case EVENT_SKIN_COMPLETE:
+                    FinishPrisonEvent();
+                    break;
+                case EVENT_SKIN_CROWLEY_SPELL:
+                    if (UpdateVictim())
+                        DoCastVictim(SPELL_CROWLEY_LEFT_HOOK);
+                    if (me->IsInCombat())
+                        _events.ScheduleEvent(EVENT_SKIN_CROWLEY_SPELL, Milliseconds(urand(SKIN_CROWLEY_SPELL_REPEAT_MIN, SKIN_CROWLEY_SPELL_REPEAT_MAX)));
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            if (!UpdateVictim())
+                return;
+
+            me->SetCannotReachTarget(false);
+            DoMeleeAttackIfReady();
+        }
+
+    private:
+        void OnWaveSummonGone(Creature* summon)
+        {
+            if (!summon || summon->GetEntry() != NPC_WORGEN_RUNT_PRISON)
+                return;
+
+            if (!_waveGuids.erase(summon->GetGUID()))
+                return;
+
+            summons.Despawn(summon);
+
+            if (_aliveWaveCount > 0)
+                --_aliveWaveCount;
+
+            if (_eventActive && !_finishing && _aliveWaveCount == 0)
+            {
+                _events.CancelEvent(EVENT_SKIN_WORGEN_WAVE);
+                SpawnWorgenWave(_waveHouseNext);
+                _waveHouseNext = !_waveHouseNext;
+                _events.ScheduleEvent(EVENT_SKIN_WORGEN_WAVE, Milliseconds(SKIN_WAVE_INTERVAL));
+            }
+        }
+
+        void NotifyTobias(int32 action)
+        {
+            if (Creature* tobias = me->FindNearestCreature(NPC_TOBIAS_MISTMANTLE_PRISON, SkinCreditRange))
+                tobias->AI()->DoAction(action);
+        }
+
+        void SpawnWorgenWave(bool houseRoof)
+        {
+            if (houseRoof)
+            {
+                for (uint8 i = 0; i < SKIN_HOUSE_SPAWN_COUNT; ++i)
+                    if (Creature* runt = me->SummonCreature(NPC_WORGEN_RUNT_PRISON, worgenRuntSpawnPos[i], TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, SKIN_RUNT_DESPAWN_MS))
+                        runt->AI()->DoAction(i);
+            }
+            else
+            {
+                for (uint8 i = SKIN_CATHEDRAL_SPAWN_BEGIN; i < SKIN_CATHEDRAL_SPAWN_END; ++i)
+                    if (Creature* runt = me->SummonCreature(NPC_WORGEN_RUNT_PRISON, worgenRuntSpawnPos[i], TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, SKIN_RUNT_DESPAWN_MS))
+                        runt->AI()->DoAction(i);
+            }
+        }
+
+        void CleanupEventCreatures()
+        {
+            summons.DespawnAll();
+            _waveGuids.clear();
+            _aliveWaveCount = 0;
+
+            std::list<Creature*> runts;
+            me->GetCreatureListWithEntryInGrid(runts, NPC_WORGEN_RUNT_PRISON, SkinCleanupRange);
+            for (Creature* runt : runts)
+            {
+                if (!runt->IsSummon())
+                    continue;
+
+                runt->CombatStop(true);
+                runt->DespawnOrUnsummon();
+            }
+        }
+
+        void RestoreRoofNpcs()
+        {
+            me->CombatStop(true);
+            me->GetMotionMaster()->Clear();
+            me->NearTeleportTo(crowleyStonewardHomePos);
+            me->SetHomePosition(crowleyStonewardHomePos);
+            me->SetFacingTo(crowleyStonewardHomePos.GetOrientation());
+
+            if (Creature* tobias = me->FindNearestCreature(NPC_TOBIAS_MISTMANTLE_PRISON, SkinCreditRange))
+            {
+                tobias->CombatStop(true);
+                tobias->GetMotionMaster()->Clear();
+                tobias->NearTeleportTo(tobiasMistmantleHomePos);
+                tobias->SetHomePosition(tobiasMistmantleHomePos);
+                tobias->SetFacingTo(tobiasMistmantleHomePos.GetOrientation());
+            }
+        }
+
+        void CastTimerOnNearbyParticipants()
+        {
+            std::list<Player*> players;
+            me->GetPlayerListInGrid(players, SkinCreditRange);
+
+            for (Player* player : players)
+            {
+                if (player->GetQuestStatus(QUEST_BY_THE_SKIN_OF_HIS_TEETH) == QUEST_STATUS_INCOMPLETE)
+                    player->CastSpell(player, SPELL_BY_THE_SKIN_OF_HIS_TEETH, true);
+            }
+        }
+
+        EventMap _events;
+        GuidSet _waveGuids;
+        uint32 _aliveWaveCount = 0;
+        bool _eventActive = false;
+        bool _waveHouseNext = true;
+        bool _finishing = false;
+    };
+
+    bool OnQuestAccept(Player* player, Creature* creature, Quest const* quest) override
+    {
+        if (quest->GetQuestId() != QUEST_BY_THE_SKIN_OF_HIS_TEETH)
+            return false;
+
+        if (npc_lord_darius_crowleyAI* ai = CAST_AI(npc_lord_darius_crowleyAI, creature->GetAI()))
+            ai->OnPlayerAcceptedQuest(player);
+
+        return false;
+    }
+
+    bool OnQuestReward(Player* player, Creature* /*creature*/, Quest const* quest, uint32 /*opt*/) override
+    {
+        if (quest->GetQuestId() != QUEST_BY_THE_SKIN_OF_HIS_TEETH || !player)
+            return false;
+
+        player->RemoveAurasDueToSpell(SPELL_BY_THE_SKIN_OF_HIS_TEETH);
+        player->RemoveAurasDueToSpell(SPELL_REBEL_VALOR);
+        return false;
+    }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_lord_darius_crowleyAI(creature);
+    }
+};
+
+// 67503 - Rebel Valor (Crowley area buff). Stop applying after 14154 is done so it cannot stick on leave.
+class spell_gilneas_rebel_valor : public SpellScriptLoader
+{
+public:
+    spell_gilneas_rebel_valor() : SpellScriptLoader("spell_gilneas_rebel_valor") { }
+
+    class spell_gilneas_rebel_valor_AuraScript : public AuraScript
+    {
+        PrepareAuraScript(spell_gilneas_rebel_valor_AuraScript);
+
+        bool CheckAreaTarget(Unit* target)
+        {
+            Player* player = target->ToPlayer();
+            if (!player)
+                return true;
+
+            QuestStatus status = player->GetQuestStatus(QUEST_BY_THE_SKIN_OF_HIS_TEETH);
+            return status != QUEST_STATUS_COMPLETE && status != QUEST_STATUS_REWARDED;
+        }
+
+        void Register() override
+        {
+            DoCheckAreaTarget += AuraCheckAreaTargetFn(spell_gilneas_rebel_valor_AuraScript::CheckAreaTarget);
+        }
+    };
+
+    AuraScript* GetAuraScript() const override
+    {
+        return new spell_gilneas_rebel_valor_AuraScript();
     }
 };
 
@@ -1781,7 +2694,7 @@ public:
             me->AddNpcFlag(UNIT_NPC_FLAG_SPELLCLICK);
         }
 
-        void OnSpellClick(Unit* clicker, bool& /*result*/)
+        void OnSpellClick(Unit* clicker, bool& /*result*/) override
         {
             if (Player* player = clicker->ToPlayer())
                 if (player->GetQuestStatus(QUEST_GASPING_FOR_BREATH) == QUEST_STATUS_INCOMPLETE)
@@ -2355,7 +3268,7 @@ public:
             DoStartNoMovement(who);
         }
 
-        void EnterCombat(Unit* /*victim*/) override { }
+        void JustEngagedWith(Unit* /*victim*/) override { }
 
         void UpdateAI(uint32 diff) override
         {
@@ -3365,7 +4278,7 @@ public:
     npc_stagecoach_carriage_44928() : CreatureScript("npc_stagecoach_carriage_44928") { }
 
     /* the spell SPELL_SUMMON_CARRIAGE has failure. player mount not as passenger on carriage, but as horse in harness */
-    bool OnGossipHello(Player* player, Creature* creature) override
+    bool OnGossipHello(Player* player, Creature* /*creature*/) override
     {
         if (player->GetQuestStatus(QUEST_EXODUS) == QUEST_STATUS_INCOMPLETE)
         {
@@ -3768,19 +4681,6 @@ public:
     }
 };
 
-class gilneas_phases : public PlayerScript
-{
-public:
-    gilneas_phases() : PlayerScript("gilneas_phases") { }
-
-    //If someone will report another broken phases in Gilneas, handle it here, thanks
-    void OnUpdateZone(Player* player, uint32 /*newZone*/, uint32 /*oldZone*/, uint32 /*newArea*/) override
-    {
-        if (player->GetMapId() == 654)
-            PhasingHandler::AddPhase(player, 170, true);
-    }
-};
-
 class npc_lorna_crowley_43727 : public CreatureScript
 {
 public:
@@ -3839,10 +4739,94 @@ struct npc_dark_ranger_thyala_36312 : public ScriptedAI
     }
 };
 
+/*######
+## npc_gilnean_crow
+######*/
+
+class npc_gilnean_crow : public CreatureScript
+{
+public:
+    npc_gilnean_crow() : CreatureScript("npc_gilnean_crow") {}
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_gilnean_crowAI(creature);
+    }
+
+    struct npc_gilnean_crowAI : public ScriptedAI
+    {
+        static constexpr float ScareDistance = 8.0f;
+        static constexpr float FlightXYMin = 10.0f;
+        static constexpr float FlightXYMax = 18.0f;
+        static constexpr float FlightZMin = 12.0f;
+        static constexpr float FlightZMax = 20.0f;
+
+        npc_gilnean_crowAI(Creature* creature) : ScriptedAI(creature)
+        {
+            me->SetReactState(REACT_PASSIVE);
+        }
+
+        void Reset() override
+        {
+            _flying = false;
+        }
+
+        void MoveInLineOfSight(Unit* who) override
+        {
+            if (_flying || !who || !who->IsPlayer())
+                return;
+
+            if (!me->IsWithinDistInMap(who, ScareDistance))
+                return;
+
+            StartFlying();
+        }
+
+        void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+        {
+            if (spell->Id == SPELL_PING_GILNEAN_CROW)
+                StartFlying();
+        }
+
+        void MovementInform(uint32 type, uint32 id) override
+        {
+            if (type == EFFECT_MOTION_TYPE && id == POINT_CROW_FLIGHT)
+                me->DespawnOrUnsummon(0, 70s);
+        }
+
+    private:
+        void StartFlying()
+        {
+            if (_flying)
+                return;
+
+            _flying = true;
+
+            me->SetStandState(UNIT_STAND_STATE_STAND);
+            me->SetEmoteState(EMOTE_ONESHOT_NONE);
+            me->SetAnimTier(UNIT_BYTE1_FLAG_HOVER, true);
+            me->SetCanFly(true);
+            me->SetDisableGravity(true);
+            me->SetHover(true);
+
+            Position dest = me->GetRandomNearPosition(frand(FlightXYMin, FlightXYMax));
+            dest.m_positionZ = me->GetPositionZ() + frand(FlightZMin, FlightZMax);
+            me->GetMotionMaster()->MoveTakeoff(POINT_CROW_FLIGHT, dest);
+        }
+
+        bool _flying = false;
+    };
+};
+
 void AddSC_gilneas_c1()
 {
+    new player_gilneas_last_stand();
     new npc_frightened_citizen();
-    // new npc_worgen_runt(); --- Some type of issue
+    new spell_gilneas_knocking();
+    new spell_gilneas_rebel_valor();
+    new npc_worgen_runt();
+    new npc_tobias_mistmantle_prison();
+    new npc_lord_darius_crowley();
     new npc_josiah_avery();
     new npc_dark_scout_37953();
     new npc_greymanes_horse();
@@ -3897,8 +4881,8 @@ void AddSC_gilneas_c1()
     new go_kings_gate_196412();
     new go_mandragore_196394();
     new item_belysras_talisman_49944();
-    RegisterPlayerScript(gilneas_phases);
     new npc_lorna_crowley_43727();
     RegisterCreatureAI(npc_lorna_crowley_36457);
     RegisterCreatureAI(npc_dark_ranger_thyala_36312);
+    new npc_gilnean_crow();
 }

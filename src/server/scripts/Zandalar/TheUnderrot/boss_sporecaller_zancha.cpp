@@ -144,7 +144,7 @@ public:
         InstanceScript* instance;
         bool introText;
 
-        void MoveInLineOfSight(Unit* /*who*/)
+        void MoveInLineOfSight(Unit* /*who*/) override
         {
             if (!introText)
             {
@@ -210,14 +210,14 @@ public:
             me->SetPower(POWER_ENERGY, 0);
         }
 
-        void JustDied(Unit*)
+        void JustDied(Unit*) override
         {
             _JustDied();
             DespawnAurasWipe();
             SelectSoundAndText(me, 4);
         }
 
-        void EnterEvadeMode(EvadeReason /*why*/)
+        void EnterEvadeMode(EvadeReason /*why*/) override
         {
             Reset();
             _DespawnAtEvade(15);
@@ -247,10 +247,10 @@ public:
             return true;
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*) override
         {
             SelectSoundAndText(me, 1);
-            _EnterCombat();
+            _JustEngagedWith();
             events.ScheduleEvent(EVENT_SHOCKWAVE, TIMER_SHOCKWAVE);
             events.ScheduleEvent(EVENT_UPHEAVAL, TIMER_UPHEAVAL);
             events.ScheduleEvent(EVENT_SPAWN_SPORE, TIMER_SPAWN_SPORE);
@@ -336,7 +336,7 @@ public:
             }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             events.Update(diff);
 
@@ -369,7 +369,7 @@ public:
                 case EVENT_UPHEAVAL:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
 
                     targets.remove_if(checkSpec());
 

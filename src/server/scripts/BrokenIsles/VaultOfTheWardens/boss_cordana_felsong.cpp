@@ -167,12 +167,12 @@ public:
             instance->SetData(DATA_CORDANA_ACTIONS, 2); // clear centry
         }
 
-        void EnterCombat(Unit* unit) override
+        void JustEngagedWith(Unit* unit) override
         {
             Talk(SAY_AGGRO);
 
             Reset();
-            _EnterCombat();
+            _JustEngagedWith();
 
             me->AddDelayedCombat(1000, [this]()->void
             {
@@ -615,7 +615,7 @@ public:
             }
         }
 
-        void OnSpellClick(Unit* clicker, bool& /*result*/)
+        void OnSpellClick(Unit* clicker, bool& /*result*/) override
         {
             if (Player* player = clicker->ToPlayer())
             {
@@ -652,7 +652,7 @@ public:
         EventMap events;
         bool doorSpirit = false;
 
-        void Reset()
+        void Reset() override
         {
             if (doorSpirit)
                 instance->SetBossState(DATA_CORDANA_SPIRIT, NOT_STARTED);
@@ -665,7 +665,7 @@ public:
                 instance->SetBossState(DATA_CORDANA_SPIRIT, DONE);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             if (!UpdateVictim())
                 return;

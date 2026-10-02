@@ -185,6 +185,35 @@ void BattlegroundWS::PostUpdateImpl(uint32 diff)
             _flagSpellForceTimer = 0; //reset timer.
             _flagDebuffState = 0;
         }
+
+        // Proximity-based flag capture check (for BFA map 2106 where area triggers use a different system)
+        // Alliance captures: Alliance player carries Horde flag and enters Alliance base while Alliance flag is on base
+        if (_flagState[TEAM_HORDE] == BG_WS_FLAG_STATE_ON_PLAYER && _flagState[TEAM_ALLIANCE] == BG_WS_FLAG_STATE_ON_BASE)
+        {
+            if (Player* carrier = ObjectAccessor::GetPlayer(GetBgMap(), m_FlagKeepers[TEAM_HORDE]))
+            {
+                if (carrier->GetTeam() == ALLIANCE)
+                {
+                    if (GameObject* allianceFlag = GetBGObject(BG_WS_OBJECT_A_FLAG))
+                        if (carrier->IsWithinDistInMap(allianceFlag, 3.0f))
+                            EventPlayerCapturedFlag(carrier);
+                }
+            }
+        }
+
+        // Horde captures: Horde player carries Alliance flag and enters Horde base while Horde flag is on base
+        if (_flagState[TEAM_ALLIANCE] == BG_WS_FLAG_STATE_ON_PLAYER && _flagState[TEAM_HORDE] == BG_WS_FLAG_STATE_ON_BASE)
+        {
+            if (Player* carrier = ObjectAccessor::GetPlayer(GetBgMap(), m_FlagKeepers[TEAM_ALLIANCE]))
+            {
+                if (carrier->GetTeam() == HORDE)
+                {
+                    if (GameObject* hordeFlag = GetBGObject(BG_WS_OBJECT_H_FLAG))
+                        if (carrier->IsWithinDistInMap(hordeFlag, 3.0f))
+                            EventPlayerCapturedFlag(carrier);
+                }
+            }
+        }
     }
 }
 
@@ -245,6 +274,8 @@ void BattlegroundWS::StartingEventOpenDoors()
 
     UpdateWorldState(BG_WS_STATE_TIMER_ACTIVE, 1);
     UpdateWorldState(BG_WS_STATE_TIMER, m_EndTimestamp);
+    UpdateWorldState(BG_WS_FLAG_CAPTURES_MAX, BG_WS_MAX_TEAM_SCORE);
+    UpdateWorldState(BG_WS_FLAG_CAPTURES_MAX_NEW, BG_WS_MAX_TEAM_SCORE);
 }
 
 void BattlegroundWS::AddPlayer(Player* player)
@@ -658,15 +689,27 @@ void BattlegroundWS::HandleAreaTrigger(Player* player, uint32 trigger, bool ente
         case 3709:                                          // Horde elixir of berserk spawn
             //buff_guid = BgObjects[BG_WS_OBJECT_BERSERKBUFF_2];
             break;
-        case 3646:                                          // Alliance Flag spawn
+        case 3646:                                          // Alliance Flag spawn (classic map 489)
             if (_flagState[TEAM_HORDE] && !_flagState[TEAM_ALLIANCE])
                 if (GetFlagPickerGUID(TEAM_HORDE) == player->GetGUID())
                     EventPlayerCapturedFlag(player);
             break;
-        case 3647:                                          // Horde Flag spawn
+        case 3647:                                          // Horde Flag spawn (classic map 489)
             if (_flagState[TEAM_ALLIANCE] && !_flagState[TEAM_HORDE])
                 if (GetFlagPickerGUID(TEAM_ALLIANCE) == player->GetGUID())
                     EventPlayerCapturedFlag(player);
+            break;
+        case 30:                                            // Alliance capture zone (BFA map 2106)
+            if (player->GetTeam() == ALLIANCE)
+                if (_flagState[TEAM_HORDE] == BG_WS_FLAG_STATE_ON_PLAYER && _flagState[TEAM_ALLIANCE] == BG_WS_FLAG_STATE_ON_BASE)
+                    if (GetFlagPickerGUID(TEAM_HORDE) == player->GetGUID())
+                        EventPlayerCapturedFlag(player);
+            break;
+        case 31:                                            // Horde capture zone (BFA map 2106)
+            if (player->GetTeam() == HORDE)
+                if (_flagState[TEAM_ALLIANCE] == BG_WS_FLAG_STATE_ON_PLAYER && _flagState[TEAM_HORDE] == BG_WS_FLAG_STATE_ON_BASE)
+                    if (GetFlagPickerGUID(TEAM_ALLIANCE) == player->GetGUID())
+                        EventPlayerCapturedFlag(player);
             break;
         case 3649:                                          // unk1
         case 3688:                                          // unk2
@@ -812,11 +855,6 @@ bool BattlegroundWS::UpdatePlayerScore(Player* player, uint32 type, uint32 value
 
 WorldSafeLocsEntry const* BattlegroundWS::GetClosestGraveYard(Player* player)
 {
-    //if status in progress, it returns main graveyards with spiritguides
-    //else it will return the graveyard in the flagroom - this is especially good
-    //if a player dies in preparation phase - then the player can't cheat
-    //and teleport to the graveyard outside the flagroom
-    //and start running around, while the doors are still closed
     if (player->GetTeam() == ALLIANCE)
     {
         if (GetStatus() == STATUS_IN_PROGRESS)
@@ -858,6 +896,7 @@ void BattlegroundWS::FillInitialWorldStates(WorldPackets::WorldState::InitWorldS
         packet.Worldstates.emplace_back(uint32(BG_WS_FLAG_UNK_HORDE), 0);
 
     packet.Worldstates.emplace_back(uint32(BG_WS_FLAG_CAPTURES_MAX), int32(BG_WS_MAX_TEAM_SCORE));
+    packet.Worldstates.emplace_back(uint32(BG_WS_FLAG_CAPTURES_MAX_NEW), int32(BG_WS_MAX_TEAM_SCORE));
 
     if (GetStatus() == STATUS_IN_PROGRESS)
     {

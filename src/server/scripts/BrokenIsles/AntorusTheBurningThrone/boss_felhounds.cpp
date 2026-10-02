@@ -120,9 +120,9 @@ struct boss_shatug_fhargAI : public BossAI
             //instance->DoConversation(5523);
     }
 
-    void EnterCombat(Unit* who) override
+    void JustEngagedWith(Unit* who) override
     {
-        _EnterCombat();
+        _JustEngagedWith();
         Creature* pOtherBoss = GetOtherBoss();
         if (pOtherBoss)
         {
@@ -329,7 +329,7 @@ struct npc_lightforged_teleport_pod_128289 : public ScriptedAI
     {
         me->AddNpcFlag(UNIT_NPC_FLAG_SPELLCLICK);
     }
-    void OnSpellClick(Unit* clicker, bool& /*result*/)
+    void OnSpellClick(Unit* clicker, bool& /*result*/) override
     {
         if (Player* player = clicker->ToPlayer())
         {

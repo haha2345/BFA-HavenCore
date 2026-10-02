@@ -170,7 +170,7 @@ public:
             me->SetPower(POWER_ENERGY, 4);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             //me->AddAura(138451, me);
             //SCHEDULE_EVENT(EVENT_CHECK_ACCELERATION, 1000);
@@ -200,7 +200,7 @@ public:
             }
         }
 
-        void DamageTaken(Unit* attacker, uint32& damage)
+        void DamageTaken(Unit* /*attacker*/, uint32& damage)
         {
             if (damage >= me->GetHealth())
             {
@@ -338,7 +338,7 @@ public:
             events.ScheduleEvent(EVENT_CHECK_ENERGY, 1000);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             events.ScheduleEvent(EVENT_CRIMSON_WAKE, 10000);
             events.ScheduleEvent(EVENT_CHECK_ENERGY, 1000);
@@ -351,7 +351,7 @@ public:
         }
 
 
-        void DamageTaken(Unit* attacker, uint32& damage)
+        void DamageTaken(Unit* /*attacker*/, uint32& damage)
         {
             if (damage >= me->GetHealth())
             {
@@ -442,7 +442,7 @@ public:
         EventMap events;
         uint64 playerGuid;
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             me->AddAura(SPELL_CIRMSON_WAKE_SLOW, me);
             me->DespawnOrUnsummon(30000);
@@ -468,7 +468,7 @@ public:
                 case EVENT_SELECTION_TARGET:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -476,7 +476,7 @@ public:
                     for (std::list<Unit*>::iterator itr = targets.begin(); itr != targets.end(); ++itr)
                     {
                         me->AddAura(SPELL_CRIMSON_WAKE_FIXATE, (*itr));
-                        me->AddThreat((*itr), 9999999999.9f);
+                        me->GetThreatManager().AddThreat((*itr), 9999999999.9f);
                         me->AI()->AttackStart((*itr));
                     }
                     me->DespawnOrUnsummon(30000);
@@ -565,7 +565,7 @@ public:
             me->SetPower(POWER_ENERGY, 0);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             events.ScheduleEvent(EVENT_EXPLOSIVE_SLAM, 5000);
             events.ScheduleEvent(EVENT_MATTER_SWAP, urand(2000, 7000));
@@ -577,7 +577,7 @@ public:
             }
         }
 
-        void DamageTaken(Unit* attacker, uint32& damage)
+        void DamageTaken(Unit* /*attacker*/, uint32& damage)
         {
             if (damage >= me->GetHealth())
             {
@@ -768,7 +768,7 @@ public:
             return me->FindNearestCreature(NPC_ANIMA_ORB, 400.0f, true);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             if (Creature* animaOrb = GetAnimaOrb())
             {
@@ -819,7 +819,7 @@ public:
             DespawnCreature(NPC_MASSIVE_ANIMA_GOLEM);
         }
 
-        void EnterEvadeMode(EvadeReason w)
+        void EnterEvadeMode(EvadeReason /*w*/)
         {
             float x, y, z, o;
             events.ScheduleEvent(EVENT_ADD_ROOT_TO_ME_AND_ADDS, 7000);
@@ -1021,7 +1021,7 @@ public:
                 case EVENT_ANIMA_FONT:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
 
                     targets.remove_if(hasTouchAura());
 
@@ -1047,7 +1047,7 @@ public:
                 case EVENT_TOUCH_OF_THE_ANIMUS:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -1124,7 +1124,7 @@ public:
             _y = me->GetPositionY();
         }
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/)
         {
             events.RescheduleEvent(EVENT_SUMMON_ANIMA, 3000);
             me->DespawnOrUnsummon(20000);
@@ -1243,7 +1243,7 @@ public:
                 case EVENT_MOVE_TO_TARGET:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -1251,7 +1251,7 @@ public:
                     for (std::list<Unit*>::iterator itr = targets.begin(); itr != targets.end(); ++itr)
                     {
                         me->GetMotionMaster()->MoveChase((*itr));
-                        me->AddThreat((*itr), 99999999.9f);
+                        me->GetThreatManager().AddThreat((*itr), 99999999.9f);
                         me->AI()->AttackStart((*itr));
                         events.ScheduleEvent(EVENT_UNAURA_AND_AURA, 500);
                     }
@@ -1530,7 +1530,7 @@ public:
             me->SetUnitFlags(UNIT_FLAG_NOT_SELECTABLE);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             if (me->HasAura(9454))
             {
@@ -1582,14 +1582,14 @@ public:
     {
         PrepareAuraScript(bfa_spell_powered_down_AuraScript);
 
-        void HandleOnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (!GetCaster())
                 return;
             GetCaster()->SetUnitFlags(UNIT_FLAG_NON_ATTACKABLE);
         }
 
-        void HandleOnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (!GetCaster())
                 return;
@@ -1619,7 +1619,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_critically_damaged_AuraScript);
 
-        void HandleOnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (!GetCaster())
                 return;
@@ -1661,7 +1661,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_matter_swap_AuraScript);
 
-        void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* caster = GetCaster();
             Player* target = GetTarget()->ToPlayer();
@@ -1692,7 +1692,7 @@ public:
             }
         }
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             Player* target = GetTarget()->ToPlayer();
             Player* mostDistant = GetTarget()->ToPlayer();
@@ -1746,7 +1746,7 @@ public:
     {
         PrepareSpellScript(bfa_spell_siphon_anima_SpellScript);
 
-        void OnHit(SpellEffIndex index)
+        void OnHit(SpellEffIndex /*index*/)
         {
             Unit* caster = GetCaster();
 
@@ -1791,7 +1791,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_full_power_AuraScript);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             if (!GetCaster())
                 return;
@@ -1821,7 +1821,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_acceleration_link_AuraScript);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             Unit* caster = GetCaster();
 

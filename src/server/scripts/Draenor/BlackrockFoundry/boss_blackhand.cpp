@@ -1,5 +1,6 @@
 #include "boss_blackhand.h"
 #include "SpellAuraEffects.h"
+#include <algorithm>
 
 /// Blackhand <Warlord of the Blackrock> - 77325
 class boss_blackhand : public CreatureScript
@@ -166,7 +167,7 @@ class boss_blackhand : public CreatureScript
 
             uint32 m_SmashedCount;
 
-            bool CanRespawn()
+            bool CanRespawn() override
             {
                 return false;
             }
@@ -235,7 +236,7 @@ class boss_blackhand : public CreatureScript
                 Talk(eTalks::TalkSlay);
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
                 me->SetWalk(false);
 
@@ -243,7 +244,7 @@ class boss_blackhand : public CreatureScript
 
                 me->HandleEmoteCommand(0);
 
-                _EnterCombat();
+                _JustEngagedWith();
 
                 if (m_Instance != nullptr)
                 {
@@ -274,7 +275,7 @@ class boss_blackhand : public CreatureScript
                 m_CosmeticEvents.ScheduleEvent(eEvents::EventRegenerateEnergy, eTimers::TimerRegenerateEnergy);
             }
 
-            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER)
+            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER) override
             {
                 me->NearTeleportTo(me->GetHomePosition());
 
@@ -344,7 +345,7 @@ class boss_blackhand : public CreatureScript
                 {
                     case eSpells::ShatteringSmashCast:
                     {
-                        me->getThreatManager().modifyThreatPercent(p_Target, -100);
+                        me->GetThreatManager().ModifyThreatByPercent(p_Target, -100);
                         break;
                     }
                     case eSpells::ImpalingThrowPlayer:
@@ -375,7 +376,7 @@ class boss_blackhand : public CreatureScript
                 }
             }
 
-            void SpellMissTarget(Unit* p_Target, SpellInfo const* p_SpellInfo, SpellMissInfo /*p_MissInfo*/)
+            void SpellMissTarget(Unit* p_Target, SpellInfo const* p_SpellInfo, SpellMissInfo /*p_MissInfo*/) override
             {
                 if (p_Target == nullptr)
                     return;
@@ -385,7 +386,7 @@ class boss_blackhand : public CreatureScript
                     me->CastSpell(p_Target, eSpells::ImpaledAura, true);
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -560,7 +561,7 @@ class boss_blackhand : public CreatureScript
                 }
             }
 
-            void RegeneratePower(Powers /*p_Power*/, int32& p_Value)
+            void RegeneratePower(Powers /*p_Power*/, int32& p_Value) override
             {
                 /// Regens manually
                 p_Value = 0;
@@ -745,21 +746,21 @@ class boss_blackhand : public CreatureScript
                         if (m_PhaseID != ePhases::StorageWarehouse)
                             break;
 
-                        std::list<HostileReference*> l_ThreatList = me->getThreatManager().getThreatList();
+                        std::vector<ThreatReference*> l_ThreatList = me->GetThreatManager().GetModifiableThreatList();
                         if (!l_ThreatList.empty())
                         {
-                            l_ThreatList.remove_if([this](HostileReference* p_Ref) -> bool
+                            l_ThreatList.erase(std::remove_if(l_ThreatList.begin(), l_ThreatList.end(), [](ThreatReference* p_Ref) -> bool
                             {
-                                if (p_Ref == nullptr || p_Ref->getTarget() == nullptr || !p_Ref->getTarget()->IsPlayer())
+                                if (p_Ref == nullptr || p_Ref->GetVictim() == nullptr || !p_Ref->GetVictim()->IsPlayer())
                                     return true;
 
                                 return false;
-                            });
+                            }), l_ThreatList.end());
                         }
 
-                        for (HostileReference* l_Ref : l_ThreatList)
+                        for (ThreatReference* l_Ref : l_ThreatList)
                         {
-                            if (Unit* l_Unit = l_Ref->getTarget())
+                            if (Unit* l_Unit = l_Ref->GetVictim())
                             {
                                 if (l_Unit->m_positionZ < (g_SecondFloorJumpPos.m_positionZ - 5.0f))
                                     l_Unit->NearTeleportTo(g_SecondFloorJumpPos);
@@ -1043,7 +1044,7 @@ class npc_foundry_blackrock_foundry : public CreatureScript
                 m_ScaleTime = -1;
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -1257,7 +1258,7 @@ class npc_foundry_slag_bomb : public CreatureScript
                     me->CastSpell(p_Target, eSpells::SlaggedAura, true);
             }
 
-            void OnSpellCasted(SpellInfo const* p_SpellInfo)
+            void OnSpellCasted(SpellInfo const* p_SpellInfo) override
             {
                 if (p_SpellInfo->Id == eSpells::SlagBombAoE)
                     me->DespawnOrUnsummon(200);
@@ -1609,7 +1610,7 @@ class npc_foundry_siegemaker : public CreatureScript
                     if ([[maybe_unused]] TempSummon* l_Temp = me->ToTempSummon())
                     {
                         if (Unit* l_Owner = me->ToTempSummon()->GetSummoner())
-                            EnterCombat(l_Owner->GetVictim());
+                            JustEngagedWith(l_Owner->GetVictim());
                     }
 
                     //AddTimedDelayedOperation(1 * TimeConstants::IN_MILLISECONDS, [this]() -> void
@@ -1636,8 +1637,8 @@ class npc_foundry_siegemaker : public CreatureScript
                     {
                         m_Target = p_Target->GetGUID();
 
-                        DoResetThreat();
-                        me->AddThreat(p_Target, 1000000.0f);
+                        ResetThreatList();
+                        me->GetThreatManager().AddThreat(p_Target, 1000000.0f);
 
                         AttackStart(p_Target);
 
@@ -1654,7 +1655,7 @@ class npc_foundry_siegemaker : public CreatureScript
                 }
             }
 
-            void OnSpellCasted(SpellInfo const* p_SpellInfo)
+            void OnSpellCasted(SpellInfo const* p_SpellInfo) override
             {
                 switch (p_SpellInfo->Id)
                 {
@@ -1668,7 +1669,7 @@ class npc_foundry_siegemaker : public CreatureScript
                 }
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
                 if (me->GetReactState() == ReactStates::REACT_PASSIVE)
                     return;
@@ -1712,7 +1713,7 @@ class npc_foundry_siegemaker : public CreatureScript
                 }
             }
 
-            void RegeneratePower(Powers /*p_Power*/, int32& p_Value)
+            void RegeneratePower(Powers /*p_Power*/, int32& p_Value) override
             {
                 /// Only regens by script
                 p_Value = 0;
@@ -1801,7 +1802,7 @@ class npc_foundry_blaze_controller : public CreatureScript
                 m_Controller.Clear();
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -1854,7 +1855,7 @@ class npc_foundry_blaze_controller : public CreatureScript
                 }
             }
 
-            void SetGUID(ObjectGuid p_Guid, int32 /*p_ID*/ /*= 0*/)
+            void SetGUID(ObjectGuid p_Guid, int32 /*p_ID*/ /*= 0*/) override
             {
                 m_Controller = p_Guid;
             }
@@ -1950,7 +1951,7 @@ class npc_foundry_blackrock_foundry_third_phase : public CreatureScript
                 me->AddUnitFlag(UnitFlags(UNIT_FLAG_REMOVE_CLIENT_CONTROL));
             }
 
-            void DoAction(int32  p_Action) 
+            void DoAction(int32  p_Action) override
             {
                 switch (p_Action)
                 {
@@ -2121,7 +2122,7 @@ class npc_foundry_slag_hole : public CreatureScript
                     me->CastSpell(me, eSpells::SlagEruptionVisual, true);
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -2181,7 +2182,7 @@ class npc_foundry_slag_crater : public CreatureScript
                     me->CastSpell(me, eSpells::HugeSlagEruptionAura, true);
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -2234,7 +2235,7 @@ class npc_foundry_achievement_stalker : public CreatureScript
                 me->AddUnitFlag(UnitFlags(UNIT_FLAG2_DISABLE_TURN));
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -2254,7 +2255,7 @@ class npc_foundry_achievement_stalker : public CreatureScript
                 }
             }
 
-            void OnSpellCasted(SpellInfo const* p_SpellInfo)
+            void OnSpellCasted(SpellInfo const* p_SpellInfo) override
             {
                 switch (p_SpellInfo->Id)
                 {

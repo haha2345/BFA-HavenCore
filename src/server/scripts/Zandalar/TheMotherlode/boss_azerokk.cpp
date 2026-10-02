@@ -172,7 +172,7 @@ struct bfa_boss_azerokk : public BossAI {
         BossAI::JustDied(killer);
     }
 
-    void EnterCombat(Unit* who) override
+    void JustEngagedWith(Unit* who) override
     {
         Talk(SAY_AGGRO);
         PlayAnimKits();
@@ -187,7 +187,7 @@ struct bfa_boss_azerokk : public BossAI {
         events.ScheduleEvent(EVENT_CALL_EARTHRAGER, TIMER_CALL_EARTHRAGER);
         events.ScheduleEvent(EVENT_AZERITE_INFUSION, TIMER_AZERITE_INFUSION);
         events.ScheduleEvent(EVENT_RESONANT_PULSE, TIMER_RESONANT_PULSE);
-        BossAI::EnterCombat(who);
+        BossAI::JustEngagedWith(who);
     }
 
     void PlayAnimKits()
@@ -204,14 +204,14 @@ struct bfa_boss_azerokk : public BossAI {
             reager->SetInCombatWithZone();
     }
 
-    void EnterEvadeMode(EvadeReason /*why*/)
+    void EnterEvadeMode(EvadeReason /*why*/) override
     {
         BossAI::EnterEvadeMode();
         me->GetMotionMaster()->MoveTargetedHome();
         Reset();
     }
 
-    void OnSpellFinished(SpellInfo const* spellInfo) /*override*/
+    void OnSpellFinished(SpellInfo const* spellInfo) override
     {
         switch (spellInfo->Id)
         {
@@ -313,7 +313,7 @@ struct bfa_npc_earthrager : public ScriptedAI {
         events.Reset();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         events.ScheduleEvent(EVENT_FIXATE, 2000);
         events.ScheduleEvent(EVENT_JAGGED_CUT, 3000);
@@ -401,7 +401,7 @@ struct bfa_npc_fracking_totem : public ScriptedAI {
     void SetInCombat(Player* invoker, Unit* earthrager)
     {
         earthrager->SetInCombatWith(invoker);
-        earthrager->getThreatManager().addThreat(invoker, 999999.9f);
+        earthrager->GetThreatManager().AddThreat(invoker, 999999.9f);
         invoker->SetInCombatWith(earthrager);
         me->SetInCombatWithZone();
     }

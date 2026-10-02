@@ -170,12 +170,12 @@ private:
 		}
 	}
 
-	void EnterCombat(Unit* /*who*/) override
+	void JustEngagedWith(Unit* /*who*/) override
 	{
 		switch (me->GetEntry())
 		{
 		case NPC_KAZIR:
-			_EnterCombat();
+			_JustEngagedWith();
 			events.ScheduleEvent(EVENT_POWER_GAIN, 1s);
 			darkReconstruction = false;
 			events.ScheduleEvent(EVENT_SPAWN_ACIDIC_AQIR, 45s);
@@ -187,7 +187,7 @@ private:
 			break;
 
 		case NPC_TEKRIS:
-			_EnterCombat();
+			_JustEngagedWith();
 			events.ScheduleEvent(EVENT_POWER_GAIN, 1s);
 			me->GetScheduler().Schedule(3s, [this](TaskContext /*context*/)
 			{
@@ -264,7 +264,7 @@ private:
 			break;
 
 		case EVENT_NULLIFICATION_BLAST:
-			if (Unit* tank = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+			if (Unit* tank = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
 			{
 				me->SetFacingToObject(tank, true);
 				me->CastSpell(tank, SPELL_NULLIFICATION_BLAST, false);
@@ -366,7 +366,7 @@ private:
 		}
 	}
 
-	void DamageTaken(Unit* done_by, uint32& damage) override
+	void DamageTaken(Unit* done_by, uint32& /*damage*/) override
 	{
 		switch (me->GetEntry())
 		{
@@ -416,7 +416,7 @@ private:
 		_DespawnAtEvade();
 	}
 
-	void CleanEncounter(InstanceScript* instance, Creature* me)
+	void CleanEncounter(InstanceScript* /*instance*/, Creature* me)
 	{
 		me->DespawnCreaturesInArea(NPC_AQIR_DRONE, 125.0f);
 		me->DespawnCreaturesInArea(NPC_AQIR_DARTER, 125.0f);
@@ -501,7 +501,7 @@ struct npc_hivemind : public ScriptedAI
 		}
 	}
 
-	void EnterCombat(Unit* /*who*/) override
+	void JustEngagedWith(Unit* /*who*/) override
 	{
 		switch (me->GetEntry())
 		{
@@ -527,7 +527,7 @@ struct npc_hivemind : public ScriptedAI
 		case EVENT_FIXATE:
 			if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
 			{
-				me->AddThreat(target, 1000.0f, SpellSchoolMask::SPELL_SCHOOL_MASK_NORMAL);
+				me->GetThreatManager().AddThreat(target, 1000.0f);
 				me->CastSpell(target, SPELL_FIXATE, true);				
 			}
 			break;
@@ -538,7 +538,7 @@ struct npc_hivemind : public ScriptedAI
 			break;
 
 		case EVENT_RAVAGE:
-			if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+			if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
 				me->CastSpell(target, SPELL_RAVAGE, false);
 			events.Repeat(18s);
 			break;

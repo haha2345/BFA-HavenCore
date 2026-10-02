@@ -314,7 +314,7 @@ class boss_malkorok : public CreatureScript
                 me->SetReactState(REACT_DEFENSIVE);
             }
 
-            void EnterCombat(Unit* /*unit*/) override
+            void JustEngagedWith(Unit* /*unit*/) override
             {
                 Talk(SAY_AGGRO);
 
@@ -1185,12 +1185,7 @@ class spell_malkorok_ancient_miasma_heal_absorb : public SpellScriptLoader
                 if (AuraEffect* aurEffect = GetUnitOwner()->GetAuraEffect(SPELL_ANCIENT_BARRIER, EFFECT_0))
                 {
                     uint32 oldAmount = aurEffect->GetAmount();
-                    //uint32 newAmount = std::min(GetUnitOwner()->GetMaxHealth(), oldAmount + absorbAmount);
-                    uint32 newAmount;
-                    if (GetUnitOwner()->GetMaxHealth() < oldAmount + absorbAmount)
-                        newAmount = uint32(GetUnitOwner()->GetMaxHealth());
-                    else if (oldAmount + absorbAmount < GetUnitOwner()->GetMaxHealth())
-                        newAmount = oldAmount + absorbAmount;
+                    uint32 newAmount = std::min(uint32(GetUnitOwner()->GetMaxHealth()), oldAmount + absorbAmount);
 
                     if (oldAmount != newAmount)
                     {
@@ -1371,7 +1366,7 @@ class spell_malkorok_displaced_energy : public SpellScriptLoader
                 {
                     uint8 targetsCount = pCreature->GetMap()->Is25ManRaid() ? 4 : 2;
                     std::list<Unit*> newTargets;
-                    pCreature->AI()->SelectTargetList(newTargets, DisplacedEnergyTargetSelector(pCreature), targetsCount, SELECT_TARGET_RANDOM);
+                    pCreature->AI()->SelectTargetList(newTargets, targetsCount, SELECT_TARGET_RANDOM, 0, DisplacedEnergyTargetSelector(pCreature));
 
                     for (auto target : newTargets)
                         targets.push_back(target);

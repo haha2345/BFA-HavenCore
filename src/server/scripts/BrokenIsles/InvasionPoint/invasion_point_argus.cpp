@@ -34,6 +34,7 @@
 #include "SpellScript.h"
 #include "WorldQuestMgr.h"
 #include "GameEventMgr.h"
+#include <algorithm>
 
 enum events
 {
@@ -151,12 +152,12 @@ struct npc_baldrazar : ScriptedAI
         DespawnAllSummons();
     }
 
-    void EnterEvadeMode(EvadeReason why) override
+    void EnterEvadeMode(EvadeReason /*why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -326,12 +327,12 @@ struct npc_dreadbringer_valus : ScriptedAI
         //me->RemoveAllAreaObjects();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -341,7 +342,7 @@ struct npc_dreadbringer_valus : ScriptedAI
         events.ScheduleEvent(EVENT_3, 85000);
     }
 
-    void JustSummoned(Creature* summon)
+    void JustSummoned(Creature* summon) override
     {
         summons.Summon(summon);
 
@@ -362,7 +363,7 @@ struct npc_dreadbringer_valus : ScriptedAI
                 (*itr)->DespawnOrUnsummon();
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -510,12 +511,12 @@ struct npc_vogrethar_the_defiled : ScriptedAI
         DespawnAllSummons();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -535,7 +536,7 @@ struct npc_vogrethar_the_defiled : ScriptedAI
                 (*itr)->DespawnOrUnsummon();
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -683,12 +684,12 @@ struct npc_flamebringer_azrothel : ScriptedAI
         DespawnAllSummons();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -709,7 +710,7 @@ struct npc_flamebringer_azrothel : ScriptedAI
                 (*itr)->DespawnOrUnsummon();
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -860,12 +861,12 @@ struct npc_gorgoloth : ScriptedAI
         //me->RemoveAllAreaObjects();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -874,7 +875,7 @@ struct npc_gorgoloth : ScriptedAI
         events.ScheduleEvent(EVENT_2, 21000);
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -1018,12 +1019,12 @@ struct npc_flameweaver_verathix : ScriptedAI
         DespawnAllSummons();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -1042,7 +1043,7 @@ struct npc_flameweaver_verathix : ScriptedAI
                 (*itr)->DespawnOrUnsummon();
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -1188,12 +1189,12 @@ struct npc_velthrak_the_punisher : ScriptedAI
         DespawnAllSummons();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -1204,7 +1205,7 @@ struct npc_velthrak_the_punisher : ScriptedAI
         events.ScheduleEvent(EVENT_4, 11000);
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -1294,7 +1295,7 @@ struct npc_velthrak_the_punisher : ScriptedAI
         }
     }
 
-    void JustSummoned(Creature* summon)
+    void JustSummoned(Creature* summon) override
     {
         summons.Summon(summon);
         summon->SetReactState(REACT_PASSIVE);
@@ -1383,12 +1384,12 @@ struct npc_mazgoroth : ScriptedAI
         //me->RemoveAllAreaObjects();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -1397,7 +1398,7 @@ struct npc_mazgoroth : ScriptedAI
         events.ScheduleEvent(EVENT_2, 16000);
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -1510,18 +1511,18 @@ struct npc_mazgoroth : ScriptedAI
             {
             case EVENT_1:
             {
-                auto threatlist = me->getThreatManager().getThreatList();
+                auto threatlist = me->GetThreatManager().GetModifiableThreatList();
 
                 for (uint8 i = 0; i < 3; ++i)
                 {
                     if (threatlist.empty())
                         break;
 
-                    auto itr = Trinity::Containers::SelectRandomContainerElement(threatlist);
-                    if (Unit* target = itr->getTarget())
+                    ThreatReference* ref = Trinity::Containers::SelectRandomContainerElement(threatlist);
+                    if (Unit* target = ref->GetVictim())
                         DoCast(target, 248501, false);
 
-                    threatlist.remove(itr);
+                    threatlist.erase(std::remove(threatlist.begin(), threatlist.end(), ref), threatlist.end());
                 }
                 events.ScheduleEvent(EVENT_1, 45000);
                 break;
@@ -1529,7 +1530,7 @@ struct npc_mazgoroth : ScriptedAI
             case EVENT_2:
                 DoCast(248509);
                 if (auto victim = me->GetVictim())
-                    me->AddThreat(victim, 0.0f);
+                    me->GetThreatManager().AddThreat(victim, 0.0f);
                 events.ScheduleEvent(EVENT_2, 32000);
                 break;
             }
@@ -1558,12 +1559,12 @@ struct npc_malphazel_argus : ScriptedAI
         DespawnAllSummons();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -1573,7 +1574,7 @@ struct npc_malphazel_argus : ScriptedAI
         events.ScheduleEvent(EVENT_3, 25000);
     }
 
-    void JustSummoned(Creature* summon)
+    void JustSummoned(Creature* summon) override
     {
         summons.Summon(summon);
 
@@ -1598,7 +1599,7 @@ struct npc_malphazel_argus : ScriptedAI
                 (*itr)->DespawnOrUnsummon();
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -1694,7 +1695,7 @@ struct npc_malphazel_argus : ScriptedAI
         {
         case 249245:
             if (auto victim = me->GetVictim())
-                me->AddThreat(victim, 0.0f);
+                me->GetThreatManager().AddThreat(victim, 0.0f);
             break;
         }
     }
@@ -1757,12 +1758,12 @@ struct npc_fel_lord_kazral : ScriptedAI
         DespawnAllSummons();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -1786,7 +1787,7 @@ struct npc_fel_lord_kazral : ScriptedAI
            //     (*itr)->RemoveFromOwner();
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -1929,12 +1930,12 @@ struct npc_harbinger_drelnathar : ScriptedAI
         //me->RemoveAllAreaObjects();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -1944,7 +1945,7 @@ struct npc_harbinger_drelnathar : ScriptedAI
         events.ScheduleEvent(EVENT_3, 26000);
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -2091,12 +2092,12 @@ struct npc_flamecaller_vezrah : ScriptedAI
         //me->RemoveAllAreaObjects();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -2105,7 +2106,7 @@ struct npc_flamecaller_vezrah : ScriptedAI
         events.ScheduleEvent(EVENT_2, 10000);
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -2249,12 +2250,12 @@ struct npc_dread_knight_zakgal : ScriptedAI
         DespawnAllSummons();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -2273,7 +2274,7 @@ struct npc_dread_knight_zakgal : ScriptedAI
                 (*itr)->DespawnOrUnsummon();
     }
 
-    void MoveInLineOfSight(Unit* who) override
+    void MoveInLineOfSight(Unit* /*who*/) override
     {
         if (Intro)
             return;
@@ -2415,7 +2416,7 @@ struct npc_fragment_of_argus : ScriptedAI
         //me->RemoveAllAreaObjects();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
@@ -2442,7 +2443,7 @@ struct npc_fragment_of_argus : ScriptedAI
 
     bool checkPlayers()
     {
-        std::list<HostileReference*> threatList = me->getThreatManager().getThreatList();
+        std::vector<ThreatReference*> threatList = me->GetThreatManager().GetModifiableThreatList();
         if (threatList.size() >= 1)
             return true;
 
@@ -2607,7 +2608,7 @@ struct npc_shadowy_illusion_argus : ScriptedAI
         events.Reset();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         me->DespawnOrUnsummon();
         ScriptedAI::EnterEvadeMode();
@@ -2686,7 +2687,7 @@ struct npc_temporal_anomaly : ScriptedAI
      //   });
     }*/
 
-    void DoAction(int32 const action) override
+    void DoAction(int32 const /*action*/) override
     {
         //switch (action)
         //{
@@ -2733,7 +2734,7 @@ struct npc_demon_hunter_val : ScriptedAI
         me->RemoveNpcFlag(UNIT_NPC_FLAG_SPELLCLICK);
     }
 
-    void DoAction(int32 const action) override
+    void DoAction(int32 const /*action*/) override
     {
         //switch (action)
         //{
@@ -2804,13 +2805,13 @@ struct npc_felflame_invader : ScriptedAI
                 me->CastSpell(c, 252327, false);
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         Talk(0);
         events.ScheduleEvent(EVENT_1, 2000);
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
@@ -2888,7 +2889,7 @@ struct npc_felflame_subjugator : ScriptedAI
             DoCast(252628);
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         Talk(0);
         events.ScheduleEvent(EVENT_1, 2000);
@@ -2899,7 +2900,7 @@ struct npc_felflame_subjugator : ScriptedAI
         //me->RemoveAllAreaObjects();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
@@ -2941,7 +2942,7 @@ struct npc_crazed_corruptor : ScriptedAI
         //me->RemoveAllAreaObjects();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         if (me->GetZoneId() == 9126)
             DoCast(251896);
@@ -2960,7 +2961,7 @@ struct npc_crazed_corruptor : ScriptedAI
         }
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
@@ -3034,7 +3035,7 @@ struct npc_magma_giant : ScriptedAI
         }
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         events.ScheduleEvent(EVENT_1, 18000);
         events.ScheduleEvent(EVENT_2, 3000);
@@ -3045,12 +3046,12 @@ struct npc_magma_giant : ScriptedAI
         //me->RemoveAllAreaObjects();
     }
 
-    void EnterEvadeMode(EvadeReason Why) override
+    void EnterEvadeMode(EvadeReason /*Why*/) override
     {
         ScriptedAI::EnterEvadeMode();
     }
 
-    void JustSummoned(Creature* summon)
+    void JustSummoned(Creature* summon) override
     {
         summons.Summon(summon);
 
@@ -3071,7 +3072,7 @@ struct npc_magma_giant : ScriptedAI
      //   });
     }
 
-    void MovementInform(uint32 type, uint32 data)
+    void MovementInform(uint32 type, uint32 data) override
     {
         if (type == POINT_MOTION_TYPE)
         {
@@ -3080,7 +3081,7 @@ struct npc_magma_giant : ScriptedAI
         }
     }
 
-    void DoAction(int32 const action) override
+    void DoAction(int32 const /*action*/) override
     {
         //switch (action)
         //{
@@ -3176,7 +3177,7 @@ class spell_fire_enchanted : public AuraScript
 {
     PrepareAuraScript(spell_fire_enchanted);
 
-    void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         Unit* caster = GetCaster();
         if (!caster)
@@ -3197,7 +3198,7 @@ class spell_spore_filled : public AuraScript
 {
     PrepareAuraScript(spell_spore_filled);
 
-    void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         Unit* caster = GetCaster();
         if (!caster)
@@ -3218,7 +3219,7 @@ class spell_cripple : public AuraScript
 {
     PrepareAuraScript(spell_cripple);
 
-    void OnProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    void OnProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
     {
         Unit* target = GetTarget();
         if (!target)
@@ -3252,7 +3253,7 @@ class spell_creeping_doom_argus_dummy : public SpellScript
         });
     }
 
-    void HandleDummy(SpellEffIndex effIndex)
+    void HandleDummy(SpellEffIndex /*effIndex*/)
     {
         Unit* caster = GetCaster();
         Unit* target = GetHitUnit();

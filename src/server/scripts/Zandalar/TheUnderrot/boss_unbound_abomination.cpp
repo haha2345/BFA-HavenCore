@@ -142,7 +142,7 @@ public:
             }
         }
 
-        void Reset()
+        void Reset() override
         {
             _Reset();
             events.Reset();
@@ -150,7 +150,7 @@ public:
             me->RemoveAllAreaTriggers();
         }
         
-        void JustSummoned(Creature* summon)
+        void JustSummoned(Creature* summon) override
         {
             summons.Summon(summon);
 
@@ -167,7 +167,7 @@ public:
             }
         }
 
-        void JustDied(Unit*)
+        void JustDied(Unit*) override
         {
             _JustDied();
             SelectSoundAndText(me, 2);
@@ -180,14 +180,14 @@ public:
             me->RemoveAllAreaTriggers();
         }
 
-        void EnterEvadeMode(EvadeReason /*why*/)
+        void EnterEvadeMode(EvadeReason /*why*/) override
         {
             if (Creature* titan = GetTitan())
                 titan->DespawnOrUnsummon();
             _DespawnAtEvade(15);
         }
 
-        void DoAction(int32 action)
+        void DoAction(int32 action) override
         {
             switch (action)
             {
@@ -211,7 +211,7 @@ public:
             }
         }
 
-        void DamageTaken(Unit* /*at*/, uint32& damage)
+        void DamageTaken(Unit* /*at*/, uint32& damage) override
         {
             if (me->HasAura(SPELL_BLOOD_BARRIER))
             {
@@ -225,10 +225,10 @@ public:
             return me->FindNearestCreature(NPC_TITAN_KEEPER_HEZREL, 500.0f, true);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*) override
         {
             SelectSoundAndText(me, 1);
-            _EnterCombat();
+            _JustEngagedWith();
             visage = 0;
 
             me->RemoveAllAreaTriggers();
@@ -250,7 +250,7 @@ public:
             case SPELL_VILE_EXPULSION:
             {
                 std::list<Unit*> targets;
-                SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
 
                 if (!targets.empty())
                     if (targets.size() >= 1)
@@ -265,7 +265,7 @@ public:
             }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             events.Update(diff);
 
@@ -346,7 +346,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             if (me->GetPositionZ() >= -100.f)
                 return;
@@ -459,7 +459,7 @@ public:
                     me->TextEmote(str.str().c_str(), 0, true);
 
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 1, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 1, SELECT_TARGET_RANDOM, 0, 500.0f, true);
 
                     if (!targets.empty())
                         if (targets.size() >= 1)
@@ -545,7 +545,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             me->SetReactState(REACT_AGGRESSIVE);
 
@@ -598,7 +598,7 @@ public:
                 case EVENT_FIXATE:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 1, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 1, SELECT_TARGET_RANDOM, 0, 500.0f, true);
 
                     if (!targets.empty())
                         if (targets.size() >= 1)
@@ -606,7 +606,7 @@ public:
 
                     for (Unit* target : targets)
                     {
-                        me->AddThreat(target, 9999999999.9f);
+                        me->GetThreatManager().AddThreat(target, 9999999999.9f);
                         me->AI()->AttackStart(target);
                     }
                     events.ScheduleEvent(EVENT_FIXATE_FOLLOW, 2000);

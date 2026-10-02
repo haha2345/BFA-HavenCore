@@ -119,7 +119,7 @@ public:
 		EventMap events;
 		InstanceScript* instance;
 
-		void Reset()
+		void Reset() override
 		{
 			instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
 
@@ -130,18 +130,18 @@ public:
 			DespawnCreature(NPC_MONSOON);
 		}
 
-		void EnterEvadeMode(EvadeReason /*reason*/) 
+		void EnterEvadeMode(EvadeReason /*reason*/) override
 		{
 			me->NearTeleportTo(me->GetHomePosition());
 			Reset();
 		}
 
-		void KilledUnit(Unit* /*target*/) 
+		void KilledUnit(Unit* /*target*/) override
 		{
 			SelectSoundAndText(me, 6);
 		}
 
-		void JustDied(Unit* /**/) 
+		void JustDied(Unit* /**/) override
 		{
 			DespawnCreature(NPC_SALTSEA_GLOBULE);
 			DespawnCreature(NPC_MONSOON);
@@ -172,7 +172,7 @@ public:
 			return true;
 		}
 
-		void EnterCombat(Unit*)
+		void JustEngagedWith(Unit*) override
 		{
 			SelectSoundAndText(me, 1);
 			instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
@@ -364,7 +364,7 @@ public:
 			}
 		}
 
-		void UpdateAI(uint32 diff)
+		void UpdateAI(uint32 diff) override
 		{
 			if (!UpdateVictim())
 				return;
@@ -429,7 +429,7 @@ public:
 					me->TextEmote(str.str().c_str(), 0, true);
 
 					std::list<Unit*> targets;
-					SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+					SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
 
 					if (!targets.empty())
 						for (std::list<Unit*>::iterator itr = targets.begin(); itr != targets.end(); ++itr)
@@ -599,7 +599,7 @@ public:
 					for (auto validTarget : targetList)
 					{
 						me->AI()->AttackStart(validTarget);
-						me->AddThreat(validTarget, 999999999.9f);
+						me->GetThreatManager().AddThreat(validTarget, 999999999.9f);
 					}
 
 					break;
@@ -672,7 +672,7 @@ public:
 	public:
 		PrepareAuraScript(bfa_spell_curse_of_witch_AuraScript);
 
-		void HandleEffectRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+		void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
 		{
 			if (!GetUnitOwner() || !GetCaster())
 				return;

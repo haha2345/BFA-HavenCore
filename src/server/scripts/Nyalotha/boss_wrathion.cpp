@@ -219,9 +219,9 @@ private:
         me->RemoveUnitFlag2(UnitFlags2(UNIT_FLAG2_SELECTION_DISABLED));
     }
 
-    void EnterCombat(Unit* u) override
+    void JustEngagedWith(Unit* u) override
     {
-        BossAI::EnterCombat(u);
+        BossAI::JustEngagedWith(u);
         Talk(SAY_AGGRO);
         this->cracklingShards = 0;
         SchedulePhase1();
@@ -274,7 +274,7 @@ private:
             {
                 Talk(SAY_INCINERATION);
                 UnitList u_li;
-                SelectTargetList(u_li, 3, SELECT_TARGET_RANDOM, 100.0f, true);
+                SelectTargetList(u_li, 3, SELECT_TARGET_RANDOM, 0, 100.0f, true);
                 for (Unit* targets : u_li)
                 {
                     me->CastSpell(targets, SPELL_INCINERATION, true);
@@ -375,7 +375,7 @@ private:
             case SPELL_GALE_BLAST:
             {
                 UnitList u_li;
-                SelectTargetList(u_li, 5, SELECT_TARGET_RANDOM, 100.f, true);
+                SelectTargetList(u_li, 5, SELECT_TARGET_RANDOM, 0, 100.f, true);
                 for (Unit* targets : u_li)
                 {
                     AddTimedDelayedOperation(1000, [this, targets]() -> void
@@ -584,7 +584,7 @@ class spell_wrathion_searing_breath_targets : public SpellScript
 {
     PrepareSpellScript(spell_wrathion_searing_breath_targets);
 
-    void HandleHitTarget(SpellEffIndex effIndex)
+    void HandleHitTarget(SpellEffIndex /*effIndex*/)
     {
         if (Unit* target = GetHitUnit())
         {
@@ -617,7 +617,7 @@ class spell_wrathion_incineration_targets : public SpellScript
         targetsList = tempTargets;
     }
 
-    void HandleHitTarget(SpellEffIndex effIndex)
+    void HandleHitTarget(SpellEffIndex /*effIndex*/)
     {
         if (Unit* target = GetHitUnit())
             GetCaster()->CastSpell(target, SPELL_INCINERATION, true);
@@ -654,7 +654,7 @@ class aura_wrathion_burning_cataclysm : public AuraScript
 
     void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (Unit* caster = GetCaster())
+        if (GetCaster())
             for (uint8 i = 0; i < 15; ++i)
                 GetCaster()->CastSpell(GetRandomRoomPosition(), SPELL_MOLTEN_ERUPTION_MISSILE, true);
     }
@@ -670,7 +670,7 @@ class spell_wrathion_burning_cataclysm_teleport : public SpellScript
 {
     PrepareSpellScript(spell_wrathion_burning_cataclysm_teleport);
 
-    void HandleHitTarget(SpellEffIndex effIndex)
+    void HandleHitTarget(SpellEffIndex /*effIndex*/)
     {
         Unit* caster = GetCaster();
 
@@ -732,7 +732,7 @@ class spell_wrathion_creeping_madness_targets : public SpellScript
         targetsList = tempTargets;
     }
 
-    void HandleHitTarget(SpellEffIndex effIndex)
+    void HandleHitTarget(SpellEffIndex /*effIndex*/)
     {
         if (Unit* target = GetHitUnit())
             GetCaster()->CastSpell(target, SPELL_CREEPING_MADNESS, true);
@@ -869,7 +869,7 @@ struct at_wrathion_smoke_and_mirrors : public AreaTriggerAI
         if (unit->GetEntry() != NPC_WRATHION)
             return;
 
-        unit->GetScheduler().Schedule(1s, [this, unit](TaskContext context)
+        unit->GetScheduler().Schedule(1s, [this, unit](TaskContext /*context*/)
         {
             if (!unit->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE) || !unit->HasUnitFlag2(UNIT_FLAG2_SELECTION_DISABLED))
             {

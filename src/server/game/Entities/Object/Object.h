@@ -415,6 +415,10 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         {
             return GetPhaseShift().CanSee(obj->GetPhaseShift());
         }
+        static bool InSamePhase(WorldObject const* a, WorldObject const* b)
+        {
+            return a && b && a->IsInPhase(b);
+        }
 
         PhaseShift& GetPhaseShift() { return _phaseShift; }
         PhaseShift const& GetPhaseShift() const { return _phaseShift; }
@@ -516,8 +520,8 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
 
         TempSummon* SummonCreature(uint32 id, Position const& pos, TempSummonType spwtype = TEMPSUMMON_MANUAL_DESPAWN, uint32 despwtime = 0, uint32 vehId = 0, bool visibleBySummonerOnly = false);
         TempSummon* SummonCreature(uint32 id, float x, float y, float z, float ang = 0, TempSummonType spwtype = TEMPSUMMON_MANUAL_DESPAWN, uint32 despwtime = 0, bool visibleBySummonerOnly = false);
-        GameObject* SummonGameObject(uint32 entry, Position const& pos, QuaternionData const& rot, uint32 respawnTime /* s */, bool visibleBySummonerOnly = false);
-        GameObject* SummonGameObject(uint32 entry, float x, float y, float z, float ang, QuaternionData const& rot, uint32 respawnTime /* s */, bool visibleBySummonerOnly = false);
+        GameObject* SummonGameObject(uint32 entry, Position const& pos, QuaternionData const& rot, uint32 respawnTime /* s */, bool visibleBySummonerOnly = false, ObjectGuid guildGuid = ObjectGuid::Empty);
+        GameObject* SummonGameObject(uint32 entry, float x, float y, float z, float ang, QuaternionData const& rot, uint32 respawnTime /* s */, bool visibleBySummonerOnly = false, ObjectGuid guildGuid = ObjectGuid::Empty);
         Creature*   SummonTrigger(float x, float y, float z, float ang, uint32 dur, CreatureAI* (*GetAI)(Creature*) = nullptr);
         void SummonCreatureGroup(uint8 group, std::list<TempSummon*>* list = nullptr);
 
@@ -574,9 +578,7 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         void AddToNotify(uint16 f) { m_notifyflags |= f;}
         bool isNeedNotify(uint16 f) const { return (m_notifyflags & f) != 0; }
         uint16 GetNotifyFlags() const { return m_notifyflags; }
-        bool NotifyExecuted(uint16 f) const { return (m_executed_notifies & f) != 0; }
-        void SetNotified(uint16 f) { m_executed_notifies |= f;}
-        void ResetAllNotifies() { m_notifyflags = 0; m_executed_notifies = 0; }
+        void ResetAllNotifies() { m_notifyflags = 0; }
 
         bool isActiveObject() const { return m_isActive; }
         void setActive(bool isActiveObject);
@@ -655,7 +657,6 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         bool m_visibleBySummonerOnly;
 
         uint16 m_notifyflags;
-        uint16 m_executed_notifies;
         virtual bool _IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D) const;
 
         bool CanNeverSee(WorldObject const* obj) const;

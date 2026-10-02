@@ -188,7 +188,7 @@ void WildBattlePetMgr::ReplaceCreature(Creature* creature, WildPetPoolTemplate* 
 
     // Set creature flags
     replacementCreature->SetNpcFlags(UNIT_NPC_FLAG_WILD_BATTLE_PET);
-    replacementCreature->SetUnitFlags(UNIT_FLAG_IMMUNE_TO_NPC);
+    replacementCreature->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
     replacementCreature->SetWildBattlePetLevel(battlePetInstance->Level);
     replacementCreature->SetRespawnRadius(3.5f);
     replacementCreature->SetDefaultMovementType(RANDOM_MOTION_TYPE);
@@ -279,7 +279,7 @@ void WildBattlePetMgr::EnableWildBattle(Creature* creature)
 
     // Set creature flags
     creature->AddNpcFlag(UNIT_NPC_FLAG_WILD_BATTLE_PET);
-    creature->SetUnitFlags(UNIT_FLAG_IMMUNE_TO_NPC);
+    creature->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
     creature->SetWildBattlePetLevel(battlePetInstance->Level);
 }
 

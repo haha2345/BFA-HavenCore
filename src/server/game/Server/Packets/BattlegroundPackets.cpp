@@ -131,6 +131,14 @@ WorldPacket const* WorldPackets::Battleground::PVPMatchStatistics::Write()
     return &_worldPacket;
 }
 
+WorldPacket const* WorldPackets::Battleground::PVPMatchComplete::Write()
+{
+    _worldPacket << int32(Winner);
+    _worldPacket << uint32(Duration);
+
+    return &_worldPacket;
+}
+
 void WorldPackets::Battleground::BattlemasterJoin::Read()
 {
     QueueIDs.resize(_worldPacket.read<uint32>());

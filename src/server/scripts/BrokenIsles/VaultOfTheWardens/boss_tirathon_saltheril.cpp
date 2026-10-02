@@ -95,10 +95,10 @@ public:
             me->SetReactState(REACT_AGGRESSIVE);
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             Talk(SAY_AGGRO);
-            _EnterCombat();
+            _JustEngagedWith();
 
             events.RescheduleEvent(EVENT_DARKSTRIKES, 16000);
             events.RescheduleEvent(EVENT_SWOOP, 22000);
@@ -350,7 +350,7 @@ public:
         bool phaseSecond;
         bool phaseThree;
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             me->RemoveAurasDueToSpell(200888);
             me->RemoveAurasDueToSpell(204879);
@@ -361,7 +361,7 @@ public:
             phaseThree = false;
         }
 
-        void DamageTaken(Unit* attacker, uint32& damage) override
+        void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/) override
         {
             if (me->HealthBelowPct(60) && !phaseSecond)
             {
@@ -382,7 +382,7 @@ public:
             }
         }
 
-        void JustDied(Unit* killer) override
+        void JustDied(Unit* /*killer*/) override
         {
             if (Creature* conv = me->SummonCreature(950002, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ() - 10.0f, me->GetOrientation()))
             {
@@ -553,7 +553,7 @@ class spell_tirathon_darkstrikes : public AuraScript
 
     uint32 procDelay = 0;
 
-    void OnProc(AuraEffect const* /*auraEffect*/, ProcEventInfo& eventInfo)
+    void OnProc(AuraEffect const* /*auraEffect*/, ProcEventInfo& /*eventInfo*/)
     {
         if (procDelay)
             PreventDefaultAction();

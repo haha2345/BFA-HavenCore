@@ -14,12 +14,17 @@ add_library(trinity-compile-option-interface INTERFACE)
 # Use -std=c++11 instead of -std=gnu++11
 set(CXX_EXTENSIONS OFF)
 
+# Set build-directive (used in core to tell which buildtype we used)
+target_compile_definitions(trinity-compile-option-interface
+  INTERFACE
+    _BUILD_DIRECTIVE="$<CONFIG>")
+
 # An interface library to make the target features available to other targets
 add_library(trinity-feature-interface INTERFACE)
 
 target_compile_features(trinity-feature-interface
   INTERFACE
-    cxx_std_17)
+    cxx_std_20)
 
 # An interface library to make the warnings level available to other targets
 # This interface taget is set-up through the platform specific script

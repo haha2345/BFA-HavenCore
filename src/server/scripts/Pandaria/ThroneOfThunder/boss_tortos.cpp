@@ -219,7 +219,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             me->AddAura(SPELL_KICK_SHELL_A, me);
             me->AddAura(SPELL_ROCKFALL_AURA, me);
@@ -241,7 +241,7 @@ public:
                 instance->SetData(DATA_TORTOS, IN_PROGRESS);
             }
 
-            _EnterCombat();
+            _JustEngagedWith();
 
             if (me->GetMap()->IsHeroic())
                 SpawnCrystals();
@@ -264,13 +264,13 @@ public:
             me->SummonCreature(NPC_HUMMING_CRYSTAL, 6007.39f, 4991.19f, -61.52f, 2.36f, TEMPSUMMON_MANUAL_DESPAWN);
         }
 
-        void EnterEvadeMode(EvadeReason w)
+        void EnterEvadeMode(EvadeReason /*w*/) override
         {
             me->AddUnitState(UNIT_STATE_EVADE);
 
             me->RemoveAllAuras();
             Reset();
-            me->DeleteThreatList();
+            me->GetThreatManager().ClearAllThreat();
             me->CombatStop(true);
             me->GetMotionMaster()->MovementExpired();
             me->GetMotionMaster()->MoveTargetedHome();
@@ -316,11 +316,11 @@ public:
                 }
                 else
                 {
-                    ThreatContainer::StorageType threatList = me->getThreatManager().getThreatList();
+                    std::vector<ThreatReference*> threatList = me->GetThreatManager().GetModifiableThreatList();
 
-                    for (ThreatContainer::StorageType::const_iterator itr = threatList.cbegin(); itr != threatList.cend(); ++itr)
+                    for (std::vector<ThreatReference*>::const_iterator itr = threatList.cbegin(); itr != threatList.cend(); ++itr)
                     {
-                        if (Unit* target = (*itr)->getTarget())
+                        if (Unit* target = (*itr)->GetVictim())
                         {
                             if (me->IsWithinMeleeRange(target))
                             {
@@ -355,7 +355,7 @@ public:
             DespawnCrystals();
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
 
             if (!UpdateVictim() || !CheckInRoom())
@@ -488,14 +488,14 @@ public:
         bool shellBlocked;
         bool failSafe;
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/) override
         {
             me->SetInCombatWithZone();
             me->SetReactState(REACT_PASSIVE);
             //me->SetSpeed(MOVE_RUN, 3.0f, true);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*) override
         {
             events.ScheduleEvent(EVENT_DAMAGE_PLAYERS_SPIN, 500);
             events.ScheduleEvent(EVENT_MOVE, 3000, 0, 0);
@@ -506,7 +506,7 @@ public:
             if (Creature* pTortos = me->FindNearestCreature(BOSS_TORTOS, 50.0f, true))
             {
                 std::list<Unit*>targetList;
-                std::list<HostileReference*> threatList = pTortos->getThreatManager().getThreatList();
+                std::vector<ThreatReference*> threatList = pTortos->GetThreatManager().GetModifiableThreatList();
                 uint32 max_size = (pTortos->GetMap()->Is25ManRaid() ? 8 : 3);
 
                 if (threatList.size() > max_size)
@@ -514,9 +514,9 @@ public:
 
                     for (auto itr = threatList.cbegin(); itr != threatList.cend(); ++itr)
                     {
-                        if (Unit* target = (*itr)->getTarget())
+                        if (Unit* target = (*itr)->GetVictim())
                         {
-                            if (target && target->ToPlayer() && target->GetExactDist2d(me) > 20.f && !target->HasAura(SPELL_SPINNING_SHELL_DUMMY))//(&DefaultTargetSelector(target, -20.f, true, -SPELL_SPINNING_SHELL_DUMMY)))
+                            if (target && target->ToPlayer() && target->GetExactDist2d(me) > 20.f && !target->HasAura(SPELL_SPINNING_SHELL_DUMMY))//(&DefaultTargetSelector(target, -20.f, true, true, -SPELL_SPINNING_SHELL_DUMMY)))
                                 targetList.push_back(target);
                         }
                     }
@@ -536,10 +536,10 @@ public:
                         }
                     }
 
-                    std::list<HostileReference*>::iterator find = threatList.begin();
+                    std::vector<ThreatReference*>::iterator find = threatList.begin();
                     std::advance(find, urand(0 /*1*/, threatList.size() - 1));
 
-                    if (Unit* pTarget = (*find)->getTarget())
+                    if (Unit* pTarget = (*find)->GetVictim())
                     {
                         me->GetMotionMaster()->MovementExpired();
                         me->GetMotionMaster()->MovePoint(2, *pTarget);
@@ -569,7 +569,7 @@ public:
                 events.RescheduleEvent(EVENT_MOVE, 200);
         }
 
-        void Reset()
+        void Reset() override
         {
             me->SetInCombatWithZone();
             me->SetReactState(REACT_PASSIVE);
@@ -580,7 +580,7 @@ public:
             shellBlocked = false;
         }
 
-        void SpellHit(Unit* caster, SpellInfo const* spell)
+        void SpellHit(Unit* caster, SpellInfo const* spell) override
         {
             if (spell->Id == SPELL_KICK_SHELL_TRIGGER)
             {
@@ -595,7 +595,7 @@ public:
             }
         }
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& damage) override
         {
             if (me->HealthBelowPct(3) && !shellBlocked)
             {
@@ -619,7 +619,7 @@ public:
             }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             events.Update(diff);
 
@@ -628,7 +628,7 @@ public:
             case EVENT_MOVE:
             {
                 std::list<Unit*> targets;
-                SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                 if (!targets.empty())
                     if (targets.size() >= 1)
                         targets.resize(1);
@@ -739,7 +739,7 @@ public:
             me->AddAura(SPELL_DRAIN_THE_WEAK_A, me);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             if (!UpdateVictim() || me->HasUnitState(UNIT_STATE_CASTING))
                 return;
@@ -863,7 +863,7 @@ public:
             //me->AddAura(SPELL_CRYSTAL_SHELL_AURA, me);
         }
 
-        void DamageTaken(Unit* attacker, uint32& damage)
+        void DamageTaken(Unit* attacker, uint32& /*damage*/)
         {
             //me->AddAura(SPELL_CRYSTAL_SHELL_AURA, attacker);
             attacker->CastSpell(attacker, 137633, true);
@@ -876,7 +876,7 @@ public:
             me->SetReactState(REACT_PASSIVE);
         }
 
-        void UpdateAI(uint32 diff) { }
+        void UpdateAI(uint32 /*diff*/) { }
     };
 
     CreatureAI* GetAI(Creature* creature) const
@@ -936,7 +936,7 @@ public:
                 Trinity::Containers::RandomResize(targets, 1);
         }
 
-        void HandleDummy(SpellEffIndex effIndex)
+        void HandleDummy(SpellEffIndex /*effIndex*/)
         {
             Unit* caster = GetCaster();
             Unit* target = GetHitUnit();
@@ -1042,7 +1042,7 @@ public:
     {
         PrepareAuraScript(spell_spinning_shell_AuraScript);
 
-            void OnPeriodic(AuraEffect const* aurEff)
+            void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             Unit* caster = GetCaster();
 
@@ -1107,7 +1107,7 @@ public:
     {
         PrepareAuraScript(spell_drain_the_weak_AuraScript);
 
-        void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+        void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
         {
             PreventDefaultAction();
 
@@ -1145,7 +1145,7 @@ public:
     {
         PrepareSpellScript(spell_impl);
 
-        void HandleEffectHitTarget(SpellEffIndex eff_idx)
+        void HandleEffectHitTarget(SpellEffIndex /*eff_idx*/)
         {
             Unit* caster = GetCaster();
             Unit* target = GetHitUnit();
@@ -1178,12 +1178,12 @@ public:
     {
         PrepareAuraScript(spell_crystal_shell_aura_AuraScript);
 
-        void CalculateAmount(AuraEffect const* auraEffect, int32& amount, bool& /*canBeRecalculated*/)
+        void CalculateAmount(AuraEffect const* /*auraEffect*/, int32& amount, bool& /*canBeRecalculated*/)
         {
             amount += GetCaster()->CountPctFromMaxHealth(15);
         }
 
-        void OnAbsorb(AuraEffect* aurEff, DamageInfo& dmgInfo, uint32& absorbAmount)
+        void OnAbsorb(AuraEffect* /*aurEff*/, DamageInfo& /*dmgInfo*/, uint32& /*absorbAmount*/)
         {
             Unit* target = GetCaster();
             if (!target)
@@ -1218,7 +1218,7 @@ public:
     {
         PrepareAuraScript(spell_crystal_shell_absorb_AuraScript);
 
-        void OnProc(const AuraEffect* aurEff, ProcEventInfo& eventInfo)
+        void OnProc(const AuraEffect* /*aurEff*/, ProcEventInfo& eventInfo)
         {
             //int32 amount = aurEff->GetSpellInfo()->Effects[EFFECT_0].BasePoints;
 
@@ -1285,7 +1285,6 @@ public:
                 return;
             if (caster->GetMap()->IsHeroic())
             {
-                uint32 damage = target->CountPctFromMaxHealth(100);
                 // resilience/armor/absorb
                 //SpellNonMeleeDamage damageInfo(caster, target, GetSpellInfo()->Id, GetSpellInfo()->SchoolMask);
                 //caster->CalculateSpellDamageTaken(&damageInfo, damage, GetSpellInfo());
@@ -1296,7 +1295,6 @@ public:
             }
             else
             {
-                uint32 damage = target->CountPctFromMaxHealth(65);
                 // resilience/armor/absorb
                // SpellNonMeleeDamage damageInfo(caster, target, GetSpellInfo()->Id, GetSpellInfo()->SchoolMask);
                 //caster->CalculateSpellDamageTaken(&damageInfo, damage, GetSpellInfo());
@@ -1328,7 +1326,7 @@ public:
     {
         PrepareAuraScript(aura_impl);
 
-        void HandleOnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Creature* pCreature = GetCaster()->ToCreature())
                 pCreature->SetPower(POWER_ENERGY, 0);
@@ -1461,7 +1459,7 @@ public:
             }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             events.Update(diff);
 
@@ -1566,7 +1564,7 @@ public:
             return true;
         }
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             Unit* caster = GetCaster();
 
@@ -1611,7 +1609,7 @@ public:
     {
         PrepareAuraScript(aura_impl);
 
-        void HandleAuraEffectRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleAuraEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* Owner = GetOwner()->ToUnit())
             {
@@ -1643,7 +1641,7 @@ public:
     {
         PrepareAuraScript(aura_impl);
 
-        void HandleOnPeriodic(AuraEffect const* aurEff)
+        void HandleOnPeriodic(AuraEffect const* /*aurEff*/)
         {
             PreventDefaultAction();
 

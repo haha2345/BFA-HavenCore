@@ -132,7 +132,7 @@ class boss_sha_of_anger : public CreatureScript
                     Talk(TALK_SLAY);
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
                 Talk(TALK_AGGRO);
             }
@@ -158,10 +158,10 @@ class boss_sha_of_anger : public CreatureScript
             {
                 if (damage >= me->GetHealth())
                 {
-                    std::list<HostileReference*> l_ThreatList = me->getThreatManager().getThreatList();
-                    for (std::list<HostileReference*>::const_iterator l_Itr = l_ThreatList.begin(); l_Itr != l_ThreatList.end(); ++l_Itr)
+                    std::vector<ThreatReference*> l_ThreatList = me->GetThreatManager().GetModifiableThreatList();
+                    for (std::vector<ThreatReference*>::const_iterator l_Itr = l_ThreatList.begin(); l_Itr != l_ThreatList.end(); ++l_Itr)
                     {
-                        if (Player* player = ObjectAccessor::GetPlayer(*me, (*l_Itr)->getUnitGuid()))
+                        if (Player* player = ObjectAccessor::GetPlayer(*me, (*l_Itr)->GetVictim()->GetGUID()))
                             m_LootersGuids.push_back(player->GetGUID());
                     }
                 }
@@ -277,7 +277,7 @@ class boss_sha_of_anger : public CreatureScript
                         }
                         case EVENT_RANGE_ATTACK:
                         {
-                            if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT))
                             {
                                 me->CastSpell(target, SPELL_SHADOW_BOLT_ANGER, false);
                                 me->AddAura(SPELL_SEETHE_AURA, target);

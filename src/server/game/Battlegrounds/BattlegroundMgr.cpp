@@ -221,7 +221,7 @@ void BattlegroundMgr::BuildBattlegroundStatusNeedConfirmation(WorldPackets::Batt
     BuildBattlegroundStatusHeader(&battlefieldStatus->Hdr, bg, player, ticketId, joinTime, arenaType);
     battlefieldStatus->Mapid = bg->GetMapId();
     battlefieldStatus->Timeout = timeout;
-    battlefieldStatus->Role = 0;
+    battlefieldStatus->Role = player->GetBGQueuedRole();
 }
 
 void BattlegroundMgr::BuildBattlegroundStatusActive(WorldPackets::Battleground::BattlefieldStatusActive* battlefieldStatus, Battleground* bg, Player* player, uint32 ticketId, uint32 joinTime, uint32 arenaType)

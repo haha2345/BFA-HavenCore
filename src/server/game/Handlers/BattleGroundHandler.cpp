@@ -163,6 +163,15 @@ void WorldSession::HandleBattlemasterJoinOpcode(WorldPackets::Battleground::Batt
             return;
 
         BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
+
+        // Convert LFG role bitmask (TANK=0x02, HEALER=0x04, DAMAGE=0x08) to
+        // battlefield status role index (TANK=0, HEALER=1, DAMAGE=2)
+        uint8 bgRole = ROLE_DAMAGE;
+        if (battlemasterJoin.Roles & 0x02) // PLAYER_ROLE_TANK
+            bgRole = ROLE_TANK;
+        else if (battlemasterJoin.Roles & 0x04) // PLAYER_ROLE_HEALER
+            bgRole = ROLE_HEALER;
+        _player->SetBGQueuedRole(bgRole);
         GroupQueueInfo* ginfo = bgQueue.AddGroup(_player, nullptr, bgTypeId, bracketEntry, 0, false, isPremade, 0, 0);
 
         uint32 avgTime = bgQueue.GetAverageQueueWaitTime(ginfo, bracketEntry->GetBracketId());
@@ -210,6 +219,14 @@ void WorldSession::HandleBattlemasterJoinOpcode(WorldPackets::Battleground::Batt
             }
 
             // add to queue
+            {
+                uint8 memberBgRole = ROLE_DAMAGE;
+                if (battlemasterJoin.Roles & 0x02) // PLAYER_ROLE_TANK
+                    memberBgRole = ROLE_TANK;
+                else if (battlemasterJoin.Roles & 0x04) // PLAYER_ROLE_HEALER
+                    memberBgRole = ROLE_HEALER;
+                member->SetBGQueuedRole(memberBgRole);
+            }
             uint32 queueSlot = member->AddBattlegroundQueueId(bgQueueTypeId);
 
             WorldPackets::Battleground::BattlefieldStatusQueued battlefieldStatus;

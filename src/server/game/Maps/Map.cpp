@@ -50,6 +50,7 @@
 #include "WeatherMgr.h"
 #include "World.h"
 #include "WorldSession.h"
+#include <unordered_map>
 
 u_map_magic MapMagic        = { {'M','A','P','S'} };
 u_map_magic MapVersionMagic = { {'v','1','.','9'} };
@@ -873,21 +874,10 @@ void Map::Update(const uint32 t_diff)
         // Handle updates for creatures in combat with player and are more than 60 yards away
         if (player->IsInCombat())
         {
-            std::vector<Creature*> updateList;
-            HostileReference* ref = player->getHostileRefManager().getFirst();
-
-            while (ref)
-            {
-                if (Unit* unit = ref->GetSource()->GetOwner())
-                    if (unit->ToCreature() && unit->GetMapId() == player->GetMapId() && !unit->IsWithinDistInMap(player, GetVisibilityRange(), false))
-                        updateList.push_back(unit->ToCreature());
-
-                ref = ref->next();
-            }
-
-            // Process deferred update list for player
-            for (Creature* c : updateList)
-                VisitNearbyCellsOf(c, grid_object_update, world_object_update);
+            for (auto const& pair : player->GetCombatManager().GetPvECombatRefs())
+                if (Creature* unit = pair.second->GetOther(player)->ToCreature())
+                    if (unit->GetMapId() == player->GetMapId() && !unit->IsWithinDistInMap(player, GetVisibilityRange(), false))
+                        VisitNearbyCellsOf(unit, grid_object_update, world_object_update);
         }
     }
 
@@ -1040,7 +1030,7 @@ void Map::RemovePlayerFromMap(Player* player, bool remove)
 {
     sScriptMgr->OnPlayerLeaveMap(this, player);
 
-    player->getHostileRefManager().deleteReferences(); // multithreading crashfix
+    player->CombatStop();
 
     bool const inWorld = player->IsInWorld();
     player->RemoveFromWorld();
@@ -3962,6 +3952,12 @@ bool Map::IsDungeon() const
     return i_mapEntry && i_mapEntry->IsDungeon();
 }
 
+// Declared in Map.h but never defined before (link error once it was used).
+bool Map::IsScenario() const
+{
+    return i_mapEntry && i_mapEntry->InstanceType == MAP_SCENARIO;
+}
+
 bool Map::IsNonRaidDungeon() const
 {
     return i_mapEntry && i_mapEntry->IsNonRaidDungeon();
@@ -4726,4 +4722,41 @@ WildBattlePetPool* Map::GetWildBattlePetPool(Creature* creature)
         return nullptr;
 
     return &m_wildBattlePetPool[creature->GetZoneId()][creature->GetEntry()];
+}
+
+// A group counts as a guild group when enough of its members belong to the same
+// guild (retail: 3 of a 5-player group, 80% of larger groups - 8/10, 20/25). Only
+// instances and battlegrounds have a meaningful 'group' population; for
+// battlegrounds only the given team's players are considered.
+ObjectGuid::LowType Map::GetOwnerGuildId(uint32 team /*= TEAM_OTHER*/) const
+{
+    if (!IsDungeon() && !IsBattlegroundOrArena())
+        return UI64LIT(0);
+
+    std::unordered_map<ObjectGuid::LowType, uint32> membersPerGuild;
+    uint32 groupSize = 0;
+    PlayerList const& players = GetPlayers();
+    for (PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+    {
+        Player const* player = itr->GetSource();
+        if (!player || player->IsGameMaster())
+            continue;
+
+        if (team != TEAM_OTHER && player->GetBGTeam() != team)
+            continue;
+
+        ++groupSize;
+        if (ObjectGuid::LowType guildId = player->GetGuildId())
+            ++membersPerGuild[guildId];
+    }
+
+    if (groupSize < 2)
+        return UI64LIT(0);
+
+    uint32 const required = groupSize <= 5 ? std::min<uint32>(3, groupSize) : (groupSize * 8 + 9) / 10;
+    for (auto const& entry : membersPerGuild)
+        if (entry.second >= required)
+            return entry.first;
+
+    return UI64LIT(0);
 }

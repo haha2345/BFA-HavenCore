@@ -55,9 +55,9 @@ class boss_jinbak : public CreatureScript
                 _Reset();
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
-                _EnterCombat();
+                _JustEngagedWith();
             }
 
             void JustReachedHome() override
@@ -148,7 +148,7 @@ class npc_sap_globule : public CreatureScript
             done = false;
         }
 
-        void IsSummonedBy(Unit* /*summoner*/)
+        void IsSummonedBy(Unit* /*summoner*/) override
         {
             if (Creature * jinbak = me->FindNearestCreature(NPC_JINBAK, 500.0f))
                 jinbak->AI()->JustSummoned(me);
@@ -165,9 +165,6 @@ class npc_sap_globule : public CreatureScript
             }
         }
 
-        void UpdateAI(uint32 const diff) override
-        {
-        }
     private:
         bool done;
     };

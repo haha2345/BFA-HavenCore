@@ -154,11 +154,11 @@ class boss_ingvar_the_plunderer : public CreatureScript
                 events.ScheduleEvent(EVENT_JUST_TRANSFORMED, IN_MILLISECONDS / 2, 0, PHASE_EVENT);
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
-                if (events.IsInPhase(PHASE_EVENT) || events.IsInPhase(PHASE_UNDEAD)) // ingvar gets multiple EnterCombat calls
+                if (events.IsInPhase(PHASE_EVENT) || events.IsInPhase(PHASE_UNDEAD)) // ingvar gets multiple JustEngagedWith calls
                     return;
-                _EnterCombat();
+                _JustEngagedWith();
 
                 Talk(SAY_AGGRO);
                 events.SetPhase(PHASE_HUMAN);
@@ -198,7 +198,7 @@ class boss_ingvar_the_plunderer : public CreatureScript
 
             void UpdateAI(uint32 diff) override
             {
-                if (!events.IsInPhase(PHASE_EVENT) && !UpdateVictim())
+                if (!UpdateVictim())
                     return;
 
                 events.Update(diff);
@@ -229,10 +229,9 @@ class boss_ingvar_the_plunderer : public CreatureScript
                             break;
                         case EVENT_JUST_TRANSFORMED:
                             ScheduleSecondPhase();
-                            me->RemoveUnitFlag(UnitFlags(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_NOT_SELECTABLE));
-                            if (Unit* target = me->getThreatManager().getHostilTarget())
-                                AttackStart(target);
-                            else
+                            me->RemoveUnitFlag(UnitFlags(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE));
+                            me->SetImmuneToPC(false);
+                            if (!me->IsThreatened())
                             {
                                 EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
                                 return;
@@ -330,7 +329,7 @@ class npc_annhylde_the_caller : public CreatureScript
 
             void AttackStart(Unit* /*who*/) override { }
             void MoveInLineOfSight(Unit* /*who*/) override { }
-            void EnterCombat(Unit* /*who*/) override { }
+            void JustEngagedWith(Unit* /*who*/) override { }
 
             void UpdateAI(uint32 diff) override
             {

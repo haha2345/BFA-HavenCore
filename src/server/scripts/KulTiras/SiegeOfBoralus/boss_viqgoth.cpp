@@ -85,9 +85,9 @@ struct boss_viqgoth : public BossAI
 		return 0;
 	}
 
-	void EnterEvadeMode(EvadeReason why) override
+	void EnterEvadeMode(EvadeReason /*why*/) override
 	{
-		if (me->getThreatManager().isThreatListEmpty() && this->encountered == 1 && me->HealthAbovePct(1) && instance->GetBossState(DATA_VIQGOTH) == IN_PROGRESS)
+		if (me->GetThreatManager().IsThreatListEmpty() && this->encountered == 1 && me->HealthAbovePct(1) && instance->GetBossState(DATA_VIQGOTH) == IN_PROGRESS)
 		{
 			if (Creature* viqgoth = me->FindNearestCreature(NPC_VIQGOTH, 100.0f, true))
 			{
@@ -113,9 +113,9 @@ struct boss_viqgoth : public BossAI
 		}		
 	}
 
-	void EnterCombat(Unit* /*unit*/) override
+	void JustEngagedWith(Unit* /*unit*/) override
 	{
-		_EnterCombat();
+		_JustEngagedWith();
 		//events.ScheduleEvent(EVENT_ERADICATION, 3s);
 		events.ScheduleEvent(EVENT_PUTRID_WATERS, 6s);
 		instance->SetBossState(DATA_VIQGOTH, IN_PROGRESS);
@@ -184,7 +184,7 @@ struct npc_demolishing_terror : public ScriptedAI
 		events.ScheduleEvent(EVENT_HULLCRACKER, 1s);
 	}
 
-	void EnterCombat(Unit* /*unit*/) override
+	void JustEngagedWith(Unit* /*unit*/) override
 	{
 		instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
 		events.ScheduleEvent(EVENT_SLAM, 1s);
@@ -250,7 +250,7 @@ struct npc_cannon_viq : public ScriptedAI
 
 	}
 
-	void sGossipHello(Player* player)
+	void sGossipHello(Player* player) override
 	{	
 		CloseGossipMenuFor(player);
 		//me->RemoveNpcFlag(UNIT_NPC_FLAG_GOSSIP);
@@ -360,7 +360,7 @@ struct npc_jaina_sob_outro_ali : public ScriptedAI
 		}
 	}
 
-	void UpdateAI(uint32 diff)
+	void UpdateAI(uint32 diff) override
 	{
 		scheduler.Update(diff);
 	}

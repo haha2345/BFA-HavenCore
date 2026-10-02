@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 concurrency:
@@ -39,6 +40,8 @@ jobs:
             - '**/*.hpp'
             - '**/*.inl'
             - '**/*.proto'
+            - '**/*.rc'
+            - '**/*.def'
             - '**/*.cmake'
             - '**/CMakeLists.txt'
             - '.github/workflows/*.yml'
@@ -52,5 +55,11 @@ jobs:
   gcc:
     needs: changes
     uses: ./.github/workflows/gcc-build.yml
+    with:
+      run_build: ${{ needs.changes.outputs.code == 'true' && !github.event.pull_request.draft }}
+
+  clang:
+    needs: changes
+    uses: ./.github/workflows/clang-build.yml
     with:
       run_build: ${{ needs.changes.outputs.code == 'true' && !github.event.pull_request.draft }}

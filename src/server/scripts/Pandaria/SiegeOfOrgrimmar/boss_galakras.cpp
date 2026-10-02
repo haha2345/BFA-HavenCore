@@ -605,7 +605,7 @@ class boss_galakras : public CreatureScript
                 m_FlamesOfGalakrond.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 SpawnTurrets();
 
@@ -1088,7 +1088,7 @@ struct npc_galakras_tower_defender : public ScriptedAI
             m_Defender = TowerDefenders::DEFENDER_NONE;
         }
 
-        void SetData(uint32 type, uint32 data)
+        void SetData(uint32 type, uint32 /*data*/)
         {
             if (type == DATA_LEFT_TOWER_DEFENDER)
             {
@@ -1179,7 +1179,7 @@ class npc_galakras_master_cannoneer_dagryn : public CreatureScript
                 summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_SHOOT, 1000);
                 events.ScheduleEvent(EVENT_MUZZLE_SPRAY, urand(5000, 10000));
@@ -1252,7 +1252,7 @@ class npc_galakras_lieutenant_krugruk : public CreatureScript
                 summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_THUNDER_CLAP, urand(4000, 5000));
                 events.ScheduleEvent(EVENT_ARCING_SMASH, urand(10000, 12000));
@@ -1324,7 +1324,7 @@ class npc_galakras_dragonmaw_flameslinger : public CreatureScript
                 summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_FLAME_ARROWS, 1000);
             }
@@ -1389,7 +1389,7 @@ class npc_galakras_high_enforcer_thranok : public CreatureScript
                 summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_CRUSHERS_CALL, urand(10000, 12000));
                 events.ScheduleEvent(EVENT_SHATTERING_CLEAVE, 7500);
@@ -1463,7 +1463,7 @@ class npc_galakras_korgra_the_snake : public CreatureScript
                 curseOfVenomDone = false;
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_POISON_TIPPED_BLADES, urand(3000, 5000));
             }
@@ -1553,7 +1553,7 @@ class npc_galakras_dragonmaw_bonecrusher : public CreatureScript
                 summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_SHATTERING_ROAR, urand(5000, 8000));
                 events.ScheduleEvent(EVENT_FRACTURE, urand(5000, 12000));
@@ -1618,7 +1618,7 @@ class npc_galakras_dragonmaw_ebon_stalker : public CreatureScript
                 summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_SHADOW_STALK, urand(5000, 12000));
             }
@@ -1686,7 +1686,7 @@ class npc_galakras_dragonmaw_flagbearer : public CreatureScript
                 me->AddAura(SPELL_DRAGONMAW_FLAGBEARER, me);
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_WAR_BANNER, urand(7000, 10000));
             }
@@ -1939,7 +1939,7 @@ class npc_galakras_dragonmaw_grunt_1 : public CreatureScript
                 summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
 
             }
@@ -1960,9 +1960,7 @@ class npc_galakras_dragonmaw_grunt_1 : public CreatureScript
                 if (me->HasUnitState(UNIT_STATE_CASTING))
                     return;
 
-                if (uint32 eventId = events.ExecuteEvent())
-                {
-                }
+                events.ExecuteEvent();
 
                 DoMeleeAttackIfReady();
             }
@@ -1995,7 +1993,7 @@ class npc_galakras_dragonmaw_grunt_2 : public CreatureScript
                 me->SetReactState(REACT_DEFENSIVE);
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
 
             }
@@ -2018,9 +2016,7 @@ class npc_galakras_dragonmaw_grunt_2 : public CreatureScript
                 if (me->HasUnitState(UNIT_STATE_CASTING))
                     return;
 
-                if (uint32 eventId = events.ExecuteEvent())
-                {
-                }
+                events.ExecuteEvent();
 
                 DoMeleeAttackIfReady();
             }
@@ -2051,7 +2047,7 @@ class npc_galakras_dragonmaw_proto_drake : public CreatureScript
                 summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
 
             }
@@ -2072,9 +2068,7 @@ class npc_galakras_dragonmaw_proto_drake : public CreatureScript
                 if (me->HasUnitState(UNIT_STATE_CASTING))
                     return;
 
-                if (uint32 eventId = events.ExecuteEvent())
-                {
-                }
+                events.ExecuteEvent();
 
                 DoMeleeAttackIfReady();
             }
@@ -2105,7 +2099,7 @@ class npc_galakras_dragonmaw_tidal_shaman : public CreatureScript
                 summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_CHAIN_HEAL, urand(5000, 12000));
                 events.ScheduleEvent(EVENT_HEALING_TIDE_TOTEM, urand(10000, 20000));
@@ -2176,7 +2170,7 @@ class npc_galakras_healing_tide_totem : public CreatureScript
                 me->AddAura(SPELL_HEALING_TIDE_AURA, me);
             }
 
-            void UpdateAI(const uint32 diff)
+            void UpdateAI(const uint32 /*diff*/)
             {
 
             }
@@ -2192,13 +2186,13 @@ class npc_galakras_anti_air_turret : public CreatureScript
     public:
         npc_galakras_anti_air_turret() : CreatureScript("npc_galakras_anti_air_turret") { }
 
-        CreatureAI* GetAI(Creature* creature) const
+        CreatureAI* GetAI(Creature* creature) const override
         {
             return new npc_galakras_anti_air_turretAI(creature);
         }
 
         // prevent menu
-        bool OnGossipHello(Player* player, Creature* creature) override
+        bool OnGossipHello(Player* /*player*/, Creature* /*creature*/) override
         {
             return true;
         }
@@ -2215,7 +2209,7 @@ class npc_galakras_anti_air_turret : public CreatureScript
                 cooldownTimer = 0;
             }
 
-            void Reset()
+            void Reset() override
             {
                 enabled = true;
             }
@@ -2242,7 +2236,7 @@ class npc_galakras_anti_air_turret : public CreatureScript
                 }
              }
 
-            void DoAction(const int32 action)
+            void DoAction(const int32 action) override
             {
                 if (action == ACTION_RIGHT_TOWER_ALL_DEFENDERS_DIED)
                 {
@@ -2273,7 +2267,7 @@ class npc_galakras_anti_air_turret : public CreatureScript
                 }
             }
 
-            void SetData(uint32 type, uint32 data)
+            void SetData(uint32 type, uint32 /*data*/) override
             {
                 if (type == DATA_LEFT_TOWER_DEFENDER)
                 {
@@ -2285,7 +2279,7 @@ class npc_galakras_anti_air_turret : public CreatureScript
                 }
             }
 
-            void UpdateAI(const uint32 diff)
+            void UpdateAI(const uint32 diff) override
             {
                 if (!cooldownTimer)
                     return;
@@ -2342,12 +2336,12 @@ class npc_galakras_tower : public CreatureScript
                 defendersLeft = DEFENDERS_COUNT;
             }
 
-            void Reset()
+            void Reset() override
             {
 
             }
 
-            void DoAction(const int32 action)
+            void DoAction(const int32 action) override
             {
                 if (action == ACTION_LEFT_TOWER_DEFENDER_DIED)
                 {
@@ -2369,12 +2363,12 @@ class npc_galakras_tower : public CreatureScript
                 return 0;
             }
 
-            void DamageTaken(Unit* who, uint32& damage) override
+            void DamageTaken(Unit* /*who*/, uint32& damage) override
             {
                 damage = 0;
             }
 
-            void UpdateAI(const uint32 diff)
+            void UpdateAI(const uint32 diff) override
             {
                 SelectPlayers(diff);
             }
@@ -2556,12 +2550,12 @@ class npc_galakras_korkron_demolisher : public CreatureScript
                 summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_MOVE_TO_ATTACK, 500);
             }
 
-            void SetData(uint32 type, uint32 data)
+            void SetData(uint32 type, uint32 /*data*/)
             {
                 if (type == DATA_LEFT_TOWER_ATTACKER)
                 {
@@ -2698,7 +2692,7 @@ class spell_galakras_crushers_call_aoe : public SpellScriptLoader
         {
             PrepareSpellScript(spell_galakras_crushers_call_aoe_SpellScript);
 
-            void HandleHitTarget(SpellEffIndex effIndex)
+            void HandleHitTarget(SpellEffIndex /*effIndex*/)
             {
                 if (!GetCaster() || !GetHitUnit())
                     return;
@@ -2729,7 +2723,7 @@ class spell_galakras_anti_air_cannon_aura : public SpellScriptLoader
         {
             PrepareAuraScript(spell_galakras_anti_air_cannon_aura_AuraScript);
 
-            void HandleApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+            void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 if (!GetUnitOwner())
                     return;
@@ -2773,7 +2767,7 @@ class spell_galakras_tower_strength : public SpellScriptLoader
         {
             PrepareAuraScript(spell_galakras_tower_strength_AuraScript);
 
-            void HandlePeriodicTick(AuraEffect const* aurEff)
+            void HandlePeriodicTick(AuraEffect const* /*aurEff*/)
             {
                 if (!GetUnitOwner())
                     return;
@@ -2831,7 +2825,7 @@ class spell_galakras_tidal_wave_aoe : public SpellScriptLoader
                 Trinity::Containers::RandomResize(targets, 1);
             }
 
-            void HandleHitTarget(SpellEffIndex effIndex)
+            void HandleHitTarget(SpellEffIndex /*effIndex*/)
             {
                 if (!GetCaster() || !GetHitUnit())
                     return;
@@ -2934,7 +2928,7 @@ struct spell_area_galakras_flames_of_galakrond : AreaTriggerAI
         }
     }
 
-    void OnUnitEnter(Unit* target)
+    void OnUnitEnter(Unit* target) override
     {
         Unit* caster = at->GetCaster();
         if (!caster)
@@ -2957,7 +2951,7 @@ struct spell_area_galakras_flames_of_galakrond : AreaTriggerAI
         }
     }
 
-    void OnUnitExit(Unit* target)
+    void OnUnitExit(Unit* /*target*/) override
     {
         Unit* caster = at->GetCaster();
         if (!caster)

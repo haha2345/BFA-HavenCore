@@ -200,7 +200,7 @@ public:
                 player->Variables.Set("PHASE_2_WELCOMING_ACTIVE", false);
             });
 
-            creature->GetScheduler().Schedule(Milliseconds(11000), [creature](TaskContext context)
+            creature->GetScheduler().Schedule(Milliseconds(11000), [creature](TaskContext /*context*/)
             {
                 if (Creature* npc = creature->FindNearestCreature(98228, 100.0f, true))
                 {
@@ -423,7 +423,7 @@ struct npc_inquisitor_baleful : public ScriptedAI
         return ObjectAccessor::GetCreature(*me, colossalInfernalGuid);
     }
 
-    void EnterCombat(Unit*) override
+    void JustEngagedWith(Unit*) override
     {
         Talk(SAY_AGGRO_INQUISITOR_BALEFUL);
 
@@ -473,7 +473,7 @@ struct npc_inquisitor_baleful : public ScriptedAI
                     context.Repeat(5s);
             });
 
-            me->GetScheduler().Schedule(15s, [this](TaskContext context) /// End Legion Aegis event
+            me->GetScheduler().Schedule(15s, [this](TaskContext /*context*/) /// End Legion Aegis event
             {
                 me->SetReactState(REACT_AGGRESSIVE);
                 me->SetDisableGravity(true);
@@ -614,7 +614,7 @@ struct npc_doom_commander_beliash : public ScriptedAI
                 me->ForcedDespawn(15000, 15s);
     }
 
-    void EnterCombat(Unit* who) override
+    void JustEngagedWith(Unit* who) override
     {
         Talk(SAY_AGGRO_DOOM_COMMANDER_BELIASH);
 
@@ -804,7 +804,7 @@ public:
     {
         go_q39495AI(GameObject* go) : GameObjectAI(go){}
 
-        void UpdateAI(uint32 diff) override
+        void UpdateAI(uint32 /*diff*/) override
         {
             std::list<Player*> list;
             list.clear();
@@ -885,7 +885,7 @@ public:
                 killer->ToPlayer()->KilledMonsterCredit(NPC_FEL_LORD_CAZA_CREDIT, ObjectGuid::Empty);
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             Talk(0);
         }
@@ -1025,7 +1025,7 @@ class npc_kayn_sunfury : public CreatureScript
 public:
     npc_kayn_sunfury() : CreatureScript("npc_kayn_sunfury") { }
 
-    bool OnQuestAccept(Player* player, Creature* creature, Quest const* quest)
+    bool OnQuestAccept(Player* /*player*/, Creature* creature, Quest const* quest) override
     {
         if (quest->GetQuestId() == QUEST_CRY_HAVOC)
             creature->AI()->Talk(SAY_KAYN_SUNFURY_TEXT_1);
@@ -1079,7 +1079,7 @@ struct npc_allari : public ScriptedAI
 {
     npc_allari(Creature* creature) : ScriptedAI(creature) {  }
 
-    void sGossipSelect(Player* player, uint32 menuId, uint32 gossipListId)
+    void sGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId)
     {
         if (player->HasQuest(QUEST_VENGEANCE))
         {
@@ -1098,7 +1098,7 @@ struct npc_cyana : public ScriptedAI
 {
     npc_cyana(Creature* creature) : ScriptedAI(creature) {  }
 
-    void sGossipSelect(Player* player, uint32 menuId, uint32 gossipListId)
+    void sGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId)
     {
         if (player->HasQuest(QUEST_VENGEANCE))
         {
@@ -1117,7 +1117,7 @@ struct npc_korvas : public ScriptedAI
 {
     npc_korvas(Creature* creature) : ScriptedAI(creature) {  }
 
-    void sGossipSelect(Player* player, uint32 menuId, uint32 gossipListId)
+    void sGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId)
     {
         if (player->HasQuest(QUEST_VENGEANCE))
         {
@@ -1219,7 +1219,7 @@ public:
                     AttackStart(creature);
         }
 
-        void EnterCombat(Unit* who) override
+        void JustEngagedWith(Unit* who) override
         {
             who->GetAI()->AttackStart(me);
         }
@@ -1232,7 +1232,7 @@ public:
                 me->SetHealth(me->GetMaxHealth() * 0.85f);
         }
 
-        void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override {}
+        void SpellHit(Unit* /*caster*/, SpellInfo const* /*spell*/) override {}
 
         void SetData(uint32 id, uint32 /*value*/) override
         {
@@ -1285,7 +1285,7 @@ public:
                     AttackStart(creature);
         }
 
-        void EnterCombat(Unit* who) override
+        void JustEngagedWith(Unit* who) override
         {
             who->GetAI()->AttackStart(me);
         }
@@ -1298,7 +1298,7 @@ public:
                 me->SetHealth(me->GetMaxHealth() * 0.85f);
         }
 
-        void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override {}
+        void SpellHit(Unit* /*caster*/, SpellInfo const* /*spell*/) override {}
 
         void SetData(uint32 id, uint32 /*value*/) override
         {
@@ -1350,7 +1350,7 @@ public:
                     AttackStart(creature);
         }
 
-        void EnterCombat(Unit* who) override
+        void JustEngagedWith(Unit* who) override
         {
             who->GetAI()->AttackStart(me);
         }
@@ -1363,7 +1363,7 @@ public:
                 me->SetHealth(me->GetMaxHealth() * 0.85f);
         }
 
-        void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override {}
+        void SpellHit(Unit* /*caster*/, SpellInfo const* /*spell*/) override {}
 
         void SetData(uint32 id, uint32 /*value*/) override
         {
@@ -1413,7 +1413,7 @@ public:
                     AttackStart(creature);
         }
 
-        void EnterCombat(Unit* who) override
+        void JustEngagedWith(Unit* who) override
         {
             who->GetAI()->AttackStart(me);
         }
@@ -1426,7 +1426,7 @@ public:
                 me->SetHealth(me->GetMaxHealth() * 0.85f);
         }
 
-        void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override {}
+        void SpellHit(Unit* /*caster*/, SpellInfo const* /*spell*/) override {}
 
         void SetData(uint32 id, uint32 /*value*/) override
         {
@@ -1537,7 +1537,7 @@ public:
                     }
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             // We will schedule the npc abilities when player move near the npc
         }
@@ -1554,7 +1554,7 @@ public:
 
             if (!_playerParticipating && attacker->ToPlayer())
             {
-                if (Creature* creature = me->FindNearestCreature(NPC_KAYN_TYRANNA, me->GetVisibilityRange(), true))
+                if (me->FindNearestCreature(NPC_KAYN_TYRANNA, me->GetVisibilityRange(), true))
                 {
                     _playerParticipating = true;
                 }
@@ -1585,21 +1585,21 @@ public:
                 // tratamiento. El item de la quest (objetivo 1) se otorga
                 // aparte en JustDied(), a traves del loot del cadaver -- ver
                 // ahi el por que.
-                // EN: The engine clears the threat list (Unit::DeleteThreatList)
+                // EN: The engine clears the threat list (ThreatManager::ClearAllThreat)
                 // right before calling JustDied(), so it's already empty by
                 // then -- remember who's eligible for the quest item here,
                 // while the threat list is still valid, and grant it from
                 // JustDied() using this list instead of re-reading threat.
-                // ES: El motor vacia la threat list (Unit::DeleteThreatList)
+                // ES: El motor vacia la threat list (ThreatManager::ClearAllThreat)
                 // justo antes de llamar a JustDied(), asi que ya esta vacia
                 // para entonces -- acordate aca quien es elegible para el
                 // item de la quest, mientras la threat list todavia es
                 // valida, y otorgalo desde JustDied() usando esta lista en
                 // vez de releer la threat list.
-                std::list<HostileReference*> threatList;
-                threatList = me->getThreatManager().getThreatList();
-                for (std::list<HostileReference*>::const_iterator itr = threatList.begin(); itr != threatList.end(); ++itr)
-                    if (Player* target = (*itr)->getTarget()->ToPlayer())
+                std::vector<ThreatReference*> threatList;
+                threatList = me->GetThreatManager().GetModifiableThreatList();
+                for (std::vector<ThreatReference*>::const_iterator itr = threatList.begin(); itr != threatList.end(); ++itr)
+                    if (Player* target = (*itr)->GetVictim()->ToPlayer())
                         if (target->GetQuestStatus(38728) == QUEST_STATUS_INCOMPLETE)
                         {
                             target->KilledMonsterCredit(101760);
@@ -1666,7 +1666,7 @@ public:
             // silently adding it to the bag, so the player picks it up like
             // any other quest item. By this point the engine already ran
             // its own loot fill for creature_loot_template (Unit::Kill,
-            // before DeleteThreatList()/JustDied()), so me->loot is the
+            // before ClearAllThreat()/JustDied()), so me->loot is the
             // real, final loot object for this corpse -- AddItem() here
             // just appends to it, it won't get overwritten afterwards.
             // Uses _keystoneRecipients (captured in DamageTaken, see there)
@@ -1679,7 +1679,7 @@ public:
             // recoja como cualquier otro item de quest. A esta altura el
             // motor ya corrio su propio llenado de loot para
             // creature_loot_template (Unit::Kill, antes de
-            // DeleteThreatList()/JustDied()), asi que me->loot ya es el
+            // ClearAllThreat()/JustDied()), asi que me->loot ya es el
             // objeto de loot real y final de este cadaver -- AddItem() aca
             // solo le suma, no se pisa despues. Usa _keystoneRecipients
             // (capturada en DamageTaken, ver ahi) en vez de la threat list,
@@ -1768,7 +1768,6 @@ public:
         {
             for (uint8 i = 0; i < count; i++)
             {
-                uint8 rand = urand(1, 2);
                 float angle = frand(0.0f, 2.0f * float(M_PI));
                 float x = targetPos.GetPositionX() + (5.0f * std::cos(angle));
                 float y = targetPos.GetPositionY() + (5.0f * std::sin(angle));
@@ -1940,7 +1939,7 @@ public:
                 gob->DestroyForNearbyPlayers();
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             Talk(0);
 
@@ -2018,7 +2017,7 @@ public:
     uint32 MAP_MARDUM = 1481;
     uint32 ZONE_MARDUM_SHATTERED_ABYSS = 7705;
 
-    void OnLogin(Player* player, bool firstLogin)
+    void OnLogin(Player* player, bool /*firstLogin*/) override
     {
         if (player->GetMapId() == MAP_MARDUM)
         {

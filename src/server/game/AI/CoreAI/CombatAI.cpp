@@ -76,7 +76,7 @@ void CombatAI::JustDied(Unit* killer)
             me->CastSpell(killer, *i, true);
 }
 
-void CombatAI::EnterCombat(Unit* who)
+void CombatAI::JustEngagedWith(Unit* who)
 {
     for (SpellVct::iterator i = spells.begin(); i != spells.end(); ++i)
     {
@@ -121,7 +121,7 @@ bool CombatAI::UpdateVictim()
 {
     if (!me->HasReactState(REACT_PASSIVE))
     {
-        if (Unit* victim = me->SelectVictim(false))
+        if (Unit* victim = me->SelectVictim())
         {
             if (!me->IsFocusing(nullptr, true))
                 AttackStart(victim);
@@ -131,7 +131,7 @@ bool CombatAI::UpdateVictim()
 
         return me->GetVictim() != nullptr;
     }
-    else if (me->getThreatManager().isThreatListEmpty())
+    else if (me->GetThreatManager().IsThreatListEmpty())
     {
         EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
         return false;
@@ -200,7 +200,7 @@ void CasterAI::InitializeAI()
         m_attackDist = MELEE_RANGE;
 }
 
-void CasterAI::EnterCombat(Unit* who)
+void CasterAI::JustEngagedWith(Unit* who)
 {
     if (spells.empty())
         return;
@@ -312,11 +312,11 @@ TurretAI::TurretAI(Creature* c) : CreatureAI(c)
     me->m_SightDistance = me->m_CombatDistance;
 }
 
-bool TurretAI::CanAIAttack(const Unit* /*who*/) const
+bool TurretAI::CanAIAttack(Unit const* who) const
 {
     /// @todo use one function to replace it
-    if (!me->IsWithinCombatRange(me->GetVictim(), me->m_CombatDistance)
-        || (m_minRange && me->IsWithinCombatRange(me->GetVictim(), m_minRange)))
+    if (!me->IsWithinCombatRange(who, me->m_CombatDistance)
+        || (m_minRange && me->IsWithinCombatRange(who, m_minRange)))
         return false;
     return true;
 }

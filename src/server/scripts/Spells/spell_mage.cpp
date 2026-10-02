@@ -2749,7 +2749,7 @@ public:
             me->UpdateAttackPowerAndDamage();
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             Unit* owner = me->GetOwner();
             if (!owner)

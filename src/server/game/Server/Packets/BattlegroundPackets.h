@@ -150,6 +150,18 @@ namespace WorldPackets
             std::vector<PVPMatchPlayerStatistics> Statistics;
             Optional<RatingData> Ratings;
             std::array<int8, 2> PlayerCount = { };
+            int8 Winner = -1; // -1 = none/in progress, 0 = Horde, 1 = Alliance
+        };
+
+        class PVPMatchComplete final : public ServerPacket
+        {
+        public:
+            PVPMatchComplete() : ServerPacket(SMSG_PVP_MATCH_COMPLETE, 4 + 4) { }
+
+            WorldPacket const* Write() override;
+
+            int32 Winner = 0;   // 0 = Horde, 1 = Alliance
+            uint32 Duration = 0; // match duration in seconds
         };
 
         struct BattlefieldStatusHeader

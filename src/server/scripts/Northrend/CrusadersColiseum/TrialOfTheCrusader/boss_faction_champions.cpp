@@ -610,20 +610,12 @@ struct boss_faction_championsAI : public BossAI
 
     void UpdateThreat()
     {
-        std::list<HostileReference*> const& tList = me->getThreatManager().getThreatList();
-        for (std::list<HostileReference*>::const_iterator itr = tList.begin(); itr != tList.end(); ++itr)
-        {
-            Unit* unit = ObjectAccessor::GetUnit(*me, (*itr)->getUnitGuid());
-            if (unit && me->getThreatManager().getThreat(unit))
+        for (ThreatReference* ref : me->GetThreatManager().GetModifiableThreatList())
+            if (Player* victim = ref->GetVictim()->ToPlayer())
             {
-                if (unit->GetTypeId() == TYPEID_PLAYER)
-                {
-                    float threat = CalculateThreat(me->GetDistance2d(unit), (float)unit->GetArmor(), unit->GetHealth());
-                    me->getThreatManager().modifyThreatPercent(unit, -100);
-                    me->AddThreat(unit, 1000000.0f * threat);
-                }
+                ref->ScaleThreat(0.0f);
+                ref->AddThreat(1000000.0f * CalculateThreat(me->GetDistance2d(victim), victim->GetArmor(), victim->GetHealth()));
             }
-        }
     }
 
     void UpdatePower()
@@ -650,10 +642,10 @@ struct boss_faction_championsAI : public BossAI
                 pChampionController->AI()->SetData(2, DONE);
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         DoCast(me, SPELL_ANTI_AOE, true);
-        _EnterCombat();
+        _JustEngagedWith();
         if (Creature* pChampionController = ObjectAccessor::GetCreature((*me), instance->GetGuidData(NPC_CHAMPIONS_CONTROLLER)))
             pChampionController->AI()->SetData(2, IN_PROGRESS);
     }
@@ -693,28 +685,19 @@ struct boss_faction_championsAI : public BossAI
 
     Unit* SelectEnemyCaster(bool /*casting*/)
     {
-        std::list<HostileReference*> const& tList = me->getThreatManager().getThreatList();
-        std::list<HostileReference*>::const_iterator iter;
-        for (iter = tList.begin(); iter!=tList.end(); ++iter)
-        {
-            Unit* target = ObjectAccessor::GetUnit(*me, (*iter)->getUnitGuid());
-            if (target && target->GetPowerType() == POWER_MANA)
-                return target;
-        }
+        for (auto const& pair : me->GetCombatManager().GetPvECombatRefs())
+            if (Player* player = pair.second->GetOther(me)->ToPlayer())
+                if (player->GetPowerType() == POWER_MANA)
+                    return player;
         return nullptr;
     }
 
     uint32 EnemiesInRange(float distance)
     {
-        std::list<HostileReference*> const& tList = me->getThreatManager().getThreatList();
-        std::list<HostileReference*>::const_iterator iter;
         uint32 count = 0;
-        for (iter = tList.begin(); iter != tList.end(); ++iter)
-        {
-            Unit* target = ObjectAccessor::GetUnit(*me, (*iter)->getUnitGuid());
-                if (target && me->GetDistance2d(target) < distance)
-                    ++count;
-        }
+        for (ThreatReference const* ref : me->GetThreatManager().GetUnsortedThreatList())
+            if (me->GetDistance2d(ref->GetVictim()) < distance)
+                ++count;
         return count;
     }
 
@@ -725,9 +708,7 @@ struct boss_faction_championsAI : public BossAI
 
         if (me->Attack(who, true))
         {
-            me->AddThreat(who, 10.0f);
-            me->SetInCombatWith(who);
-            who->SetInCombatWith(me);
+            AddThreat(who, 10.0f);
 
             if (_aiType == AI_MELEE || _aiType == AI_PET)
                 DoStartMovement(who);
@@ -1272,9 +1253,9 @@ class npc_toc_warlock : public CreatureScript
                 SetEquipmentSlots(false, 49992, EQUIP_NO_CHANGE, EQUIP_NO_CHANGE);
             }
 
-            void EnterCombat(Unit* who) override
+            void JustEngagedWith(Unit* who) override
             {
-                boss_faction_championsAI::EnterCombat(who);
+                boss_faction_championsAI::JustEngagedWith(who);
                 DoCast(SPELL_SUMMON_FELHUNTER);
             }
 
@@ -1458,9 +1439,9 @@ class npc_toc_hunter : public CreatureScript
                 SetEquipmentSlots(false, 47156, EQUIP_NO_CHANGE, 48711);
             }
 
-            void EnterCombat(Unit* who) override
+            void JustEngagedWith(Unit* who) override
             {
-                boss_faction_championsAI::EnterCombat(who);
+                boss_faction_championsAI::JustEngagedWith(who);
                 DoCast(SPELL_CALL_PET);
             }
 
@@ -2091,9 +2072,9 @@ class npc_toc_retro_paladin : public CreatureScript
                 SetEquipmentSlots(false, 47519, EQUIP_NO_CHANGE, EQUIP_NO_CHANGE);
             }
 
-            void EnterCombat(Unit* who) override
+            void JustEngagedWith(Unit* who) override
             {
-                boss_faction_championsAI::EnterCombat(who);
+                boss_faction_championsAI::JustEngagedWith(who);
                 DoCast(SPELL_SEAL_OF_COMMAND);
             }
 

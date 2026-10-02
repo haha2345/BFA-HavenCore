@@ -100,14 +100,14 @@ class boss_anraphet : public CreatureScript
             _Reset();
         }
 
-        void EnterCombat(Unit* who) override
+        void JustEngagedWith(Unit* who) override
         {
             Talk(SAY_AGGRO);
             events.ScheduleEvent(EVENT_NEMESIS_STRIKE, urand(5000, 8000), 1);
             events.ScheduleEvent(EVENT_ALPHA_BEAMS, 10000, 1);
             events.ScheduleEvent(EVENT_OMEGA_STANCE, 15000, 1);
             events.ScheduleEvent(EVENT_CRUMBLING_RUIN, 20000);
-            BossAI::EnterCombat(who);
+            BossAI::JustEngagedWith(who);
         }
 
         void MovementInform(uint32 type, uint32 id) override
@@ -323,15 +323,15 @@ class npc_whirling_winds_hoo : public CreatureScript
         {
             me->RemoveUnitMovementFlag(MOVEMENTFLAG_WALKING);
 
-            ThreatContainer::StorageType const& m_threatList = summoner->getThreatManager().getThreatList();
+            std::vector<ThreatReference*> const& m_threatList = summoner->GetThreatManager().GetModifiableThreatList();
             if (m_threatList.empty())
                 return;
 
-            for(ThreatContainer::StorageType::const_iterator itr = m_threatList.begin(); itr != m_threatList.end(); ++itr)
+            for(std::vector<ThreatReference*>::const_iterator itr = m_threatList.begin(); itr != m_threatList.end(); ++itr)
             {
-                Unit * unit = ObjectAccessor::GetUnit(*me, (*itr)->getUnitGuid());
+                Unit * unit = (*itr)->GetVictim();
                 if(unit && unit->IsAlive() && unit->GetTypeId() == TYPEID_PLAYER)
-                    targetGUIDs.push_back((*itr)->getUnitGuid());
+                    targetGUIDs.push_back((*itr)->GetVictim()->GetGUID());
             }
 
             if(!targetGUIDs.empty())
@@ -607,7 +607,7 @@ class npc_water_warden_hoo : public CreatureScript
                 targetGUID = victim->GetGUID();
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             DoCast(me, SPELL_AQUA_BOMB_AURA, true);
         }

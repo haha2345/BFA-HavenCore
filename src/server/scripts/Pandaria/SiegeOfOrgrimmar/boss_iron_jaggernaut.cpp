@@ -244,7 +244,7 @@ class boss_iron_juggernaut : public CreatureScript
                 me->SetCombatReach(BOSS_COMBAT_REACH_SIZE);
             }
 
-            void Reset()
+            void Reset() override
             {
                 _Reset();
 
@@ -257,7 +257,7 @@ class boss_iron_juggernaut : public CreatureScript
                 m_CurrentPhase = PHASE_NONE;
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/) override
             {
                 SendIronJuggernautStart();
 
@@ -303,14 +303,14 @@ class boss_iron_juggernaut : public CreatureScript
                 BossAI::SummonedCreatureDespawn(summon);
             }
 
-            void JustDied(Unit* /*killer*/)
+            void JustDied(Unit* /*killer*/) override
             {
                 SendIronJuggernautDead();
 
                 _JustDied();
             }
 
-            void UpdateAI(const uint32 diff)
+            void UpdateAI(const uint32 diff) override
             {
                 if (!UpdateVictim())
                     return;
@@ -737,7 +737,7 @@ class npc_iron_juggernaut_borer_drill : public CreatureScript
                 isMoved = false;
             }
 
-            void SetGUID(ObjectGuid guid, int32 type)
+            void SetGUID(ObjectGuid guid, int32 type) override
             {
                 if (type == DATA_BORER_DRILL_TARGET)
                 {
@@ -834,7 +834,7 @@ class npc_iron_juggernaut_crawler_mine : public CreatureScript
                 damage = 0;
             }
 
-            void MovementInform(uint32 /*type*/, uint32 id)
+            void MovementInform(uint32 /*type*/, uint32 id) override
             {
                 if (id == EVENT_JUMP)
                 {
@@ -845,7 +845,7 @@ class npc_iron_juggernaut_crawler_mine : public CreatureScript
                 }
             }
 
-            void OnSpellClick(Unit* clicker, bool& /*result*/)
+            void OnSpellClick(Unit* clicker, bool& /*result*/) override
             {
                 if (isExploded)
                     return;
@@ -894,7 +894,7 @@ class npc_iron_juggernaut_cutter_laser : public CreatureScript
                 damageTimer = 2000;
             }
 
-            void Reset()
+            void Reset() override
             {
                 me->SetSpeed(MOVE_RUN, 0.5f);
 
@@ -910,7 +910,7 @@ class npc_iron_juggernaut_cutter_laser : public CreatureScript
                 }
             }
 
-            void UpdateAI(const uint32 diff)
+            void UpdateAI(const uint32 diff) override
             {
                 UpdateMove(diff);
 
@@ -1147,9 +1147,9 @@ class npc_iron_juggernaut_sawblade_ricochet : public CreatureScript
                     GetPositionUnderJuggernautClaw(pJaggernaut, spawnPos, true);
 
                     std::list<Unit*> targets;
-                    pJaggernaut->AI()->SelectTargetList(targets, RICOCHET_COUNT, SELECT_TARGET_RANDOM, -BOSS_RANGE_TARGETS_DIST, true);
+                    pJaggernaut->AI()->SelectTargetList(targets, RICOCHET_COUNT, SELECT_TARGET_RANDOM, 0, -BOSS_RANGE_TARGETS_DIST, true);
                     if (targets.size() < RICOCHET_COUNT)
-                        pJaggernaut->AI()->SelectTargetList(targets, RICOCHET_COUNT, SELECT_TARGET_RANDOM, 0.0f, true);
+                        pJaggernaut->AI()->SelectTargetList(targets, RICOCHET_COUNT, SELECT_TARGET_RANDOM, 0, 0.0f, true);
 
                     if (targets.size() > RICOCHET_COUNT)
                         Trinity::Containers::RandomResize(targets, RICOCHET_COUNT);
@@ -1292,11 +1292,11 @@ class spell_iron_juggernaut_borer_drill : public SpellScriptLoader
                     if (Creature* pCreature = GetCaster()->ToCreature())
                     {
                          // boss's size is 16.f, so -1.0f is like -17.0f
-                        pCreature->AI()->SelectTargetList(targets, BORER_DRILL_COUNT, SELECT_TARGET_RANDOM, -BOSS_RANGE_TARGETS_DIST, true);
+                        pCreature->AI()->SelectTargetList(targets, BORER_DRILL_COUNT, SELECT_TARGET_RANDOM, 0, -BOSS_RANGE_TARGETS_DIST, true);
 
                         if (targets.size() < BORER_DRILL_COUNT)
                         {
-                            pCreature->AI()->SelectTargetList(targets, BORER_DRILL_COUNT, SELECT_TARGET_RANDOM, 15.0f, true);
+                            pCreature->AI()->SelectTargetList(targets, BORER_DRILL_COUNT, SELECT_TARGET_RANDOM, 0, 15.0f, true);
                         }
                     }
 
@@ -1566,11 +1566,11 @@ class spell_iron_juggernaut_crawler_mine_aoe : public SpellScriptLoader
                 {
                     std::list<Unit*> rangeTargets;
                     // boss's size is 16.f, so -1.0f is like -17.0f
-                    pJaggernaut->AI()->SelectTargetList(rangeTargets, MAX_CRAWLER_MINES, SELECT_TARGET_RANDOM, -BOSS_RANGE_TARGETS_DIST, true);
+                    pJaggernaut->AI()->SelectTargetList(rangeTargets, MAX_CRAWLER_MINES, SELECT_TARGET_RANDOM, 0, -BOSS_RANGE_TARGETS_DIST, true);
 
                     if (rangeTargets.size() < MAX_CRAWLER_MINES)
                     {
-                        pJaggernaut->AI()->SelectTargetList(rangeTargets, MAX_CRAWLER_MINES, SELECT_TARGET_RANDOM, 15.0f, true);
+                        pJaggernaut->AI()->SelectTargetList(rangeTargets, MAX_CRAWLER_MINES, SELECT_TARGET_RANDOM, 0, 15.0f, true);
                     }
 
                     targets.clear();
@@ -1651,11 +1651,11 @@ class spell_iron_juggernaut_demolisher_cannons_aoe : public SpellScriptLoader
 
                 std::list<Unit*> rangeTargets;
                 // boss's size is 16.f, so -1.0f is like -17.0f
-                pJaggernaut->AI()->SelectTargetList(rangeTargets, maxTargetsCount, SELECT_TARGET_RANDOM, -BOSS_RANGE_TARGETS_DIST, true);
+                pJaggernaut->AI()->SelectTargetList(rangeTargets, maxTargetsCount, SELECT_TARGET_RANDOM, 0, -BOSS_RANGE_TARGETS_DIST, true);
 
                 if (rangeTargets.size() < maxTargetsCount)
                 {
-                    pJaggernaut->AI()->SelectTargetList(rangeTargets, maxTargetsCount, SELECT_TARGET_RANDOM, 15.0f, true);
+                    pJaggernaut->AI()->SelectTargetList(rangeTargets, maxTargetsCount, SELECT_TARGET_RANDOM, 0, 15.0f, true);
                 }
 
                 targets.clear();

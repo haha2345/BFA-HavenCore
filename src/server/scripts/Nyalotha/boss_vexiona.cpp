@@ -190,10 +190,10 @@ private:
 		instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_HEART_OF_DARKNESS_FEAR);
 	}
 
-	void EnterCombat(Unit* /*who*/) override
+	void JustEngagedWith(Unit* /*who*/) override
 	{
 		Talk(SAY_AGGRO);
-		_EnterCombat();
+		_JustEngagedWith();
 		events.ScheduleEvent(EVENT_GAIN_ENERGY_VEXIONA, 100ms);
 		events.ScheduleEvent(EVENT_ASCENDANT, 1s);
 		events.ScheduleEvent(EVENT_ENCROACHING_SHADOWS, 13s);
@@ -204,7 +204,7 @@ private:
 		this->phase = 1;
 	}
 
-	void DamageTaken(Unit* attacker, uint32& damage) override
+	void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/) override
 	{
 		if (this->phase == 1 && this->twilightDecimator == 3)
 		{
@@ -253,13 +253,13 @@ private:
 
 			case EVENT_DESPAIR:
 				Talk(SAY_DESPAIR);		
-				if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+				if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
 					me->CastSpell(target, SPELL_DESPAIR, true);
 				events.Repeat(30s);
 				break;
 
 			case EVENT_TWILIGHT_BREATH:
-				if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 50.0f, true))
+				if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 50.0f, true))
 					me->CastSpell(target, SPELL_TWILIGHT_BREATH, false);
 				events.Repeat(18s);
 				break;
@@ -271,7 +271,7 @@ private:
 			case EVENT_ENCROACHING_SHADOWS:	
 			{
 				UnitList tarlist;
-				SelectTargetList(tarlist, 6, SELECT_TARGET_RANDOM, 100.0f);
+				SelectTargetList(tarlist, 6, SELECT_TARGET_RANDOM, 0, 100.0f);
 				for (Unit* targets : tarlist)
 				{
 					me->CastSpell(targets, SPELL_ENCROACHING_SHADOWS_PERIODIC_TRIGGER, true);
@@ -302,7 +302,7 @@ private:
 		}
 	}
 
-	void SpellHitTarget(Unit* target, const SpellInfo* spellInfo) override
+	void SpellHitTarget(Unit* /*target*/, const SpellInfo* spellInfo) override
 	{
 		switch (spellInfo->Id)
 		{
@@ -352,7 +352,7 @@ class aura_despair : public AuraScript
 {
 	PrepareAuraScript(aura_despair);
 
-	void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+	void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
 	{
 		Unit* target = GetTarget();
 		Unit* caster = GetCaster();
@@ -391,7 +391,7 @@ struct npc_void_ascendant : public ScriptedAI
 			DoZoneInCombat(nullptr);
 	}
 
-	void EnterCombat(Unit* /*who*/) override
+	void JustEngagedWith(Unit* /*who*/) override
 	{
 		events.ScheduleEvent(EVENT_ANNIHILATION, 3s);
 	}
@@ -401,7 +401,7 @@ struct npc_void_ascendant : public ScriptedAI
 		switch (eventId)
 		{
 		case EVENT_ANNIHILATION:
-			if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+			if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
 				me->CastSpell(target, SPELL_ANNIHILATION, false);
 			events.Repeat(20s);
 			break;
@@ -505,7 +505,7 @@ struct npc_fanatic : public ScriptedAI
 {
 	npc_fanatic(Creature* c) : ScriptedAI(c) { }
 
-	void EnterCombat(Unit* /*who*/) override
+	void JustEngagedWith(Unit* /*who*/) override
 	{
 		switch (me->GetEntry())
 		{
@@ -552,7 +552,7 @@ class aura_encroaching_shadows : public AuraScript
 				caster->CastSpell(target, SPELL_ENCROACHING_SHADOWS_DAMAGE, true);
 	}
 
-	void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+	void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
 	{
 		Unit* target = GetTarget();
 		Unit* caster = GetCaster();
@@ -578,7 +578,7 @@ public:
 private:
 	uint32 checkTimer = 1000;
 
-	void OnUpdate(Player* player, uint32 diff) override
+	void OnUpdate(Player* player, uint32 /*diff*/) override
 	{
 		if (player->GetAreaId() != 12877)
 			return;

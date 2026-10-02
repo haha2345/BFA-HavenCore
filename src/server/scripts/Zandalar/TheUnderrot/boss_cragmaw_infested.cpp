@@ -84,7 +84,7 @@ public:
         EventMap events;
         InstanceScript* instance;
 
-        void Reset()
+        void Reset() override
         {
             _Reset();
             events.Reset();
@@ -126,21 +126,21 @@ public:
             return true;
         }
 
-        void JustDied(Unit*)
+        void JustDied(Unit*) override
         {
             _JustDied();
             DespawnCreature(NPC_BLOOD_TICK);
             DespawnCreature(NPC_LARVES);
         }
 
-        void EnterEvadeMode(EvadeReason /*why*/)
+        void EnterEvadeMode(EvadeReason /*why*/) override
         {
             DespawnCreature(NPC_BLOOD_TICK);
             DespawnCreature(NPC_LARVES);
             _DespawnAtEvade(15);
         }
 
-        void MovementInform(uint32 /*uiType*/, uint32 id)
+        void MovementInform(uint32 /*uiType*/, uint32 id) override
         {
             switch (id)
             {
@@ -216,9 +216,9 @@ public:
             }
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*) override
         {
-            _EnterCombat();
+            _JustEngagedWith();
 
             me->SetPowerType(POWER_ENERGY);
             me->SetMaxPower(POWER_ENERGY, 100);
@@ -244,7 +244,7 @@ public:
             }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             events.Update(diff);
 
@@ -388,7 +388,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             events.ScheduleEvent(EVENT_SERRATED_FANGS, TIMER_SERRATED_FANGS);
         }

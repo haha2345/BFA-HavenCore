@@ -78,7 +78,7 @@ class grimrail_depot_mob_assault_cannon : public CreatureScript
             events.Reset();
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
         }
 
@@ -143,7 +143,7 @@ class grimrail_depot_mob_grimrail_bombadier : public CreatureScript
             events.ScheduleEvent(eGrimrailBombadierEvents::EventBlackrockBombs, 3 * TimeConstants::IN_MILLISECONDS);
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {         
             events.ScheduleEvent(eGrimrailBombadierEvents::EventDoubleSlash, 6 * TimeConstants::IN_MILLISECONDS);
         }
@@ -182,7 +182,7 @@ class grimrail_depot_mob_grimrail_bombadier : public CreatureScript
             switch (events.ExecuteEvent())
             {
             case eGrimrailBombadierEvents::EventBlackrockBombs:
-                if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_FARTHEST, 0, 15.0f, true))
+                if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXDISTANCE, 0, 15.0f, true))
                     me->CastSpell(l_Target, eGrimrailBombadierSpells::SpellBlackrockBombTriggerMissile);
                 else
                 {
@@ -259,7 +259,7 @@ class grimrail_depot_mob_grimrail_laborer : public CreatureScript
             }
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(eGrimrailLaborerEvents::EventHaymaker, 6 * TimeConstants::IN_MILLISECONDS);
         }
@@ -328,7 +328,7 @@ class grimrail_depot_mob_grimrail_overseer : public CreatureScript
             m_DashEffect = false;
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(eGrimrailOverseerEvents::EventDash, 15 * TimeConstants::IN_MILLISECONDS);
             events.ScheduleEvent(eGrimrailOverseerEvents::EventHewingSwipe, 6 * TimeConstants::IN_MILLISECONDS);
@@ -391,7 +391,7 @@ class grimrail_depot_mob_grimrail_overseer : public CreatureScript
             switch (events.ExecuteEvent())
             {
             case eGrimrailOverseerEvents::EventDash:
-                if (Unit * l_Random = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+                if (Unit * l_Random = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
                 {
                     me->CastSpell(l_Random, eGrimrailOverseerSpells::SpellDashDummy);
                     me->CastSpell(l_Random, eGrimrailOverseerSpells::SpellMadDashAura);
@@ -454,7 +454,7 @@ class grimrail_depot_mob_grimrail_scout : public CreatureScript
             events.Reset();
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(eGrimrailScoutEvents::EventArcaneBlitz, 0 * TimeConstants::IN_MILLISECONDS);
         }
@@ -487,7 +487,7 @@ class grimrail_depot_mob_grimrail_scout : public CreatureScript
             switch (events.ExecuteEvent())
             {
             case eGrimrailScoutEvents::EventArcaneBlitz:
-                if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 100.0f, true))
+                if (SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 100.0f, true))
                      me->CastSpell(me, eGrimrailScoutSpells::SpellArcaneBlitzAura);
 
                 events.ScheduleEvent(eGrimrailScoutEvents::EventArcaneBlitz, 0 * TimeConstants::IN_MILLISECONDS);
@@ -548,7 +548,7 @@ class grimrail_depot_mob_grimrail_technician : public CreatureScript
             ClearDelayedOperations();
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(eGrimrailTechnicianEvents::Event50kVolts, 8 * TimeConstants::IN_MILLISECONDS);
             events.ScheduleEvent(eGrimrailTechnicianEvents::EventActivating, 20 * TimeConstants::IN_MILLISECONDS);
@@ -757,7 +757,7 @@ class grimrail_depot_mob_gromkar_capitan : public CreatureScript
             }
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(eGromkarCapitanEvents::EventRecklessSlash, 0 * TimeConstants::IN_MILLISECONDS);
         }
@@ -824,7 +824,7 @@ class grimrail_depot_mob_gromkar_cinderseer : public CreatureScript
             events.Reset();
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(eGromkarCinderseerEvents::EventFlametongue, 10 * TimeConstants::IN_MILLISECONDS);
             events.ScheduleEvent(eGromkarCinderseerEvents::EventLavaWreath, 15 * TimeConstants::IN_MILLISECONDS);
@@ -906,7 +906,7 @@ class grimrail_depot_mob_gromkar_farseer : public CreatureScript
             events.Reset();
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(eGromkarFarSeerEvents::EventStormShield, 8 * TimeConstants::IN_MILLISECONDS);
             events.ScheduleEvent(eGromkarFarSeerEvents::EventThunderZone, 15 * TimeConstants::IN_MILLISECONDS);
@@ -998,7 +998,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(eGromkarGunnerEvents::EventShrapnelBlast, 1 * TimeConstants::IN_MILLISECONDS);
         }
@@ -1077,7 +1077,7 @@ public:
 
     grimrail_depot_mob_board_to_grimrail() : CreatureScript("grimrail_depot_mob_board_to_grimrail") { }
 
-    bool OnGossipHello(Player * p_Player, Creature * p_Creature) override
+    bool OnGossipHello(Player * p_Player, Creature * /*p_Creature*/) override
     {
         /// Cut scene and teleport.
         p_Player->GetSceneMgr().PlayScene(GrimrailDepotScenes::SceneBoardToGrimrail);
@@ -1195,7 +1195,7 @@ public:
     {
         PrepareAuraScript(grimrail_depot_spell_activating_AuraScript);
 
-        void OnProc(AuraEffect const* p_AurEff, ProcEventInfo& p_EventInfo)
+        void OnProc(AuraEffect const* /*p_AurEff*/, ProcEventInfo& /*p_EventInfo*/)
         {
             PreventDefaultAction();
 
@@ -1234,7 +1234,7 @@ class grimrail_depot_spell_sharpnel_blast : public SpellScriptLoader
     {
         PrepareSpellScript(grimrail_depot_spell_sharpnel_blast_SpellScript);
 
-        void HandleDamage(SpellEffIndex p_EffIndex)
+        void HandleDamage(SpellEffIndex /*p_EffIndex*/)
         {
             if (Unit* l_Caster = GetCaster())
             {
@@ -1276,7 +1276,7 @@ class grimrail_depot_spell_arcane_blitz : public SpellScriptLoader
             SpellArcaneBlitzTriggerMissile = 166398
         };
 
-        void HandlePeriodic(AuraEffect const* p_AurEff)
+        void HandlePeriodic(AuraEffect const* /*p_AurEff*/)
         {
             if (Unit* l_Target = GetTarget())
                 l_Target->AddAura(eWardenChainAuras::SpellArcaneBlitzTriggerMissile, l_Target);

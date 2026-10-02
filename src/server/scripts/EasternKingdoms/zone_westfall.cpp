@@ -16,13 +16,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-/* ScriptData
-TrinityScript_Name: Westfall
-%Complete: 90
-Comment: Alot of this needs moved to db... it doesnt belong in core script.
-Category: Westfall
-EndScriptData */
-
 /* ContentData
 npc_thug
 npc_horatio
@@ -210,7 +203,7 @@ public:
             case 9: {
               for (uint8 i = 0; i < 4; ++i)
                 if (Creature *thug = GetThug(i))
-                  thug->CombatStart(player, true);
+                  thug->AttackedTarget(player, true);
 
               SummonTimer = 5000;
               Phase++;
@@ -2256,34 +2249,26 @@ struct npc_ripsnarl : public ScriptedAI {
   }
 };
 
-// ============================================================================
 // Quest 26232 - "Lou's Parting Thoughts"
-// Ported from TrinityCore master branch (commit 90b38cd)
-// ============================================================================
 
 enum eLousPartingThoughts {
-  // NPC entries
   NPC_LOUS_PARTING_THOUGHTS_TRIGGER = 42562,
   NPC_WESTFALL_THUG = 42387,
   NPC_SMALL_TIME_HUSTLER = 42390,
+  NPC_TWO_SHOED_LOU_PREQUEST = 42405, // Pre-quest static world spawn at Furlbrow's
 
-  // Quest
   QUEST_LOUS_PARTING_THOUGHTS_NEW = 26232,
 
-  // Spell
   SPELL_HOBO_INFORMATION = 79184,
 
-  // Sounds
   SOUND_SHOOTING = 15071,
   SOUND_SCREAM = 17852,
 
-  // Data
   DATA_THUG_DEATH = 1,
 
-  // Actions
   ACTION_THUG_RESET = 1,
+  ACTION_PRESUMMON_THUGS = 2,
 
-  // Events - shared between trigger and hustler (unique IDs across both)
   EVENT_LPT_SUMMON_THUGS = 1,
   EVENT_LPT_THUG_SAY0 = 2,
   EVENT_LPT_THUG_SAY1 = 3,
@@ -2301,7 +2286,6 @@ enum eLousPartingThoughts {
   EVENT_LPT_HUSTLER_SAY1 = 15,
   EVENT_LPT_HUSTLER_RESET = 16,
 
-  // Creature text groups
   // Thug (42387)
   THUG_SAY_0 = 0,
   THUG_SAY_1 = 1,
@@ -2324,7 +2308,7 @@ Position const ThugSpawnPos[4] = {
     {-9860.43f, 1335.46f, 41.9859f, 4.11898f},
 };
 
-// Areatrigger 5988 - player approaches the thugs while quest is incomplete
+// Areatrigger 5988
 class at_westfall_two_shoed_lou_thugs : public AreaTriggerScript {
 public:
   at_westfall_two_shoed_lou_thugs()
@@ -2369,8 +2353,7 @@ struct npc_westfall_thug : public ScriptedAI {
   }
 };
 
-// NPC 42562 - Lou's Parting Thoughts Trigger (permanent invisible controller
-// creature)
+// NPC 42562 - Lou's Parting Thoughts Trigger
 struct npc_westfall_lous_parting_thoughts_trigger : public ScriptedAI {
   npc_westfall_lous_parting_thoughts_trigger(Creature *creature)
       : ScriptedAI(creature), _thugDeathCount(0) {
@@ -2383,7 +2366,18 @@ struct npc_westfall_lous_parting_thoughts_trigger : public ScriptedAI {
       return;
 
     _eventInvokerGUID = guid;
-    _events.ScheduleEvent(EVENT_LPT_THUG_SAY0, 0);
+
+    if (_summonGUIDs[0].IsEmpty()) {
+      for (uint8 i = 0; i < 4; ++i) {
+        if (Creature* thug = me->SummonCreature(NPC_WESTFALL_THUG, ThugSpawnPos[i],
+                                                TEMPSUMMON_CORPSE_TIMED_DESPAWN, 60000))
+          _summonGUIDs[i] = thug->GetGUID();
+      }
+      _thugDeathCount = 0;
+      _events.ScheduleEvent(EVENT_LPT_THUG_SAY0, 1500);
+    } else {
+      _events.ScheduleEvent(EVENT_LPT_THUG_SAY0, 500);
+    }
   }
 
   // Called from each thug when it dies
@@ -2398,14 +2392,31 @@ struct npc_westfall_lous_parting_thoughts_trigger : public ScriptedAI {
   }
 
   void DoAction(int32 action) override {
-    if (action == ACTION_THUG_RESET)
-      _events.ScheduleEvent(EVENT_LPT_SUMMON_THUGS, 60000);
+    if (action == ACTION_THUG_RESET) {
+      // Despawn any remaining thugs and clear state; next player will re-trigger
+      for (ObjectGuid const& guid : _summonGUIDs)
+        if (Creature* thug = ObjectAccessor::GetCreature(*me, guid))
+          thug->DespawnOrUnsummon();
+      _summonGUIDs.fill(ObjectGuid::Empty);
+      _eventInvokerGUID = ObjectGuid::Empty;
+      _thugDeathCount = 0;
+      _events.Reset();
+    } else if (action == ACTION_PRESUMMON_THUGS) {
+      if (_summonGUIDs[0].IsEmpty()) {
+        for (uint8 i = 0; i < 4; ++i) {
+          if (Creature* thug = me->SummonCreature(NPC_WESTFALL_THUG, ThugSpawnPos[i],
+                                                  TEMPSUMMON_CORPSE_TIMED_DESPAWN, 300000))
+            _summonGUIDs[i] = thug->GetGUID();
+        }
+        _thugDeathCount = 0;
+      }
+    }
   }
-
-  // On server spawn: immediately summon the thug group
   void Reset() override {
-    if (_summonGUIDs[0].IsEmpty())
-      _events.ScheduleEvent(EVENT_LPT_SUMMON_THUGS, 0);
+    _events.Reset();
+    _eventInvokerGUID = ObjectGuid::Empty;
+    _summonGUIDs.fill(ObjectGuid::Empty);
+    _thugDeathCount = 0;
   }
 
   void UpdateAI(uint32 diff) override {
@@ -2421,7 +2432,7 @@ struct npc_westfall_lous_parting_thoughts_trigger : public ScriptedAI {
             thug->DespawnOrUnsummon();
 
         _summonGUIDs.fill(ObjectGuid::Empty);
-        _events.ScheduleEvent(EVENT_LPT_SUMMON_THUGS, 2500);
+        _thugDeathCount = 0;
         return;
       }
     }
@@ -2521,7 +2532,6 @@ struct npc_westfall_lous_parting_thoughts_trigger : public ScriptedAI {
             continue;
           nearPlayer->CastSpell(nearPlayer, SPELL_HOBO_INFORMATION, true);
         }
-
         _events.ScheduleEvent(EVENT_LPT_THUG_SHOOT1, 1500);
         break;
       }
@@ -2561,7 +2571,7 @@ private:
   uint32 _thugDeathCount;
 };
 
-// Areatrigger 5987 - player walks near the Small-Time Hustler
+// Areatrigger 5987
 class at_westfall_small_time_hustler : public AreaTriggerScript {
 public:
   at_westfall_small_time_hustler()
@@ -2625,12 +2635,27 @@ private:
   EventMap _events;
   ObjectGuid _eventInvokerGUID;
 };
-// ============================================================================
-// End of Quest 26232 scripts
-// ============================================================================
+
+// NPC 42405 - Two-Shoed Lou (pre-quest static world spawn)
+class npc_westfall_two_shoed_lou : public CreatureScript {
+public:
+  npc_westfall_two_shoed_lou() : CreatureScript("npc_westfall_two_shoed_lou") {}
+
+  bool OnQuestAccept(Player* /*player*/, Creature* creature,
+                     Quest const* quest) override {
+    if (quest->GetQuestId() != QUEST_LOUS_PARTING_THOUGHTS_NEW)
+      return false;
+
+    // Find the nearby trigger NPC and tell it to pre-summon the thugs
+    if (Creature* trigger = creature->FindNearestCreature(
+            NPC_LOUS_PARTING_THOUGHTS_TRIGGER, 300.0f, true))
+      trigger->AI()->DoAction(ACTION_PRESUMMON_THUGS);
+
+    return false;
+  }
+};
 
 void AddSC_westfall() {
-  new npc_thug();
   new npc_horatio();
   new npc_westplains_drifter();
   new npc_crate_mine();
@@ -2643,8 +2668,7 @@ void AddSC_westfall() {
   new npc_horatio_investigate();
   new npc_hungry_hobo();
   RegisterCreatureAI(npc_ripsnarl);
-
-  // Quest 26232 - Lou's Parting Thoughts
+  new npc_westfall_two_shoed_lou();
   RegisterCreatureAI(npc_westfall_thug);
   RegisterCreatureAI(npc_westfall_lous_parting_thoughts_trigger);
   RegisterCreatureAI(npc_westfall_small_time_hustler);

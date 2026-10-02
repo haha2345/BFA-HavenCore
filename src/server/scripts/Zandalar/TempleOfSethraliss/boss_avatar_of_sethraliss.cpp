@@ -83,7 +83,7 @@ struct boss_avatar_of_sethraliss : public BossAI
         me->RemoveUnitFlag(UNIT_FLAG_IMMUNE_TO_PC);       
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         instance->SetBossState(DATA_AVATAR_OF_SETHRALISS, IN_PROGRESS);
         events.ScheduleEvent(EVENT_CHECK_PLAYERS, 1s);
@@ -272,7 +272,7 @@ struct boss_avatar_of_sethraliss : public BossAI
         }        
     }
 
-    void JustSummoned(Creature* summon)
+    void JustSummoned(Creature* summon) override
     {
         switch (summon->GetEntry())
         {
@@ -333,7 +333,7 @@ struct boss_avatar_of_sethraliss : public BossAI
             }
 
             Talk(SAY_INTRO);
-            _EnterCombat();
+            _JustEngagedWith();
 
             me->GetScheduler().Schedule(6s, [this] (TaskContext /*context*/)
             {
@@ -345,7 +345,7 @@ struct boss_avatar_of_sethraliss : public BossAI
                 Talk(SAY_RESTORE);
             });
 
-            EnterCombat(player);
+            JustEngagedWith(player);
         }
     }
 
@@ -387,7 +387,7 @@ struct npc_hoodoo_hexer : public ScriptedAI
         me->SetVisible(false);
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {        
         if (IsSethralissHeroicPlus(me->GetMap()))
         {
@@ -437,7 +437,7 @@ struct npc_plague_toad_137233 : public ScriptedAI
         ScriptedAI::Reset();
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
        DoCastVictim(SPELL_PLAGUE);
     }
@@ -454,8 +454,8 @@ struct npc_energy_fragment : public ScriptedAI
         me->AddNpcFlag(UNIT_NPC_FLAG_GOSSIP);
     }
 
-    void sGossipHello(Player* player) 
-    { 
+    void sGossipHello(Player* player) override
+    {
         CloseGossipMenuFor(player);
         if (Creature* avatar = me->FindNearestCreature(NPC_AVATAR_OF_SETHRALISS, 100.0f, true))
         {

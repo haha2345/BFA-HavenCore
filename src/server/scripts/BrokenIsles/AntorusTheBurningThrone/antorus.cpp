@@ -76,7 +76,7 @@ struct npc_garothi_annihilator_123398 : public ScriptedAI
         me->GetMotionMaster()->MoveTargetedHome();
     }
 
-    void EnterCombat(Unit* /*attacker*/) override
+    void JustEngagedWith(Unit* /*attacker*/) override
     {
         events.ScheduleEvent(SPELL_ANNIHILATION, 5s);
     }
@@ -132,7 +132,7 @@ struct npc_clobex_127732 : public ScriptedAI
 {
     npc_clobex_127732(Creature* creature) : ScriptedAI(creature) { Initialize(); }
 
-    void EnterCombat(Unit* /*victim*/) override
+    void JustEngagedWith(Unit* /*victim*/) override
     {
         Talk(1);
         events.ScheduleEvent(SPELL_PYROGENICS, 5s);
@@ -302,7 +302,7 @@ struct npc_lightforged_beacon_129449 : public ScriptedAI
         me->AddNpcFlag(UNIT_NPC_FLAG_SPELLCLICK);
     }
 
-    void OnSpellClick(Unit* clicker, bool& /*result*/)
+    void OnSpellClick(Unit* clicker, bool& /*result*/) override
     {
         if (Player* player = clicker->ToPlayer())
         {

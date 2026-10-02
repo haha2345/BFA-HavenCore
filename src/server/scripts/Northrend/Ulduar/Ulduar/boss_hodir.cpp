@@ -235,7 +235,7 @@ public:
         {
             targetGUID = summoner->GetGUID();
             me->SetInCombatWith(summoner);
-            me->AddThreat(summoner, 250.0f);
+            AddThreat(summoner, 250.0f);
             if (Unit* target = ObjectAccessor::GetUnit(*me, targetGUID))
             {
                 DoCast(target, SPELL_BLOCK_OF_ICE, true);
@@ -279,8 +279,8 @@ public:
             summoner->AddUnitFlag(UnitFlags(UNIT_FLAG_STUNNED | UNIT_FLAG_PACIFIED));
             summoner->SetControlled(true, UNIT_STATE_ROOT);
             me->SetInCombatWith(summoner);
-            me->AddThreat(summoner, 250.0f);
-            summoner->AddThreat(me, 250.0f);
+            AddThreat(summoner, 250.0f);
+            AddThreat(me, 250.0f, summoner);
             if (Creature* target = ObjectAccessor::GetCreature(*me, targetGUID))
             {
                 DoCast(target, SPELL_FLASH_FREEZE_HELPER, true);
@@ -358,9 +358,9 @@ public:
                     FrozenHelper->CastSpell(FrozenHelper, SPELL_SUMMON_FLASH_FREEZE_HELPER, true);
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
-            _EnterCombat();
+            _JustEngagedWith();
             Talk(SAY_AGGRO);
             DoCast(me, SPELL_BITING_COLD, true);
 
@@ -489,11 +489,10 @@ public:
 
             if (gettingColdInHereTimer <= diff && gettingColdInHere)
             {
-                std::list<HostileReference*> ThreatList = me->getThreatManager().getThreatList();
-                for (std::list<HostileReference*>::const_iterator itr = ThreatList.begin(); itr != ThreatList.end(); ++itr)
-                    if (Unit* target = ObjectAccessor::GetUnit(*me, (*itr)->getUnitGuid()))
+                for (auto const& pair : me->GetCombatManager().GetPvECombatRefs())
+                    if (Player* target = pair.second->GetOther(me)->ToPlayer())
                         if (Aura* BitingColdAura = target->GetAura(SPELL_BITING_COLD_TRIGGERED))
-                            if ((target->GetTypeId() == TYPEID_PLAYER) && (BitingColdAura->GetStackAmount() > 2))
+                            if (BitingColdAura->GetStackAmount() > 2)
                                 SetData(DATA_GETTING_COLD_IN_HERE, 0);
                 gettingColdInHereTimer = 1000;
             }

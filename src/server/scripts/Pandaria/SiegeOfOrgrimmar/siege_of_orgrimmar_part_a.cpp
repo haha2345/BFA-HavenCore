@@ -207,7 +207,7 @@ class npc_siege_of_orgrimmar_tormented_initiate : public CreatureScript
                 }
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 me->CastStop();
 
@@ -309,7 +309,7 @@ class npc_siege_of_orgrimmar_fallen_pool_tender : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 me->RemoveAura(SPELL_BOOBLE_SHIELD_2);
 
@@ -387,7 +387,7 @@ class npc_siege_of_orgrimmar_aqueous_defender : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_RUSHING_WATERS, urand(8000, 15000));
             }
@@ -599,7 +599,7 @@ class npc_siege_of_orgrimmar_fragment_of_pride : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*who*/)
+            void JustEngagedWith(Unit* /*who*/)
             {
                 events.ScheduleEvent(EVENT_GROWING_PRIDE, urand(3000, 10000));
             }
@@ -657,7 +657,7 @@ class npc_siege_of_orgrimmar_amalgamated_hubris : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_SHA_NOVA, urand(5000, 10000));
             }
@@ -734,7 +734,7 @@ class npc_siege_of_orgrimmar_vanity : public CreatureScript
                 SendVanityAlive(true);
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_SELF_ABSORBED, urand(3000, 7000));
             }
@@ -889,7 +889,7 @@ class npc_siege_of_orgrimmar_zeal : public CreatureScript
                 }
             }
 
-            void Reset()
+            void Reset() override
             {
                 events.Reset();
 
@@ -898,7 +898,7 @@ class npc_siege_of_orgrimmar_zeal : public CreatureScript
                 CheckArroganceAlive();
             }
 
-            void EnterCombat(Unit* /*who*/)
+            void JustEngagedWith(Unit* /*who*/) override
             {
                 events.ScheduleEvent(EVENT_SHA_SPLASH, urand(5000, 10000));
 
@@ -920,14 +920,14 @@ class npc_siege_of_orgrimmar_zeal : public CreatureScript
                 }
             }
 
-            void JustDied(Unit* /*who*/)
+            void JustDied(Unit* /*who*/) override
             {
                 events.Reset();
 
                 SendZealDied();
             }
 
-            void UpdateAI(const uint32 diff)
+            void UpdateAI(const uint32 diff) override
             {
                 if (!UpdateVictim())
                     return;
@@ -1019,7 +1019,7 @@ class at_soo_lorewalker_cho_intro : public AreaTriggerScript
     public:
         at_soo_lorewalker_cho_intro() : AreaTriggerScript("at_soo_lorewalker_cho_intro") { }
 
-        bool OnTrigger(Player* pPlayer, const AreaTriggerEntry* /*pAt*/, bool p_Enter)
+        bool OnTrigger(Player* pPlayer, const AreaTriggerEntry* /*pAt*/, bool /*p_Enter*/)
         {
             if (InstanceScript* pInstance = pPlayer->GetInstanceScript())
             {

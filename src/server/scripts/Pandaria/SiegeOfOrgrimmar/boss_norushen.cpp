@@ -674,7 +674,7 @@ public:
             m_CombatHelper.RegisterCombatAura(SPELL_CORRUPTION);
         }
 
-        void Reset()
+        void Reset() override
         {
             _Reset();
 
@@ -691,7 +691,7 @@ public:
             instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_CORRUPTION);
         }
 
-        void AttackStart(Unit* who)
+        void AttackStart(Unit* who) override
         {
             if (!who)
                 return;
@@ -700,7 +700,7 @@ public:
                 DoStartNoMovement(who);
         }
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(EVENT_BERSERK, 7 * MINUTE * IN_MILLISECONDS);
             events.ScheduleEvent(EVENT_UNCHECKED_CORRUPTION, 5000);
@@ -717,7 +717,7 @@ public:
             DoZoneInCombat();
         }
 
-        void EnterEvadeMode(EvadeReason /*why*/)
+        void EnterEvadeMode(EvadeReason /*why*/) override
         {
             if (isDespawned)
                 return;
@@ -740,7 +740,7 @@ public:
             me->DespawnOrUnsummon(1000);
         }
 
-        void SetData(uint32 type, uint32 data)
+        void SetData(uint32 type, uint32 data) override
         {
             if (type == DATA_PURIFYING_LIGHT_ID)
             {
@@ -751,7 +751,7 @@ public:
             }
         }
 
-        void SetGUID(ObjectGuid guid, int32 type)
+        void SetGUID(ObjectGuid guid, int32 type) override
         {
             switch (type)
             {
@@ -802,7 +802,7 @@ public:
             BossAI::SummonedCreatureDespawn(summon);
         }
 
-        void JustDied(Unit* /*killer*/)
+        void JustDied(Unit* /*killer*/) override
         {
             ClearCreatures();
 
@@ -816,7 +816,7 @@ public:
             }
         }
 
-        void UpdateAI(const uint32 diff)
+        void UpdateAI(const uint32 diff) override
         {
             // prevent entering evade mode while all players in other phases
             if (!IsAllPlayersTesting())
@@ -893,7 +893,7 @@ public:
             if (m_TestController.GetPlayerTestsCount() == 0)
                 return false;
 
-            return m_TestController.GetPlayerTestsCount() >= me->getThreatManager().getThreatList().size();
+            return m_TestController.GetPlayerTestsCount() >= me->GetThreatManager().GetThreatListSize();
         }
 
         void GetNextBlindHatredPos(BlindHatredPosition& nextPos) const
@@ -1304,9 +1304,7 @@ public:
         {
             events.Update(diff);
 
-            if (uint32 eventId = events.ExecuteEvent())
-            {
-            }
+            events.ExecuteEvent();
         }
 
     private:
@@ -1475,12 +1473,12 @@ public:
             me->DespawnOrUnsummon();
         }
 
-        void Reset()
+        void Reset() override
         {
             me->AddAura(SPELL_LOOK_WITHIN_DUMMY, me);
         }
 
-        void SetData(uint32 type, uint32 data)
+        void SetData(uint32 type, uint32 data) override
         {
             if (type == DATA_PURIFYING_LIGHT_ID)
             {
@@ -1501,7 +1499,7 @@ public:
             return 0;
         }
 
-        void DoAction(const int32 action)
+        void DoAction(const int32 action) override
         {
             if (action == ACTION_SPAWN_LIGHT)
             {
@@ -1559,7 +1557,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(EVENT_MOVE, 3000);
         }
@@ -1677,7 +1675,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(EVENT_MOVE, 3000);
         }
@@ -1795,7 +1793,7 @@ public:
             DoCast(me, SPELL_UNLEASHED_1, true);
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(EVENT_MOVE, 3000);
         }
@@ -1898,7 +1896,7 @@ public:
             return ObjectGuid::Empty;
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(EVENT_MOVE, 3000);
         }
@@ -2003,7 +2001,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/)
         {
             events.ScheduleEvent(EVENT_MOVE, 3000);
         }
@@ -2112,7 +2110,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/)
         {
             events.ScheduleEvent(EVENT_MOVE, 3000);
         }
@@ -2805,7 +2803,7 @@ struct spell_area_norushen_expel_corruption_2 : AreaTriggerAI
 {
     spell_area_norushen_expel_corruption_2(AreaTrigger* areatrigger) : AreaTriggerAI(areatrigger) { }
 
-    void OnCreate()
+    void OnCreate() override
     {
         Unit* caster = ObjectAccessor::GetUnit(*at, at->GetCasterGuid());
         if (!caster)

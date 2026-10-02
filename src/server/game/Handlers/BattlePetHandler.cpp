@@ -314,7 +314,7 @@ void WorldSession::HandlePetBattleRequestWild(WorldPackets::BattlePet::RequestWi
         ++playerPetCount;
     }
 
-    _player->SetUnitFlags(UNIT_FLAG_IMMUNE_TO_NPC); ///< Immuned only to NPC
+    _player->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC); ///< Immuned only to NPC
     _player->SetTarget(wildBattlePetCreature->GetGUID());
 
     SendPetBattleFinalizeLocation(battleRequest);
@@ -340,7 +340,7 @@ void WorldSession::HandlePetBattleRequestWild(WorldPackets::BattlePet::RequestWi
 
             if (auto currrentCreature = ObjectAccessor::GetCreature(*_player, wildBattlePets[i]->OriginalCreature))
             {
-                currrentCreature->SetUnitFlags(UNIT_FLAG_IMMUNE_TO_PC); // Immuned to all
+                currrentCreature->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_PC); // Immuned to all
                 currrentCreature->SetTarget(_player->GetGUID());
                 currrentCreature->SetControlled(true, UNIT_STATE_ROOT);
                 currrentCreature->_petBattleId = battle->ID;
@@ -407,8 +407,8 @@ void WorldSession::HandlePetBattleRequestUpdate(WorldPackets::BattlePet::Request
 
     if (!packet.Canceled && battleRequest && opposant)
     {
-        _player->SetUnitFlags(UNIT_FLAG_IMMUNE_TO_NPC); // Immuned only to NPC
-        opposant->SetUnitFlags(UNIT_FLAG_IMMUNE_TO_NPC); // Immuned only to NPC
+        _player->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC); // Immuned only to NPC
+        opposant->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC); // Immuned only to NPC
 
         std::shared_ptr<BattlePetInstance> playerPets[MAX_PET_BATTLE_SLOTS];
         std::shared_ptr<BattlePetInstance> playerOpposantPets[MAX_PET_BATTLE_SLOTS];

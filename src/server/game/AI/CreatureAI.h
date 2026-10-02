@@ -218,8 +218,8 @@ class TC_GAME_API CreatureAI : public UnitAI
         // Called for reaction at stopping attack at no attackers or targets
         virtual void EnterEvadeMode(EvadeReason why = EVADE_REASON_OTHER);
 
-        // Called for reaction at enter to combat if not in combat yet (enemy can be nullptr)
-        virtual void EnterCombat(Unit* /*victim*/) { }
+        // Called for reaction when initially engaged - this will always happen _after_ JustEnteredCombat
+        virtual void JustEngagedWith(Unit* /*who*/) { }
 
         // Called when the creature is killed
         virtual void JustDied(Unit* /*killer*/) { }
@@ -229,7 +229,7 @@ class TC_GAME_API CreatureAI : public UnitAI
 
         // Called when the creature summon successfully other creature
         virtual void JustSummoned(Creature* /*summon*/) { }
-        virtual void IsSummonedBy(Unit* /*summoner*/) { }
+        virtual void IsSummonedBy(Unit* /*summoner*/) override { }
         virtual void IsSummonedBySpell(Spell const* /*summonSpell*/) { }
 
         virtual void SummonedCreatureDespawn(Creature* /*summon*/) { }

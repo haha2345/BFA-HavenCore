@@ -1,7 +1,17 @@
-# Set build-directive (used in core to tell which buildtype we used)
-target_compile_definitions(trinity-compile-option-interface
-  INTERFACE
-    -D_BUILD_DIRECTIVE="$<CONFIG>")
+include(CheckCXXSourceCompiles)
+
+set(CLANG_EXPECTED_VERSION 11.0.0)
+if(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
+  # apple doesnt like to do the sane thing which would be to use the same version numbering as regular clang
+  # version number pulled from https://en.wikipedia.org/wiki/Xcode#Toolchain_versions for row matching LLVM 11
+  set(CLANG_EXPECTED_VERSION 12.0.5)
+endif()
+
+if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS CLANG_EXPECTED_VERSION)
+  message(FATAL_ERROR "Clang: TrinityCore requires version ${CLANG_EXPECTED_VERSION} to build but found ${CMAKE_CXX_COMPILER_VERSION}")
+else()
+  message(STATUS "Clang: Minimum version required is ${CLANG_EXPECTED_VERSION}, found ${CMAKE_CXX_COMPILER_VERSION} - ok!")
+endif()
 
 if(WITH_WARNINGS)
   target_compile_options(trinity-warning-interface
@@ -13,12 +23,6 @@ if(WITH_WARNINGS)
       -Wfatal-errors
       -Wno-mismatched-tags
       -Woverloaded-virtual)
- 
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 10)
-    target_compile_options(trinity-warning-interface
-      INTERFACE
-        -Wno-deprecated-copy) # warning in g3d
-  endif()
 
   message(STATUS "Clang: All warnings enabled")
 endif()
@@ -29,6 +33,78 @@ if(WITH_COREDEBUG)
       -g3)
 
   message(STATUS "Clang: Debug-flags set (-g3)")
+endif()
+
+if(ASAN)
+  target_compile_options(trinity-compile-option-interface
+    INTERFACE
+      -fno-omit-frame-pointer
+      -fsanitize=address
+      -fsanitize-recover=address
+      -fsanitize-address-use-after-scope)
+
+  target_link_options(trinity-compile-option-interface
+    INTERFACE
+      -fno-omit-frame-pointer
+      -fsanitize=address
+      -fsanitize-recover=address
+      -fsanitize-address-use-after-scope)
+
+  message(STATUS "Clang: Enabled Address Sanitizer")
+endif()
+
+if(MSAN)
+  target_compile_options(trinity-compile-option-interface
+    INTERFACE
+      -fno-omit-frame-pointer
+      -fsanitize=memory
+      -fsanitize-memory-track-origins
+      -mllvm
+      -msan-keep-going=1)
+
+  target_link_options(trinity-compile-option-interface
+    INTERFACE
+      -fno-omit-frame-pointer
+      -fsanitize=memory
+      -fsanitize-memory-track-origins)
+
+  message(STATUS "Clang: Enabled Memory Sanitizer MSan")
+endif()
+
+if(UBSAN)
+  target_compile_options(trinity-compile-option-interface
+    INTERFACE
+      -fno-omit-frame-pointer
+      -fsanitize=undefined)
+
+  target_link_options(trinity-compile-option-interface
+    INTERFACE
+      -fno-omit-frame-pointer
+      -fsanitize=undefined)
+
+  message(STATUS "Clang: Enabled Undefined Behavior Sanitizer UBSan")
+endif()
+
+if(TSAN)
+  target_compile_options(trinity-compile-option-interface
+    INTERFACE
+      -fno-omit-frame-pointer
+      -fsanitize=thread)
+
+  target_link_options(trinity-compile-option-interface
+    INTERFACE
+      -fno-omit-frame-pointer
+      -fsanitize=thread)
+
+  message(STATUS "Clang: Enabled Thread Sanitizer TSan")
+endif()
+
+if(BUILD_TIME_ANALYSIS)
+  target_compile_options(trinity-compile-option-interface
+    INTERFACE
+      -ftime-trace)
+
+  message(STATUS "Clang: Enabled build time analysis (-ftime-trace)")
 endif()
 
 # -Wno-narrowing needed to suppress a warning in g3d
@@ -55,4 +131,14 @@ if (BUILD_SHARED_LIBS)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --no-undefined")
 
   message(STATUS "Clang: Disallow undefined symbols")
+endif()
+
+# speedup PCH builds by forcing template instantiations during PCH generation
+set(CMAKE_REQUIRED_FLAGS "-fpch-instantiate-templates")
+check_cxx_source_compiles("int main() { return 0; }" CLANG_HAS_PCH_INSTANTIATE_TEMPLATES)
+unset(CMAKE_REQUIRED_FLAGS)
+if(CLANG_HAS_PCH_INSTANTIATE_TEMPLATES)
+  target_compile_options(trinity-compile-option-interface
+    INTERFACE
+      -fpch-instantiate-templates)
 endif()

@@ -189,9 +189,9 @@ struct boss_dragon_ysondre : public BossAI
         DespawnTrash();
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
-        _EnterCombat();
+        _JustEngagedWith();
         Talk(SAY_AGGRO);
         DoCast(me, SPELL_ENERGIZE_YSONDRE, true);
         DoCast(me, SPELL_MARK_OF_YSONDRE, true);
@@ -350,7 +350,7 @@ struct boss_dragon_taerar : public ScriptedAI
         DoCast(me, SPELL_EMPTY_ENERGY, true);
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         DoCast(me, SPELL_ENERGIZE_UP, true);
         Talk(SAY_AGGRO);
@@ -491,7 +491,7 @@ struct boss_dragon_lethon : public ScriptedAI
         DoCast(me, SPELL_EMPTY_ENERGY, true);
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         DoCast(me, SPELL_ENERGIZE_UP, true);
         Talk(SAY_AGGRO);
@@ -631,7 +631,7 @@ struct boss_dragon_emeriss : public ScriptedAI
         DoCast(me, SPELL_NIGHTMARE_ENERGY, true);
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         DoCast(me, SPELL_ENERGIZE_UP, true);
         Talk(SAY_AGGRO);
@@ -832,7 +832,7 @@ struct npc_ysondre_shade_of_taerar : public ScriptedAI
 
     void Reset() override {}
 
-    void IsSummonedBy(Unit* summoner) override
+    void IsSummonedBy(Unit* /*summoner*/) override
     {
         DoCast(me, SPELL_NIGHTMARE_VISAGE, true); //Scale
         DoZoneInCombat(me, 150.0f);
@@ -981,7 +981,7 @@ struct npc_ysondre_dread_horror : public ScriptedAI
 
     void Reset() override {}
 
-    void IsSummonedBy(Unit* summoner) override
+    void IsSummonedBy(Unit* /*summoner*/) override
     {
         if (IsHeroic())
         {
@@ -1027,7 +1027,7 @@ struct npc_ysondre_corrupted_mushroom : public ScriptedAI
 
     void Reset() override {}
 
-    void IsSummonedBy(Unit* summoner) override
+    void IsSummonedBy(Unit* /*summoner*/) override
     {
         switch (me->GetEntry())
         {
@@ -1097,7 +1097,7 @@ struct npc_en_rothos : public ScriptedAI
         DespawnTrash();
     }
 
-    void EnterEvadeMode(EvadeReason why) override
+    void EnterEvadeMode(EvadeReason /*why*/) override
     {
        // SetFlyMode(true);
         ScriptedAI::EnterEvadeMode();
@@ -1105,7 +1105,7 @@ struct npc_en_rothos : public ScriptedAI
         DespawnTrash();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
        // SetFlyMode(false);
         me->SetReactState(REACT_PASSIVE);
@@ -1150,7 +1150,7 @@ class spell_ysondre_periodic_energize : public AuraScript
 
     bool fullPower = false;
 
-    void OnTick(AuraEffect const* aurEff)
+    void OnTick(AuraEffect const* /*aurEff*/)
     {
         auto caster = GetCaster()->ToCreature();
         if (!caster || !caster->IsInCombat())
@@ -1189,7 +1189,7 @@ class spell_ysondre_marks : public AuraScript
 {
     PrepareAuraScript(spell_ysondre_marks);
 
-    void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (!GetTarget())
             return;
@@ -1257,7 +1257,7 @@ class spell_ysondre_shadow_burst_filter : public SpellScript
 {
     PrepareSpellScript(spell_ysondre_shadow_burst_filter);
 
-    void FilterTargets(std::list<WorldObject*>& targets)
+    void FilterTargets(std::list<WorldObject*>& /*targets*/)
     {
       //  if (GetCaster())
            // targets.sort(Trinity::UnitSortDistance(true, GetCaster()));
@@ -1294,7 +1294,7 @@ class spell_ysondre_bellowing_roar : public AuraScript
 {
     PrepareAuraScript(spell_ysondre_bellowing_roar);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
     {
         if (!GetCaster())
             return;

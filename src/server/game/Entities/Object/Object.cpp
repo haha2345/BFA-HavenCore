@@ -851,7 +851,7 @@ void MovementInfo::OutDebug()
 WorldObject::WorldObject(bool isWorldObject) : WorldLocation(), LastUsedScriptID(0),
 m_name(""), m_isActive(false), m_isWorldObject(isWorldObject), m_zoneScript(nullptr),
 m_transport(nullptr), m_zoneId(0), m_areaId(0), m_staticFloorZ(VMAP_INVALID_HEIGHT), m_currMap(nullptr), m_InstanceId(0),
-_dbPhase(0), m_visibleBySummonerOnly(false), m_notifyflags(0), m_executed_notifies(0)
+_dbPhase(0), m_visibleBySummonerOnly(false), m_notifyflags(0)
 {
     m_serverSideVisibility.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_ALIVE | GHOST_VISIBILITY_GHOST);
     m_serverSideVisibilityDetect.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_ALIVE);
@@ -938,8 +938,9 @@ void WorldObject::ProcessPositionDataChanged(PositionFullTerrainStatus const& da
 {
     m_zoneId = m_areaId = data.areaId;
     if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(m_areaId))
-        if (area->ID)
-            m_zoneId = area->ID;
+        if (area->ParentAreaID)
+            m_zoneId = area->ParentAreaID;
+
     m_staticFloorZ = data.floorZ;
 }
 
@@ -1966,7 +1967,7 @@ TempSummon* WorldObject::SummonCreature(uint32 id, float x, float y, float z, fl
     return SummonCreature(id, pos, spwtype, despwtime, 0, visibleBySummonerOnly);
 }
 
-GameObject* WorldObject::SummonGameObject(uint32 entry, Position const& pos, QuaternionData const& rot, uint32 respawnTime, bool visibleBySummonerOnly /*= false*/)
+GameObject* WorldObject::SummonGameObject(uint32 entry, Position const& pos, QuaternionData const& rot, uint32 respawnTime, bool visibleBySummonerOnly /*= false*/, ObjectGuid guildGuid /*= ObjectGuid::Empty*/)
 {
     if (!IsInWorld())
         return nullptr;
@@ -1992,11 +1993,18 @@ GameObject* WorldObject::SummonGameObject(uint32 entry, Position const& pos, Qua
     else
         go->SetSpawnedByDefault(false);
 
+    // Guild-owned summoned objects (e.g. Mobile Bank) must carry GuildGUID BEFORE
+    // AddToMap serializes the create-object; setting it afterward leaves the client
+    // rendering the object with GuildGUID = 0 and it never re-skins the guild emblem
+    // on the later partial update.
+    if (!guildGuid.IsEmpty())
+        go->SetGuildGUID(guildGuid);
+
     map->AddToMap(go);
     return go;
 }
 
-GameObject* WorldObject::SummonGameObject(uint32 entry, float x, float y, float z, float ang, QuaternionData const& rot, uint32 respawnTime, bool visibleBySummonerOnly /*= false*/)
+GameObject* WorldObject::SummonGameObject(uint32 entry, float x, float y, float z, float ang, QuaternionData const& rot, uint32 respawnTime, bool visibleBySummonerOnly /*= false*/, ObjectGuid guildGuid /*= ObjectGuid::Empty*/)
 {
     if (!x && !y && !z)
     {
@@ -2005,7 +2013,7 @@ GameObject* WorldObject::SummonGameObject(uint32 entry, float x, float y, float 
     }
 
     Position pos(x, y, z, ang);
-    return SummonGameObject(entry, pos, rot, respawnTime, visibleBySummonerOnly);
+    return SummonGameObject(entry, pos, rot, respawnTime, visibleBySummonerOnly, guildGuid);
 }
 
 Creature* WorldObject::SummonTrigger(float x, float y, float z, float ang, uint32 duration, CreatureAI* (*GetAI)(Creature*))

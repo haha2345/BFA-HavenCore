@@ -97,9 +97,9 @@ private:
         me->AddAura(AURA_OVERRIDE_POWER_COLOR_DEMONIC);
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
-        _EnterCombat();
+        _JustEngagedWith();
         Talk(SAY_AGGRO);
         this->phase = 1;
         events.ScheduleEvent(EVENT_SHADOW_SHOCK, 3s);
@@ -192,12 +192,12 @@ private:
         {
             Talk(SAY_SHRED_PSYCHE);
              UnitList tarlist;
-             SelectTargetList(tarlist, 1, SELECT_TARGET_RANDOM, 500.0f);
+             SelectTargetList(tarlist, 1, SELECT_TARGET_RANDOM, 0, 500.0f);
              for (Unit* tar : tarlist)
              {
                  DoCast(SPELL_SHRED_PSYCHE_DUMMY);
                  DoCast(tar, SPELL_SHRED_PSYCHE_AURA);
-                 tar->GetScheduler().Schedule(5s, [tar] (TaskContext context)
+                 tar->GetScheduler().Schedule(5s, [tar] (TaskContext /*context*/)
                  {
                     tar->CastSpell(nullptr, SPELL_SHRED_PSYCHE_SUMMON, true);
                  });      
@@ -211,13 +211,13 @@ private:
             if (Is25ManRaid())
             {
                 UnitList tarlist;
-                SelectTargetList(tarlist, 13, SELECT_TARGET_RANDOM, 500.0f);
+                SelectTargetList(tarlist, 13, SELECT_TARGET_RANDOM, 0, 500.0f);
                 for (Unit* tar : tarlist)
                 {
                     DoCast(tar, SPELL_CLOUDED_MIND, true);
                 }
                 UnitList tarlist2;
-                SelectTargetList(tarlist2, 12, SELECT_TARGET_RANDOM, 500.0f);
+                SelectTargetList(tarlist2, 12, SELECT_TARGET_RANDOM, 0, 500.0f);
                 for (Unit* tar : tarlist2)
                 {
                     DoCast(tar, SPELL_TWISTED_MIND, true);
@@ -226,13 +226,13 @@ private:
             else
             {
                 UnitList tarlist;
-                SelectTargetList(tarlist, 5, SELECT_TARGET_RANDOM, 500.0f);
+                SelectTargetList(tarlist, 5, SELECT_TARGET_RANDOM, 0, 500.0f);
                 for (Unit* tar : tarlist)
                 {
                     DoCast(tar, SPELL_CLOUDED_MIND, true);
                 }
                 UnitList tarlist2;
-                SelectTargetList(tarlist2, 5, SELECT_TARGET_RANDOM, 500.0f);
+                SelectTargetList(tarlist2, 5, SELECT_TARGET_RANDOM, 0, 500.0f);
                 for (Unit* tar : tarlist2)
                 {
                     DoCast(tar, SPELL_TWISTED_MIND, true);
@@ -245,7 +245,7 @@ private:
             Talk(SAY_ILLUSIONARY_PROJECTIONS);
             for (uint8 i = 0; i < 5; ++i)
             {
-                auto* projections = DoSummon(NPC_PROPGET_SKITRA_PROJECTION, me->GetRandomPoint(middle_pos, 60.0f), TEMPSUMMON_MANUAL_DESPAWN);               
+                DoSummon(NPC_PROPGET_SKITRA_PROJECTION, me->GetRandomPoint(middle_pos, 60.0f), TEMPSUMMON_MANUAL_DESPAWN);
             }
             me->AddUnitState(UNIT_STATE_CASTING);
             break;
@@ -280,7 +280,7 @@ struct npc_shredded_psyche : public ScriptedAI
         ScriptedAI::Reset();
     }
 
-    void IsSummonedBy(Unit* summoner) override
+    void IsSummonedBy(Unit* /*summoner*/) override
     {
         me->SetDisplayId(me->GetNativeDisplayId());
         me->AddAura(309681);

@@ -39,7 +39,7 @@ public:
             m_events.Reset();
         }
 
-        void EnterCombat(Unit* /*who*/)
+        void JustEngagedWith(Unit* /*who*/)
         {
             me->RemoveAura(uint32(Spells::Submerged));
             m_events.ScheduleEvent(uint32(Events::Shielding), 5000);
@@ -129,7 +129,7 @@ public:
             m_Reset = true;
         }
 
-        void EnterCombat(Unit* /*who*/)
+        void JustEngagedWith(Unit* /*who*/)
         {
         }
 
@@ -345,9 +345,9 @@ public:
                 Talk(int8(Texts::KilledUnitB), me);
         }
 
-        void EnterCombat(Unit* /*who*/)
+        void JustEngagedWith(Unit* /*who*/)
         {
-            _EnterCombat();
+            _JustEngagedWith();
 
             Talk(int8(Texts::CombatStart));
             events.ScheduleEvent(uint32(Events::SolarBurst), 5000);
@@ -396,10 +396,10 @@ public:
                 me->CastSpell(me, uint32(Spells::CallAdds), false);
                 if (Creature* mobs = me->SummonCreature(76292, Position(1077.0f, 1790.5f, 262.173f, 5.7237f), TEMPSUMMON_MANUAL_DESPAWN))
                     if (Player* player = me->SelectRandomPlayerInRange(80.0f, true))
-                        mobs->CombatStart(player, true);
+                        mobs->AttackedTarget(player, true);
                 if (Creature* mobs = me->SummonCreature(76267, Position(1077.0f, 1790.5f, 262.173f, 5.7237f), TEMPSUMMON_MANUAL_DESPAWN))
                     if (Player* player = me->SelectRandomPlayerInRange(80.0f, true))
-                        mobs->CombatStart(player, true);                
+                        mobs->AttackedTarget(player, true);                
                 events.ScheduleEvent(uint32(Events::CallAdds), 60000);
                 break;
             default:

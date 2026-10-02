@@ -214,7 +214,7 @@ struct boss_teronogor : public BossAI
         }
     }
 
-    void DoAction(int32 p_Action)
+    void DoAction(int32 p_Action) override
     {
         switch (p_Action)
         {
@@ -302,13 +302,13 @@ struct boss_teronogor : public BossAI
         }
     }
 
-    void KilledUnit(Unit* p_Who)
+    void KilledUnit(Unit* p_Who) override
     {
         if (p_Who && p_Who->GetTypeId() == TypeID::TYPEID_PLAYER)
             Talk(eTerongorTalks::TERONGOR_KILL_01);
     }
 
-    void MovementInform(uint32 /*p_Type*/, uint32 p_Id)
+    void MovementInform(uint32 /*p_Type*/, uint32 p_Id) override
     {
         Position pos;
         switch (p_Id)
@@ -391,7 +391,7 @@ struct boss_teronogor : public BossAI
         }
         case eTerongorEvents::EventCorruption:
         {
-            if (Unit* l_Random = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 50.0f, true, -eTerongorSpells::SpellCorruptionDmg))
+            if (Unit* l_Random = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 50.0f, true, true, -eTerongorSpells::SpellCorruptionDmg))
                 me->CastSpell(l_Random, eTerongorSpells::SpellCorruptionDmg);
 
             events.ScheduleEvent(eTerongorEvents::EventCorruption, 9 * TimeConstants::IN_MILLISECONDS);
@@ -407,7 +407,7 @@ struct boss_teronogor : public BossAI
         }
         case eTerongorEvents::EventCurseOfExhaustion:
         {
-            if (Unit* l_Random = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 50.0f, true, -eTerongorSpells::SpellCurseOfExhaustionDebuff))
+            if (Unit* l_Random = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 50.0f, true, true, -eTerongorSpells::SpellCurseOfExhaustionDebuff))
                 me->CastSpell(l_Random, eTerongorSpells::SpellCurseOfExhaustionDebuff);
 
             events.ScheduleEvent(eTerongorEvents::EventCurseOfExhaustion, 13 * TimeConstants::IN_MILLISECONDS);
@@ -423,7 +423,7 @@ struct boss_teronogor : public BossAI
         }
         case eTerongorEvents::EventUnstableAffliction:
         {
-            if (Unit* l_Random = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 50.0f, true, -eTerongorSpells::SpellUnstableAffliction))
+            if (Unit* l_Random = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 50.0f, true, true, -eTerongorSpells::SpellUnstableAffliction))
                 me->CastSpell(l_Random, eTerongorSpells::SpellUnstableAffliction);
 
             events.ScheduleEvent(eTerongorEvents::EventUnstableAffliction, 20 * TimeConstants::IN_MILLISECONDS);
@@ -540,7 +540,7 @@ struct boss_teronogor : public BossAI
         me->CastSpell(me, spell);
         if (me->IsAIEnabled)
         {
-            if (Unit* l_Victim = me->GetAI()->SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+            if (Unit* l_Victim = me->GetAI()->SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
                 me->Attack(l_Victim, true);
         }
         me->UpdatePosition(*me);
@@ -594,7 +594,7 @@ public:
         EventMap events;
         bool m_First;
 
-        void Reset()
+        void Reset() override
         {
             events.Reset();
             //if (me->GetMap())//???
@@ -610,7 +610,7 @@ public:
             me->SetReactState(ReactStates::REACT_DEFENSIVE);
         }
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             me->CastStop();
             me->RemoveAllAuras();
@@ -638,7 +638,7 @@ public:
                 events.ScheduleEvent(eTeronogorDuragEvents::EventShadowBolt, 6 * TimeConstants::IN_MILLISECONDS);
                 break;
             case eTeronogorDuragEvents::EventCorruption:
-                if (Unit* l_Random = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 50.0f, true, -eTerongorSpells::SpellCorruptionDmg))
+                if (Unit* l_Random = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 50.0f, true, true, -eTerongorSpells::SpellCorruptionDmg))
                     me->CastSpell(l_Random, eTeronogorDuragSpells::SpellCorruptionDmg);
                 events.ScheduleEvent(eTeronogorDuragEvents::EventCorruption, 9 * TimeConstants::IN_MILLISECONDS);
                 break;
@@ -694,7 +694,7 @@ public:
         EventMap events;
         bool m_First;
 
-        void Reset()
+        void Reset() override
         {
             events.Reset();
 
@@ -709,7 +709,7 @@ public:
             me->SetReactState(ReactStates::REACT_DEFENSIVE);
         }
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             me->CastStop();
             me->RemoveAllAuras();
@@ -795,13 +795,13 @@ public:
         bool m_First;
         EventMap events;
 
-        void Reset()
+        void Reset() override
         {
             events.Reset();
             me->SetReactState(ReactStates::REACT_AGGRESSIVE);
         }
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(eTerongorEvents::EventWrathcleave, 10 * TimeConstants::IN_MILLISECONDS);
             events.ScheduleEvent(eTerongorEvents::EventWrathstorm, urand(14 * TimeConstants::IN_MILLISECONDS, 16 * TimeConstants::IN_MILLISECONDS));
@@ -886,7 +886,7 @@ public:
         EventMap events;
         bool m_First;
 
-        void Reset()
+        void Reset() override
         {
             events.Reset();
 
@@ -896,7 +896,7 @@ public:
                 me->CastSpell(l_Teronogor, eAuchindounSpells::SpellDrainSoulVisual);
         }
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             me->CastStop();
             me->RemoveAllAuras();
@@ -907,7 +907,7 @@ public:
                 me->CastSpell(l_Zashoo, eGromkashSpells::SpellGrimoireOfSacrifice);
         }
 
-        void JustDied(Unit* /*killer*/)
+        void JustDied(Unit* /*killer*/) override
         {
             if (Creature* l_Teronogor = me->FindNearestCreature(NPC_TERONOGOR, 1000.0f, true))
                 l_Teronogor->RemoveAura(eTerongorSpells::SpellTeronogorShield);
@@ -993,7 +993,7 @@ public:
         ObjectGuid m_Target;
         bool m_First;
 
-        void Reset()
+        void Reset() override
         {
             // m_Target = 0;
             events.Reset();

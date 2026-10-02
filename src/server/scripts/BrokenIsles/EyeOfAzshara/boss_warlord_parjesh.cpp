@@ -168,7 +168,7 @@ public:
 			return true;
 		}
 
-		void Reset()
+		void Reset() override
 		{
 			me->RemoveAllAreaTriggers();
 			me->RemoveAllAuras();
@@ -179,7 +179,7 @@ public:
 			DespawnCreatures(NPC_HATECOIL_SHELLBREAKER);
 		}
 
-		void MoveInLineOfSight(Unit* /*who*/)
+		void MoveInLineOfSight(Unit* /*who*/) override
 		{
 			if (!introText)
 			{
@@ -234,7 +234,7 @@ public:
 			}
 		}
 
-		void DamageTaken(Unit* /**/, uint32 & /**/) 
+		void DamageTaken(Unit* /**/, uint32 & /**/) override
 		{
 			if (me->HealthBelowPct(30) && !enrage)
 			{
@@ -252,7 +252,7 @@ public:
 			SelectSoundAndText(me, 6);
 		}
 
-		void JustDied(Unit* /**/) 
+		void JustDied(Unit* /**/) override
 		{
 			instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
 			DespawnCreatures(NPC_HATECOIL_CRESTRIDER);
@@ -261,7 +261,7 @@ public:
 			SelectSoundAndText(me, 2);
 		}
 
-		void JustSummoned(Creature* summon)
+		void JustSummoned(Creature* summon) override
 		{
 
 			summons.Summon(summon);
@@ -286,7 +286,7 @@ public:
 					it->DespawnOrUnsummon();
 		}
 
-		void EnterCombat(Unit*) override
+		void JustEngagedWith(Unit*) override
 		{
 			instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
 			SelectSoundAndText(me, 1);
@@ -352,7 +352,7 @@ public:
 				case EVENT_THROW_SPEAR:
 				{
 					std::list<Unit*> targets;
-					SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true); // 5 players, random targets, alive > non-tank spec selector Nontankselector selects the current target
+					SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true); // 5 players, random targets, alive > non-tank spec selector Nontankselector selects the current target
 					targets.remove_if(checkSpec());
 
 					if (!targets.empty())
@@ -417,7 +417,7 @@ public:
 			events.Reset();
 		}
 
-		void EnterCombat(Unit* /*unit*/)
+		void JustEngagedWith(Unit* /*unit*/)
 		{
 			events.ScheduleEvent(EVENT_BELLOWING_ROAR, TIMER_BELLOWING_ROAR);
 		}
@@ -467,7 +467,7 @@ public:
 
 		EventMap events;
 
-		void EnterCombat(Unit* /*unit*/)
+		void JustEngagedWith(Unit* /*unit*/)
 		{
 			events.ScheduleEvent(EVENT_LIGHTING_STRIKE, TIMER_LIGHTING_STRIKE);
 			events.ScheduleEvent(EVENT_RESTORATION, TIMER_RESTORATION);

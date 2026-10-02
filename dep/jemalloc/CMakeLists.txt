@@ -28,7 +28,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT NOJEM)
     set(JEM_MADFREE_DEF "#undef")
   endif()
 
-  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+  if(TRINITY_SYSTEM_PROCESSOR MATCHES "arm")
     set(JEM_CPU_SPINWAIT "")
     set(JEM_HAVE_CPU_SPINWAIT 0)
   else()
@@ -89,11 +89,9 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT NOJEM)
       ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
   target_compile_definitions(jemalloc
-    PUBLIC
-      -DNO_BUFFERPOOL
     PRIVATE
-      -D_GNU_SOURCE
-      -D_REENTRAN)
+      _GNU_SOURCE
+      _REENTRAN)
 
   target_link_libraries(jemalloc
     PRIVATE

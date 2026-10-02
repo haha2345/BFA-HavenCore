@@ -463,8 +463,8 @@ public:
 
         {
             // TODO: MoveInLineOfSight doesn't work for such a big distance
-            if (who->GetTypeId() == TYPEID_PLAYER && me->GetDistance2d(who) < 99.0f && !me->IsInCombat())
-                me->SetInCombatWithZone();
+            if (who->GetTypeId() == TYPEID_PLAYER && !who->ToPlayer()->IsGameMaster() && me->GetDistance2d(who) < 99.0f && !me->IsInCombat())
+                    DoZoneInCombat();
         }
 
         void EnterEvadeMode(EvadeReason why) override
@@ -509,7 +509,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             if (Creature* sara = instance->GetCreature(DATA_SARA))
                 sara->SetInCombatWith(me);
@@ -762,7 +762,7 @@ public:
                 Talk(SAY_SARA_KILL);
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             Talk(SAY_SARA_AGGRO);
             _events.ScheduleEvent(EVENT_SARAS_FERVOR, 5000, 0, PHASE_ONE);
@@ -1604,7 +1604,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             switch (me->GetEntry())
             {
@@ -3026,7 +3026,7 @@ public:
         {
             if (Unit* target = GetHitUnit())
                 if (target->CanHaveThreatList())
-                    target->getThreatManager().modifyThreatPercent(GetCaster(), -100);
+                    target->GetThreatManager().ModifyThreatByPercent(GetCaster(), -100);
         }
 
         void Register() override

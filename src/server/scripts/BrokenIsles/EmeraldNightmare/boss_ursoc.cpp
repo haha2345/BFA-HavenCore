@@ -106,9 +106,9 @@ struct boss_ursoc : public BossAI
         lowHp = false;
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
-        _EnterCombat();
+        _JustEngagedWith();
         DoCast(me, SPELL_FEROCIOUS_YELL, true);
         DoCast(me, SPELL_ENERGIZE, true);
 
@@ -325,7 +325,7 @@ struct npc_ursoc_nightmare_image : public ScriptedAI
 
     EventMap events;
 
-    void IsSummonedBy(Unit* summoner) override
+    void IsSummonedBy(Unit* /*summoner*/) override
     {
         DoZoneInCombat(me, 100.0f);
         DoCast(me, SPELL_NIGHTMARE_IMAGE_MORPH, true);
@@ -388,7 +388,7 @@ class spell_ursoc_periodic_energize : public AuraScript
 
     uint8 PowerCount;
 
-    void OnTick(AuraEffect const* aurEff)
+    void OnTick(AuraEffect const* /*aurEff*/)
     {
         Creature* caster = GetCaster()->ToCreature();
         if (!caster || !caster->IsInCombat())

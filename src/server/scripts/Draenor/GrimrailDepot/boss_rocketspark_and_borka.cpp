@@ -171,7 +171,7 @@ private:
     int m_Event;
 };
 
-static void StartRocketSparkAndBorka(InstanceScript* p_Instance, Creature* p_Me, ObjectGuid p_TargetGuid)
+static void StartRocketSparkAndBorka(InstanceScript* p_Instance, Creature* /*p_Me*/, ObjectGuid /*p_TargetGuid*/)
 {
     if (p_Instance == nullptr)
         return;
@@ -184,7 +184,7 @@ static void StartRocketSparkAndBorka(InstanceScript* p_Instance, Creature* p_Me,
         l_Rocketspark->SetInCombatWithZone();
 }
 
-static void WipingConditionRocketSparkAndBorka(InstanceScript* p_Instance, Creature* p_Me)
+static void WipingConditionRocketSparkAndBorka(InstanceScript* p_Instance, Creature* /*p_Me*/)
 {
     if (p_Instance == nullptr)
         return;
@@ -202,7 +202,7 @@ static void WipingConditionRocketSparkAndBorka(InstanceScript* p_Instance, Creat
     }
 }
 
-static void WiningConditionRocketsparkAndBurka(InstanceScript* p_Instance, Creature* p_Me, Unit* l_Killer)
+static void WiningConditionRocketsparkAndBurka(InstanceScript* p_Instance, Creature* /*p_Me*/, Unit* l_Killer)
 {
     if (p_Instance == nullptr)
         return;
@@ -330,7 +330,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* p_Who) override
+        void JustEngagedWith(Unit* p_Who) override
         {
             if (m_Instance != nullptr)
             {
@@ -338,7 +338,7 @@ public:
                 m_Instance->SendEncounterUnit(EncounterFrameType::ENCOUNTER_FRAME_ENGAGE, me);
             }
 
-            _EnterCombat();
+            _JustEngagedWith();
             HandleEncounterStartDoor();
             events.ScheduleEvent(eRocketsparkEvents::EventRandomMovement, 3 * TimeConstants::IN_MILLISECONDS);
             events.ScheduleEvent(eRocketsparkEvents::EventX2101a, 30 * TimeConstants::IN_MILLISECONDS);
@@ -631,7 +631,7 @@ public:
                 WipingConditionRocketSparkAndBorka(m_Instance, me);
         }
 
-        void EnterCombat(Unit* p_Who) override
+        void JustEngagedWith(Unit* p_Who) override
         {
             if (m_Instance != nullptr)
                 StartRocketSparkAndBorka(m_Instance, me, p_Who->GetGUID());
@@ -750,7 +750,7 @@ public:
                                     m_MadDashTargetGUID = ObjectGuid::Empty;
                                     me->StopMoving();
                                     me->CastSpell(me, eBorkaSpells::SpellMadDashHit);
-                                    if (Unit* l_Victim = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+                                    if (Unit* l_Victim = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
                                         me->Attack(l_Victim, true);
 
                                     events.Reset();
@@ -857,7 +857,7 @@ public:
     {
         PrepareSpellScript(grimrail_depot_rocketspark_spell_vx18_target_eliminator_SpellScript);
 
-        void HandleDummy(SpellEffIndex p_EffIndex)
+        void HandleDummy(SpellEffIndex /*p_EffIndex*/)
         {
             if (GetCaster())
             {
@@ -894,7 +894,7 @@ public:
             SpellX2101AMissileBarrage = 162422,
         };
 
-        void HandlePeriodic(AuraEffect const* p_AurEff)
+        void HandlePeriodic(AuraEffect const* /*p_AurEff*/)
         {
             PreventDefaultAction();
 
@@ -951,7 +951,7 @@ class grimrail_depot_rocketspark_spell_new_plan : public SpellScriptLoader
             SpellNewPlanMissile01 = 163930
         };
 
-        void HandlePeriodic(AuraEffect const* p_AurEff)
+        void HandlePeriodic(AuraEffect const* /*p_AurEff*/)
         {
             PreventDefaultAction();
 

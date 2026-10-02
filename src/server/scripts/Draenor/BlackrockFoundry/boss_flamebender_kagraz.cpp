@@ -120,7 +120,7 @@ class boss_flamebender_kagraz : public CreatureScript
 
             bool m_Firestorm;
 
-            bool CanRespawn()
+            bool CanRespawn() override
             {
                 return false;
             }
@@ -183,11 +183,11 @@ class boss_flamebender_kagraz : public CreatureScript
                 Talk(eTalks::TalkSlay);
             }
 
-            void EnterCombat(Unit* p_Attacker) override
+            void JustEngagedWith(Unit* p_Attacker) override
             {
                 me->InterruptNonMeleeSpells(true);
 
-                _EnterCombat();
+                _JustEngagedWith();
 
                 Talk(eTalks::TalkAggro);
 
@@ -198,7 +198,7 @@ class boss_flamebender_kagraz : public CreatureScript
                     if (Creature* l_MoltenStalker = ObjectAccessor::GetCreature(*me, m_Instance->GetGuidData(eFoundryCreatures::MoltenTorrentStalker)))
                     {
                         if (l_MoltenStalker->IsAIEnabled)
-                            l_MoltenStalker->AI()->EnterCombat(p_Attacker);
+                            l_MoltenStalker->AI()->JustEngagedWith(p_Attacker);
                     }
                 }
 
@@ -213,7 +213,7 @@ class boss_flamebender_kagraz : public CreatureScript
                     m_Events.ScheduleEvent(eEvents::EventBerserker, eTimers::TimerBerserker);
             }
 
-            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER)
+            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER) override
             {
                 m_Firestorm = false;
 
@@ -366,7 +366,7 @@ class boss_flamebender_kagraz : public CreatureScript
                 }
             }
 
-            void SpellHitDest(SpellDestination const* p_Dest, SpellInfo const* p_SpellInfo)
+            void SpellHitDest(SpellDestination const* p_Dest, SpellInfo const* p_SpellInfo) override
             {
                 if (p_Dest == nullptr)
                     return;
@@ -410,7 +410,7 @@ class boss_flamebender_kagraz : public CreatureScript
                 }
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -442,7 +442,7 @@ class boss_flamebender_kagraz : public CreatureScript
                 }
             }
 
-            void RegeneratePower(Powers /*p_Power*/, int32& p_Value)
+            void RegeneratePower(Powers /*p_Power*/, int32& p_Value) override
             {
                 /// Flamebender Ka'graz only regens by script
                 p_Value = 0;
@@ -594,7 +594,7 @@ class boss_flamebender_kagraz : public CreatureScript
 
                             me->ClearUnitState(UnitState::UNIT_STATE_ROOT);
 
-                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO))
+                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT))
                                 AttackStart(l_Target);
                        // });
 
@@ -678,7 +678,7 @@ class npc_foundry_aknor_steelbringer : public CreatureScript
               //  m_HammerTarget = 0;
             }
 
-            void EnterCombat(Unit* p_Attacker) override
+            void JustEngagedWith(Unit* p_Attacker) override
             {
                 if (m_Instance != nullptr)
                 {
@@ -695,7 +695,7 @@ class npc_foundry_aknor_steelbringer : public CreatureScript
                 m_Events.ScheduleEvent(eEvents::EventDropTheHammer, eTimers::TimerDropTheHammer);
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 if (p_Action == eActions::DropTheHammer)
                 {
@@ -727,7 +727,7 @@ class npc_foundry_aknor_steelbringer : public CreatureScript
                 }
             }
 
-            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER)
+            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER) override
             {
                 me->InterruptNonMeleeSpells(true);
 
@@ -831,7 +831,7 @@ class npc_foundry_flamebender_kagraz_trigger : public CreatureScript
                 me->AddUnitFlag(UnitFlags(UNIT_FLAG_IMMUNE_TO_PC | UnitFlags::UNIT_FLAG_NON_ATTACKABLE | UnitFlags::UNIT_FLAG_NOT_SELECTABLE));
             }
 
-            void SetGUID(ObjectGuid p_Guid, int32 /*p_ID*/)
+            void SetGUID(ObjectGuid p_Guid, int32 /*p_ID*/) override
             {
                 m_LavaSlashTarget = p_Guid;
 
@@ -862,7 +862,7 @@ class npc_foundry_flamebender_kagraz_trigger : public CreatureScript
                 }
             }
 
-            void SpellHitDest(SpellDestination const* p_Dest, SpellInfo const* p_SpellInfo)
+            void SpellHitDest(SpellDestination const* p_Dest, SpellInfo const* p_SpellInfo) override
             {
                 if (p_Dest == nullptr)
                     return;
@@ -962,7 +962,7 @@ class npc_foundry_kagraz_enchanted_armament : public CreatureScript
                 }
             }
 
-            void SetGUID(ObjectGuid /*p_Guid*/, int32 /*p_ID*/=0)
+            void SetGUID(ObjectGuid /*p_Guid*/, int32 /*p_ID*/=0) override
             {
                 //AddTimedDelayedOperation(50, [this, p_Guid]() -> void
                 //{
@@ -1089,7 +1089,7 @@ class npc_foundry_lava_stalker : public CreatureScript
                 }
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -1180,7 +1180,7 @@ class npc_foundry_molten_torrent_stalker : public CreatureScript
                 me->RemoveAllAreaTriggers();
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
                 me->RemoveAura(eSpells::PrefightCosmeticsStalker);
             }
@@ -1222,7 +1222,7 @@ class npc_foundry_molten_torrent_stalker : public CreatureScript
                 }
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -1444,7 +1444,7 @@ class npc_foundry_cinder_wolf : public CreatureScript
                 //});
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
                 if (m_Instance != nullptr)
                     m_Instance->SendEncounterUnit(EncounterFrameType::ENCOUNTER_FRAME_ENGAGE, me, 2);
@@ -1535,8 +1535,8 @@ class npc_foundry_cinder_wolf : public CreatureScript
                     {
                         m_Target = p_Target->GetGUID();
 
-                        DoResetThreat();
-                        me->AddThreat(p_Target, 1000000.0f);
+                        ResetThreatList();
+                        me->GetThreatManager().AddThreat(p_Target, 1000000.0f);
 
                         AttackStart(p_Target);
 
@@ -1557,7 +1557,7 @@ class npc_foundry_cinder_wolf : public CreatureScript
                     me->CastSpell(me, eSpells::Fixate, true);
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 if (m_Initialized)
                   //  ClearDelayedOperations();
@@ -1630,7 +1630,7 @@ class npc_foundry_cinder_wolf : public CreatureScript
                 }
             }
 
-            void SetGUID(ObjectGuid p_Guid, int32 /*p_ID*/) 
+            void SetGUID(ObjectGuid p_Guid, int32 /*p_ID*/) override
             {
                 m_OtherWolf = p_Guid;
             }
@@ -1662,7 +1662,7 @@ class npc_foundry_cinder_wolf : public CreatureScript
 
                 if (m_Events.ExecuteEvent() == eEvent::EventCharringBreath && m_CurrAction == eActions::ActionOverheated)
                 {
-                    if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO))
+                    if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT))
                         me->SetFacingTo(me->GetAngle(l_Target));
 
                    // AddTimedDelayedOperation(50, [this]() -> void

@@ -530,28 +530,35 @@ class CreatureGameObjectAreaTriggerScriptRegistrySwapHooks
         return map->GetAreaTrigger(guid);
     }
 
-    template<typename T>
-    static void VisitObjectsToSwapOnMap(Map* map, std::unordered_set<uint32> const& idsToRemove, T visitor)
+    // Returns the visitor instead of taking one: under msvc /permissive-, a lambda defined
+    // directly in a member function template of this class template ends up with two closure
+    // identities and no longer binds to AIFunctionMapWorker (shape taken from TrinityCore 8f097e4425).
+    static auto VisitObjectsToSwapOnMap(std::unordered_set<uint32> const& idsToRemove)
     {
-        auto evaluator = [&](std::unordered_map<ObjectGuid, ObjectType*>& objects)
+        return [&idsToRemove](Map* map, auto&& visitor)
         {
-            for (auto object : objects)
+            auto evaluator = [&](std::unordered_map<ObjectGuid, ObjectType*>& objects)
             {
-                // When the script Id of the script isn't removed in this
-                // context change, do nothing.
-                if (idsToRemove.find(object.second->GetScriptId()) != idsToRemove.end())
-                    visitor(object.second);
-            }
+                for (auto object : objects)
+                {
+                    // When the script Id of the script isn't removed in this
+                    // context change, do nothing.
+                    if (idsToRemove.find(object.second->GetScriptId()) != idsToRemove.end())
+                        visitor(object.second);
+                }
+            };
+
+            AIFunctionMapWorker<typename std::decay<decltype(evaluator)>::type> worker(std::move(evaluator));
+            TypeContainerVisitor<decltype(worker), MapStoredObjectTypesContainer> containerVisitor(worker);
+
+            containerVisitor.Visit(map->GetObjectsStore());
         };
-
-        AIFunctionMapWorker<typename std::decay<decltype(evaluator)>::type> worker(std::move(evaluator));
-        TypeContainerVisitor<decltype(worker), MapStoredObjectTypesContainer> containerVisitor(worker);
-
-        containerVisitor.Visit(map->GetObjectsStore());
     }
 
     static void DestroyScriptIdsFromSet(std::unordered_set<uint32> const& idsToRemove)
     {
+        auto const visitObjectsToSwap = VisitObjectsToSwapOnMap(idsToRemove);
+
         // First reset all swapped scripts safe by guid
         // Skip creatures and gameobjects with an empty guid
         // (that were not added to the world as of now)
@@ -559,7 +566,7 @@ class CreatureGameObjectAreaTriggerScriptRegistrySwapHooks
         {
             std::vector<ObjectGuid> guidsToReset;
 
-            VisitObjectsToSwapOnMap(map, idsToRemove, [&](ObjectType* object)
+            visitObjectsToSwap(map, [&](ObjectType* object)
             {
                 if (object->AI() && !object->GetGUID().IsEmpty())
                     guidsToReset.push_back(object->GetGUID());
@@ -571,7 +578,7 @@ class CreatureGameObjectAreaTriggerScriptRegistrySwapHooks
                     UnloadResetScript(entity);
             }
 
-            VisitObjectsToSwapOnMap(map, idsToRemove, [&](ObjectType* object)
+            visitObjectsToSwap(map, [&](ObjectType* object)
             {
                 // Destroy the scripts instantly
                 UnloadDestroyScript(object);
@@ -581,11 +588,13 @@ class CreatureGameObjectAreaTriggerScriptRegistrySwapHooks
 
     static void InitializeScriptIdsFromSet(std::unordered_set<uint32> const& idsToRemove)
     {
+        auto const visitObjectsToSwap = VisitObjectsToSwapOnMap(idsToRemove);
+
         sMapMgr->DoForAllMaps([&](Map* map)
         {
             std::vector<ObjectGuid> guidsToReset;
 
-            VisitObjectsToSwapOnMap(map, idsToRemove, [&](ObjectType* object)
+            visitObjectsToSwap(map, [&](ObjectType* object)
             {
                 if (!object->AI() && !object->GetGUID().IsEmpty())
                 {

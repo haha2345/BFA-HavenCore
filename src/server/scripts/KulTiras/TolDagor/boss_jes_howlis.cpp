@@ -54,13 +54,13 @@ struct boss_jes_howlis : public BossAI
         _rotationPaused = false;
     }
 
-    void EnterCombat(Unit* who) override
+    void JustEngagedWith(Unit* who) override
     {
         Talk(0);
         events.ScheduleEvent(EVENT_CRIP_SHIV, 7200);
         events.ScheduleEvent(EVENT_HOWLING_FEAR, 8500);
         events.ScheduleEvent(EVENT_FLASHING_DAGGER, 12100);
-        BossAI::EnterCombat(who);
+        BossAI::JustEngagedWith(who);
     }
 
     void SpellHitTarget(Unit* /*target*/, SpellInfo const* /*spell*/) override

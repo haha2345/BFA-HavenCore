@@ -649,7 +649,7 @@ public:
                 instance->SetBossState(DATA_LEI_SHEN, FAIL);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             BerserkEvents.ScheduleEvent(EVENT_BERSERK, TIMER_BERSERK);
             DespawnCreature(NPC_UNHARNESSED_POWER);
@@ -801,7 +801,7 @@ public:
             }
         }
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& damage)
         {
             if (me->HasAura(SPELL_SUPERCHARGE_CONDUITS))
                 damage = 0;
@@ -976,7 +976,7 @@ public:
         void CastStaticShockLevel1()
         {
             std::list<Unit*> players;
-            SelectTargetList(players, 1, SELECT_TARGET_RANDOM, 300.0f, true);
+            SelectTargetList(players, 1, SELECT_TARGET_RANDOM, 0, 300.0f, true);
             players.remove_if(notValidSpec());
             if (!players.empty())
                 for (std::list<Unit*>::iterator itr = players.begin(); itr != players.end(); ++itr)
@@ -988,7 +988,7 @@ public:
         void CastStaticShockLevel2()
         {
             std::list<Unit*> players;
-            SelectTargetList(players, 2, SELECT_TARGET_RANDOM, 300.0f, true);
+            SelectTargetList(players, 2, SELECT_TARGET_RANDOM, 0, 300.0f, true);
             players.remove_if(notValidSpec());
             if (!players.empty())
                 for (std::list<Unit*>::iterator itr = players.begin(); itr != players.end(); ++itr)
@@ -1000,7 +1000,7 @@ public:
         void CastStaticShockLevel3()
         {
             std::list<Unit*> players;
-            SelectTargetList(players, 3, SELECT_TARGET_RANDOM, 300.0f, true);
+            SelectTargetList(players, 3, SELECT_TARGET_RANDOM, 0, 300.0f, true);
             players.remove_if(notValidSpec());
             if (!players.empty())
                 for (std::list<Unit*>::iterator itr = players.begin(); itr != players.end(); ++itr)
@@ -1012,7 +1012,7 @@ public:
         void CastOverchargedLevel1()
         {
             std::list<Unit*> players;
-            SelectTargetList(players, 1, SELECT_TARGET_RANDOM, 300.0f, true);
+            SelectTargetList(players, 1, SELECT_TARGET_RANDOM, 0, 300.0f, true);
             players.remove_if(notValidSpec());
             players.remove_if(hasHelmActive());
             if (!players.empty())
@@ -1025,7 +1025,7 @@ public:
         void CastOverchargedLevel2()
         {
             std::list<Unit*> players;
-            SelectTargetList(players, 2, SELECT_TARGET_RANDOM, 300.0f, true);
+            SelectTargetList(players, 2, SELECT_TARGET_RANDOM, 0, 300.0f, true);
             players.remove_if(notValidSpec());
             players.remove_if(hasHelmActive());
             if (!players.empty())
@@ -1039,7 +1039,7 @@ public:
         void CastOverchargedLevel3()
         {
             std::list<Unit*> players;
-            SelectTargetList(players, 3, SELECT_TARGET_RANDOM, 300.0f, true);
+            SelectTargetList(players, 3, SELECT_TARGET_RANDOM, 0, 300.0f, true);
             players.remove_if(notValidSpec());
             players.remove_if(hasHelmActive());
             if (!players.empty())
@@ -1203,7 +1203,7 @@ public:
                 case EVENT_DIFFUSION_CHAIN_PILLAR_EVENT:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -1263,7 +1263,7 @@ public:
                 case EVENT_DECAPITATE_SPELL:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -1284,7 +1284,7 @@ public:
 
                     {
                         std::list<Unit*> targets;
-                        SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                        SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                         if (!targets.empty())
                             if (targets.size() >= 1)
                                 targets.resize(1);
@@ -1303,7 +1303,7 @@ public:
                                 trigger->SetObjectScale(2.0f);
                                 me->AddAura(123795, trigger);
                                 me->SetFacingToObject(trigger);
-                                me->AddThreat(trigger, 9.9999999f);
+                                me->GetThreatManager().AddThreat(trigger, 9.9999999f);
                                 me->CastSpell(trigger, SPELL_THUNDERSTRUCK);
                             }
                         }
@@ -1315,7 +1315,7 @@ public:
                 case EVENT_CRASHING_THUNDER:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -1329,7 +1329,7 @@ public:
                 {
                     Talk(TALK_LIGHTNING_WHIP);
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -1345,7 +1345,7 @@ public:
                         if (Creature* trigger = me->SummonCreature(60942, (*itr)->GetPositionX(), (*itr)->GetPositionY(), (*itr)->GetPositionZ(), (*itr)->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 8000))
                         {
                             me->SetFacingToObject(trigger);
-                            me->AddThreat(trigger, 9.9999999f);
+                            me->GetThreatManager().AddThreat(trigger, 9.9999999f);
                             me->CastSpell(trigger, SPELL_LIGHTNING_WHIP);
                         }
                     }
@@ -1359,7 +1359,7 @@ public:
                 case EVENT_SUMMON_BALL_LIGHTNING:
                 {
                     /*freakzUnitList players;
-                    SelectTargetList(players, Is25ManRaid() ? 4 : 8, SELECT_TARGET_RANDOM, 300.0f, true);
+                    SelectTargetList(players, Is25ManRaid() ? 4 : 8, SELECT_TARGET_RANDOM, 0, 300.0f, true);
                     players.remove_if(notValidSpec());
                     if (!players.empty())
                     for (freakzUnitList::iterator itr = players.begin(); itr != players.end(); ++itr)
@@ -1396,7 +1396,7 @@ public:
                 case EVENT_DIFFUSION_CHAIN_DISABLED:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -1419,7 +1419,7 @@ public:
                     if (me->GetMap()->IsHeroic())
                     {
                         std::list<Unit*> players;
-                        SelectTargetList(players, Is25ManRaid() ? 3 : 1, SELECT_TARGET_RANDOM, 300.0f, true);
+                        SelectTargetList(players, Is25ManRaid() ? 3 : 1, SELECT_TARGET_RANDOM, 0, 300.0f, true);
                         if (!players.empty())
                             for (std::list<Unit*>::iterator itr = players.begin(); itr != players.end(); ++itr)
                             {
@@ -1435,7 +1435,7 @@ public:
                     if (update > 2)
                         return;
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -1737,14 +1737,14 @@ public:
     {
         PrepareAuraScript(bfa_spell_violent_gale_winds_pushback_AuraScript);
 
-        void HandleOnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* caster = GetCaster();
             if (!caster)
                 return;
         }
 
-        void HandleOnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Map::PlayerList const& playerList = GetCaster()->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
@@ -1777,7 +1777,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_helm_of_command_AuraScript);
 
-        void HandleOnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* caster = GetCaster();
             if (!caster)
@@ -1841,7 +1841,7 @@ public:
         EventMap events;
         bool active;
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& damage)
         {
             damage = 0;
         }
@@ -2046,7 +2046,7 @@ public:
         EventMap events;
         bool active;
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& damage)
         {
             damage = 0;
         }
@@ -2251,7 +2251,7 @@ public:
         EventMap events;
         bool active;
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& damage)
         {
             damage = 0;
         }
@@ -2462,7 +2462,7 @@ public:
             active = false;
         }
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& damage)
         {
             damage = 0;
         }
@@ -2652,7 +2652,7 @@ public:
             return GetCaster()->FindNearestCreature(NPC_LEI_SHEN, 500.0f, true);
         }
 
-        void HandleOnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* caster = GetCaster())
             {
@@ -2666,7 +2666,7 @@ public:
             }
         }
 
-        void HandleOnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* caster = GetCaster())
             {
@@ -2708,7 +2708,7 @@ public:
             return GetCaster()->FindNearestCreature(NPC_LEI_SHEN, 500.0f, true);
         }
 
-        void HandleOnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* caster = GetCaster())
             {
@@ -2722,7 +2722,7 @@ public:
             }
         }
 
-        void HandleOnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* caster = GetCaster())
             {
@@ -2764,7 +2764,7 @@ public:
             return GetCaster()->FindNearestCreature(NPC_LEI_SHEN, 500.0f, true);
         }
 
-        void HandleOnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* caster = GetCaster())
             {
@@ -2778,7 +2778,7 @@ public:
             }
         }
 
-        void HandleOnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* caster = GetCaster())
             {
@@ -2820,7 +2820,7 @@ public:
             return GetCaster()->FindNearestCreature(NPC_LEI_SHEN, 500.0f, true);
         }
 
-        void HandleOnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* caster = GetCaster())
             {
@@ -2834,7 +2834,7 @@ public:
             }
         }
 
-        void HandleOnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* caster = GetCaster())
             {
@@ -2884,7 +2884,7 @@ public:
             targetsPlayers = targets.size();
         }
 
-        void RecalculateDamage(SpellEffIndex effIndex)
+        void RecalculateDamage(SpellEffIndex /*effIndex*/)
         {
             SetHitDamage(GetHitDamage() / targetsPlayers);
         }
@@ -3010,7 +3010,7 @@ public:
             return GetCaster()->FindNearestCreature(NPC_DIFFUSION_CHAIN_CONDUIT, 500.0f, true);
         }
 
-        void OnHit(SpellEffIndex index)
+        void OnHit(SpellEffIndex /*index*/)
         {
             Unit* caster = GetCaster();
             Unit* target = GetHitUnit();
@@ -3070,7 +3070,7 @@ public:
                 events.ScheduleEvent(EVENT_FIXATE_PLAYER, 500);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             events.ScheduleEvent(EVENT_DIFFUSION_CAST, 3 * IN_MILLISECONDS);
         }
@@ -3097,7 +3097,7 @@ public:
 
                     for (auto target : players)
                     {
-                        me->AddThreat(target, 9999999999.9f);
+                        me->GetThreatManager().AddThreat(target, 9999999999.9f);
                         me->AI()->AttackStart(target);
                     }
                     break;
@@ -3178,7 +3178,7 @@ public:
             targetsPlayers = targets.size();
         }
 
-        void RecalculateDamage(SpellEffIndex effIndex)
+        void RecalculateDamage(SpellEffIndex /*effIndex*/)
         {
             SetHitDamage(GetHitDamage() / targetsPlayers);
         }
@@ -3317,7 +3317,7 @@ public:
             events.Reset();
         }
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             me->SetInCombatWithZone();
             events.ScheduleEvent(EVENT_BOUNCE_AGAIN, 500);
@@ -3396,7 +3396,7 @@ class bfa_npc_lei_shen_teleport_players : public CreatureScript
 public:
     bfa_npc_lei_shen_teleport_players() : CreatureScript("bfa_npc_lei_shen_teleport_players") { }
 
-    bool OnGossipHello(Player* player, Creature* pCreature)
+    bool OnGossipHello(Player* player, Creature* /*pCreature*/)
     {
         player->NearTeleportTo(5676.32f, 4059.78f, 158.00f, 0.74f, false);
         return true;
@@ -3424,7 +3424,7 @@ public:
 
         EventMap events;
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             events.ScheduleEvent(EVENT_CONDUIT, 500);
         }
@@ -3481,7 +3481,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_discharged_energy_duration_AuraScript);
 
-        void HandleOnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* caster = GetCaster();
             if (!caster)
@@ -3517,7 +3517,7 @@ class bfa_npc_lei_shen_teleport_after_encounter : public CreatureScript
 public:
     bfa_npc_lei_shen_teleport_after_encounter() : CreatureScript("bfa_npc_lei_shen_teleport_after_encounter") { }
 
-    bool OnGossipHello(Player* player, Creature* pCreature)
+    bool OnGossipHello(Player* player, Creature* /*pCreature*/)
     {
         player->NearTeleportTo(5576.05322f, 4655.958984f, -0.865f, 3.14f, false);
         return true;

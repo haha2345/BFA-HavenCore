@@ -156,6 +156,7 @@ enum HunterSpells
     SPELL_HUNTER_SCORCHING_WILDFIRE = 259496,
     SPELL_HUNTER_RAPID_FIRE = 257044,
     SPELL_HUNTER_RAPID_FIRE_MISSILE = 257045,
+    SPELL_HUNTER_RAPID_FIRE_DAMAGE = 257045,
     SPELL_HUNTER_RAPID_FIRE_ENERGIZE = 263585,
     SPELL_HUNTER_LETHAL_SHOTS = 260393,
     SPELL_HUNTER_CALLING_THE_SHOTS = 260404,
@@ -547,7 +548,7 @@ public:
             {
                 if (!GetDuration())
                 {
-                    _player->ResetRedirectThreat();
+                    _player->GetThreatManager().UnregisterRedirectThreat(SPELL_HUNTER_MISDIRECTION);
 
                     if (_hasGlyph)
                     {
@@ -560,7 +561,7 @@ public:
             }
         }
 
-        void Register()
+        void Register() override
         {
             AfterEffectApply += AuraEffectApplyFn(spell_hun_misdirection_AuraScript::OnApply, EFFECT_1, SPELL_AURA_MOD_SCALE, AURA_EFFECT_HANDLE_REAL);
             AfterEffectRemove += AuraEffectRemoveFn(spell_hun_misdirection_AuraScript::OnRemove, EFFECT_1, SPELL_AURA_MOD_SCALE, AURA_EFFECT_HANDLE_REAL);
@@ -585,7 +586,7 @@ public:
 
         void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
-            GetTarget()->ResetRedirectThreat();
+            GetTarget()->GetThreatManager().UnregisterRedirectThreat(SPELL_HUNTER_MISDIRECTION);
         }
 
         void Register() override
@@ -1575,6 +1576,38 @@ public:
     SpellScript* GetSpellScript() const override
     {
         return new spell_hun_disengage_SpellScript();
+    }
+};
+
+// 257045 - Rapid Fire Damage
+class spell_hun_rapid_fire_damage : public SpellScriptLoader
+{
+public:
+    spell_hun_rapid_fire_damage() : SpellScriptLoader("spell_hun_rapid_fire_damage") {}
+
+    class spell_hun_rapid_fire_damage_SpellScript : public SpellScript
+    {
+        PrepareSpellScript(spell_hun_rapid_fire_damage_SpellScript);
+
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo({ SPELL_HUNTER_RAPID_FIRE_ENERGIZE });
+        }
+
+        void HandleHit(SpellEffIndex /*effIndex*/)
+        {
+            GetCaster()->CastSpell(nullptr, SPELL_HUNTER_RAPID_FIRE_ENERGIZE, true);
+        }
+
+        void Register() override
+        {
+            OnEffectHitTarget += SpellEffectFn(spell_hun_rapid_fire_damage_SpellScript::HandleHit, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_hun_rapid_fire_damage_SpellScript();
     }
 };
 
@@ -3901,7 +3934,6 @@ class spell_hun_rapid_fire : public AuraScript
             return;
 
         caster->CastSpell(channelTarget, SPELL_HUNTER_RAPID_FIRE_MISSILE, true);
-        caster->CastSpell(channelTarget, SPELL_HUNTER_RAPID_FIRE_ENERGIZE, true);
 
         if (!_trickShots)
             return;
@@ -4282,4 +4314,5 @@ void AddSC_hunter_spell_scripts()
     RegisterSpellScript(spell_hun_kill_command_survival);
     RegisterSpellScript(spell_hun_kill_command_sv_damage);
     RegisterSpellScript(spell_hun_cobra_shot);
+    new spell_hun_rapid_fire_damage();
 }

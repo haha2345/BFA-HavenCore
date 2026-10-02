@@ -2003,17 +2003,17 @@ struct boss_gunker : public BossAI
             return;
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         if (EncounterDone())
             return;
         if (!instance || instance->GetData(DATA_SQUIRT_RELEASE_MASK) != 7u)
         {
             me->CombatStop(true);
-            me->DeleteThreatList();
+            me->GetThreatManager().ClearAllThreat();
             return;
         }
-        _EnterCombat();
+        _JustEngagedWith();
         if (EncounterDone() || !instance || instance->GetBossState(DATA_GUNKER) != IN_PROGRESS)
             return;
         DoCastSelf(SPELL_PERIODIC_ENERGY_GAIN);
@@ -2058,7 +2058,7 @@ struct boss_gunker : public BossAI
             break;
 
         case EVENT_SLUDGE_BOLT:
-            if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 10.0f, true))
+            if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 10.0f, true))
             {
                 if (target->GetDistance2d(me) > 5.0f)
                 {

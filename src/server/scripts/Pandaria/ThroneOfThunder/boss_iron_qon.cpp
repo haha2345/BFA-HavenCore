@@ -417,7 +417,7 @@ public:
                     player->RemoveAura(136193);
         }
 
-        void EnterEvadeMode(EvadeReason w)
+        void EnterEvadeMode(EvadeReason /*w*/)
         {
             ScriptedAI::EnterEvadeMode();
             Talk(TALK_WIPE);
@@ -445,7 +445,7 @@ public:
                 instance->SetBossState(DATA_IRON_QON, DONE);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             if (instance)
             {
@@ -618,7 +618,7 @@ public:
                 case EVENT_THROW_SPEAR:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -633,7 +633,7 @@ public:
                 case EVENT_THROW_SPEAR_1:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -648,7 +648,7 @@ public:
                 case EVENT_THROW_SPEAR_2:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -830,7 +830,7 @@ public:
             instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         }
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& /*damage*/)
         {
             if (me->GetMap()->IsHeroic())
             {
@@ -850,7 +850,7 @@ public:
             }
         }
 
-        void MovementInform(uint32 type, uint32 pointId)
+        void MovementInform(uint32 /*type*/, uint32 pointId)
         {
             switch (pointId)
             {
@@ -897,7 +897,7 @@ public:
                 }
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             if (Creature* ironqon = IronQon())
             {
@@ -1161,7 +1161,7 @@ public:
                 }
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
             me->SetUnitFlags(UNIT_FLAG_NON_ATTACKABLE);
@@ -1170,7 +1170,7 @@ public:
         }
 
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& /*damage*/)
         {
             if (me->GetMap()->IsHeroic())
             {
@@ -1190,7 +1190,7 @@ public:
             }
         }
 
-        void MovementInform(uint32 type, uint32 pointId)
+        void MovementInform(uint32 /*type*/, uint32 pointId)
         {
             switch (pointId)
             {
@@ -1225,7 +1225,7 @@ public:
                 case EVENT_ARCING_LIGHT:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -1254,13 +1254,13 @@ public:
                         me->GetMotionMaster()->MoveChase(qon->GetVictim());
                     break;
                 case EVENT_CALL_THE_STORM:
-                    if (Unit* random = SelectTarget(SELECT_TARGET_FARTHEST, 0, 500.0f, true))
+                    if (Unit* random = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 500.0f, true))
                     {
                         if (Creature* winds = me->SummonCreature(41245, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 15000))
                         {
                             winds->GetMotionMaster()->MovePoint(500, random->GetPositionX(), random->GetPositionY(), random->GetPositionZ(), false);
                             //winds->AI()->AttackStart(random);
-                            //winds->AddThreat(random, 99999999.9f);
+                            //winds->GetThreatManager().AddThreat(random, 99999999.9f);
                         }
                     }
                     events.ScheduleEvent(EVENT_CALL_THE_STORM, 30000);
@@ -1359,7 +1359,7 @@ public:
                 }
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             me->AddUnitState(UNIT_STATE_ROOT);
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
@@ -1510,7 +1510,7 @@ public:
                     if (Creature* trigger = me->SummonCreature(60942, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 6000))
                     {
                         me->SetFacingToObject(trigger);
-                        me->AddThreat(trigger, 9.9999999f);
+                        me->GetThreatManager().AddThreat(trigger, 9.9999999f);
                     }
                     events.ScheduleEvent(EVENT_PHASE_THREE_DAMREN, 12 * IN_MILLISECONDS);
                     events.ScheduleEvent(EVENT_RETURN_TO_COMBAT, 6000);
@@ -1536,7 +1536,7 @@ public:
                     if (Creature* trigger = me->SummonCreature(60942, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 6000))
                     {
                         me->SetFacingToObject(trigger);
-                        me->AddThreat(trigger, 9.9999999f);
+                        me->GetThreatManager().AddThreat(trigger, 9.9999999f);
                     }
                     events.ScheduleEvent(EVENT_RETURN_TO_COMBAT, 6000);
                     events.ScheduleEvent(EVENT_FREEZE, TIMER_FREEZE);
@@ -1548,7 +1548,7 @@ public:
                 case EVENT_FREEZE:
                 {
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -1582,7 +1582,7 @@ public:
         void CastSpikes() // for 10 diffs
         {
             std::list<Unit*> targets;
-            SelectTargetList(targets, 2, SELECT_TARGET_RANDOM, 1000.0f, true);
+            SelectTargetList(targets, 2, SELECT_TARGET_RANDOM, 0, 1000.0f, true);
             targets.remove_if(notValidSpec()); // in this case, tank specc'ed players
 
             if (!targets.empty())
@@ -1593,7 +1593,7 @@ public:
         void CastSpikes25()
         {
             std::list<Unit*> targets;
-            SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 10000.0f, true);
+            SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 10000.0f, true);
             targets.remove_if(notValidSpec()); //tanks
 
             if (!targets.empty())
@@ -1769,7 +1769,7 @@ public:
         float orientation3 = 5.68f;
         float orientation4 = 4.20f;
 
-        void IsSummonedBy(Unit* caster)
+        void IsSummonedBy(Unit* /*caster*/)
         {
             me->DespawnOrUnsummon(50000); // manual despawn because when our main summoner is despawning, it will despawn this too
 
@@ -1832,7 +1832,7 @@ public:
 
         EventMap events;
 
-        void IsSummonedBy(Unit* owner)
+        void IsSummonedBy(Unit* /*owner*/)
         {
             me->AddAura(SPELL_RUSHING_WINDS_VISUAL, me);
             events.ScheduleEvent(EVENT_INIT_WINDSTORM, 2000);
@@ -1902,7 +1902,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_molten_overload_AuraScript);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             if (!GetCaster())
                 return;
@@ -1932,7 +1932,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_lightning_storm_AuraScript);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             Unit* target = GetTarget()->ToPlayer();
             if (!GetCaster() || !target)
@@ -1954,7 +1954,7 @@ public:
                 }
         }
 
-        void HandleApply(AuraEffect const* pAuraEffect, AuraEffectHandleModes eMode)
+        void HandleApply(AuraEffect const* /*pAuraEffect*/, AuraEffectHandleModes /*eMode*/)
         {
             Unit* target = GetTarget()->ToPlayer();
             if (!target)
@@ -2038,7 +2038,7 @@ public:
             targetsPlayers = targets.size();
         }
 
-        void RecalculateDamage(SpellEffIndex effIndex)
+        void RecalculateDamage(SpellEffIndex /*effIndex*/)
         {
             SetHitDamage(GetHitDamage() / targetsPlayers);
         }
@@ -2067,7 +2067,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_frozen_resilience_AuraScript);
 
-        void HandleOnProc(const AuraEffect* aurEff, ProcEventInfo& eventInfo)
+        void HandleOnProc(const AuraEffect* /*aurEff*/, ProcEventInfo& eventInfo)
         {
             if (Unit* pCaster = eventInfo.GetActor())
             {
@@ -2198,7 +2198,7 @@ public:
         EventMap events;
         bool playerIn;
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             playerIn = false;
             if (Vehicle* meVehicle = me->GetVehicleKit())
@@ -2269,7 +2269,7 @@ public:
             }
         }
 
-        void MovementInform(uint32 type, uint32 pointId)
+        void MovementInform(uint32 /*type*/, uint32 pointId)
         {
             switch (pointId)
             {
@@ -2328,7 +2328,7 @@ public:
         EventMap events;
         bool playerIn;
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             playerIn = false;
             if (Vehicle* meVehicle = me->GetVehicleKit())
@@ -2396,7 +2396,7 @@ public:
             }
         }
 
-        void MovementInform(uint32 type, uint32 pointId)
+        void MovementInform(uint32 /*type*/, uint32 pointId)
         {
             switch (pointId)
             {
@@ -2452,7 +2452,7 @@ public:
         EventMap events;
         bool playerIn;
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             playerIn = false;
             if (Vehicle* meVehicle = me->GetVehicleKit())
@@ -2546,7 +2546,7 @@ public:
             }
         }
 
-        void MovementInform(uint32 type, uint32 pointId)
+        void MovementInform(uint32 /*type*/, uint32 pointId)
         {
             switch (pointId)
             {
@@ -2602,7 +2602,7 @@ public:
         EventMap events;
         bool playerIn;
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             playerIn = false;
             if (Vehicle* meVehicle = me->GetVehicleKit())
@@ -2667,7 +2667,7 @@ public:
             }
         }
 
-        void MovementInform(uint32 type, uint32 pointId)
+        void MovementInform(uint32 /*type*/, uint32 pointId)
         {
             switch (pointId)
             {
@@ -2720,7 +2720,7 @@ public:
         EventMap events;
         bool playerIn;
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             playerIn = false;
             if (Vehicle* meVehicle = me->GetVehicleKit())
@@ -2832,7 +2832,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_arcing_lightning_AuraScript);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             Unit* caster = GetCaster();
             Unit* target = GetTarget();
@@ -2892,13 +2892,13 @@ public:
             events.Reset();
         }
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             events.ScheduleEvent(EVENT_WHIRLING, 1000);
             events.ScheduleEvent(EVENT_WHIRL_AT, 500);
         }
 
-        void MovementInform(uint32 type, uint32 pointId)
+        void MovementInform(uint32 /*type*/, uint32 pointId)
         {
             switch (pointId)
             {

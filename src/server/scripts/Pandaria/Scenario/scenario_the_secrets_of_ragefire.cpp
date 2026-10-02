@@ -169,7 +169,7 @@ struct scenario_the_secrets_of_ragefire : public InstanceScript
     }
 
 
-    void OnPlayerAreaUpdate(Player* /*player*/, uint32 newAreaId, uint32 /*oldAreaId*/ ) override
+    void OnPlayerAreaUpdate(Player* /*player*/, uint32 /*newAreaId*/, uint32 /*oldAreaId*/ ) override
     {
         if (!isLoadScenaro)
         {
@@ -496,7 +496,7 @@ struct scenario_the_secrets_of_ragefire : public InstanceScript
     }
 
 
-    void OnUnitDeath(Unit* l_unit)
+    void OnUnitDeath(Unit* /*l_unit*/) override
     {
        // if (l_unit->GetEntry() == 98011)
        //     if (GetData(DATA_STAGE_1) == NOT_STARTED)
@@ -541,7 +541,7 @@ public:
             me->AddNpcFlag(UNIT_NPC_FLAG_SPELLCLICK);
         }
 
-        void OnSpellClick(Unit* clicker, bool& /*result*/) override
+        void OnSpellClick(Unit* /*clicker*/, bool& /*result*/) override
         {
             me->RemoveNpcFlag(UNIT_NPC_FLAG_SPELLCLICK);
             if (!startTicking)
@@ -617,7 +617,7 @@ public:
     {
         ragefire_core_ticking_bombAI(Creature* creature) : ScriptedAI(creature), startTicking(false) { }
 
-        void Reset()
+        void Reset() override
         {
             //   me->SetVisible(false);
         }
@@ -688,7 +688,7 @@ public:
 
         InstanceScript* instance;
 
-        void MovementInform(uint32 /*type*/, uint32 id)
+        void MovementInform(uint32 /*type*/, uint32 id) override
         {
             switch (id)
             {
@@ -736,7 +736,7 @@ public:
                 {
                     me->SetInCombatWith(enemy);
                     me->Attack(enemy, true);
-                    me->AddThreat(enemy, 500.0f);
+                    me->GetThreatManager().AddThreat(enemy, 500.0f);
                 }
                 break;
             case 7:
@@ -850,7 +850,7 @@ public:
 
         }
 
-        void MovementInform(uint32 /*type*/, uint32 id)
+        void MovementInform(uint32 /*type*/, uint32 id) override
         {
             switch (id)
             {
@@ -955,7 +955,7 @@ public:
             me->LoadEquipment(int8(62249));
         }
 
-        void MovementInform(uint32 /*type*/, uint32 id)
+        void MovementInform(uint32 /*type*/, uint32 id) override
         {
             switch (id)
             {
@@ -1037,7 +1037,7 @@ public:
 
         InstanceScript* instance;
 
-        void MovementInform(uint32 /*type*/, uint32 id)
+        void MovementInform(uint32 /*type*/, uint32 id) override
         {
             switch (id)
             {
@@ -1272,7 +1272,7 @@ public:
             me->LoadEquipment(int8(62249));
         }
 
-        void MovementInform(uint32 /*type*/, uint32 id)
+        void MovementInform(uint32 /*type*/, uint32 id) override
         {
             switch (id)
             {
@@ -1391,7 +1391,7 @@ public:
                 me->SetReactState(REACT_AGGRESSIVE);
                 me->RemoveUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
                 me->SetInCombatWithZone();
-                EnterCombat(me);
+                JustEngagedWith(me);
                 break;
             case 3:
                 Talk(3);//me->Yell("All lesser races are enemies of the true horde!");
@@ -1401,7 +1401,7 @@ public:
             }
         }
 
-        void Reset()
+        void Reset() override
         {
             if (instance)
                 instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
@@ -1415,7 +1415,7 @@ public:
             _Reset();
         }
 
-        void EnterCombat(Unit* /*attacker*/) override
+        void JustEngagedWith(Unit* /*attacker*/) override
         {
             if (!_startCombat)
             {
@@ -1582,7 +1582,7 @@ public:
 
         InstanceScript* instance;
 
-        void Reset()
+        void Reset() override
         {
             events.Reset();
             _shadowStep = true;
@@ -1603,7 +1603,7 @@ public:
                 instance->SetData(me->GetEntry(), DONE);
         }
 
-        void EnterCombat(Unit* /*attacker*/) override
+        void JustEngagedWith(Unit* /*attacker*/) override
         {
             events.ScheduleEvent(1, urand(13000, 15000));
             instance->SetData(me->GetEntry(), SPECIAL);
@@ -1614,7 +1614,7 @@ public:
             switch (action)
             {
             case 1:
-                if (Creature* boss = me->FindNearestCreature(70683, 28.0f))
+                if (me->FindNearestCreature(70683, 28.0f))
                 {
                     me->SetInCombatWithZone();
                 }
@@ -1686,7 +1686,7 @@ public:
 
         InstanceScript* instance;
 
-        void Reset()
+        void Reset() override
         {
             events.Reset();
         }
@@ -1709,7 +1709,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*attacker*/) override
+        void JustEngagedWith(Unit* /*attacker*/) override
         {
             events.ScheduleEvent(1, urand(10000, 12000));
             events.ScheduleEvent(2, urand(6000, 8000));//reset 8 sec
@@ -1721,7 +1721,7 @@ public:
             switch (action)
             {
             case 1:
-                if (Creature* boss = me->FindNearestCreature(70683, 28.0f))
+                if (me->FindNearestCreature(70683, 28.0f))
                 {
                     me->SetInCombatWithZone();
                 }
@@ -1941,7 +1941,7 @@ public:
             }
         }
 
-        void OnSpellClick(Unit* clicker, bool& /*result*/) override
+        void OnSpellClick(Unit* /*clicker*/, bool& /*result*/) override
         {
             if (spawned)
                 return;
@@ -2388,11 +2388,11 @@ public:
 
         InstanceScript* instance;
 
-        void DoAction(const int32 action) override
+        void DoAction(const int32 /*action*/) override
         {
         }
 
-        void Reset()
+        void Reset() override
         {
             if (instance)
                 instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
@@ -2400,9 +2400,9 @@ public:
             _Reset();
         }
 
-        void EnterCombat(Unit* /*attacker*/) override
+        void JustEngagedWith(Unit* /*attacker*/) override
         {
-            _EnterCombat();
+            _JustEngagedWith();
             DoCastVictim(SPELL_SHATTERING_CHARGE);
             events.ScheduleEvent(1, urand(3000, 20000));
             events.ScheduleEvent(2, urand(10000, 20000));
@@ -2473,7 +2473,7 @@ public:
     {
         InstanceScript* instance;
 
-        void Reset()
+        void Reset() override
         {
             instance = me->GetInstanceScript();
 

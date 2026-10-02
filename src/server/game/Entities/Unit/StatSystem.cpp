@@ -358,7 +358,7 @@ void Player::UpdateMaxPower(Powers power)
     if (powerIndex == MAX_POWERS || powerIndex >= MAX_POWERS_PER_CLASS)
         return;
 
-    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + power);
+    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + AsUnderlyingType(power));
 
     float value = GetModifierValue(unitMod, BASE_VALUE) + GetCreatePowers(power);
     value *= GetModifierValue(unitMod, BASE_PCT);
@@ -954,7 +954,7 @@ void Creature::UpdateMaxPower(Powers power)
     if (GetPowerIndex(power) == MAX_POWERS)
         return;
 
-    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + power);
+    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + AsUnderlyingType(power));
 
     float value = GetModifierValue(unitMod, BASE_VALUE) + GetCreatePowers(power);
     value *= GetModifierValue(unitMod, BASE_PCT);
@@ -1231,7 +1231,7 @@ void Guardian::UpdateMaxPower(Powers power)
     if (GetPowerIndex(power) == MAX_POWERS)
         return;
 
-    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + power);
+    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + AsUnderlyingType(power));
 
     float value = GetModifierValue(unitMod, BASE_VALUE) + GetCreatePowers(power);
     value *= GetModifierValue(unitMod, BASE_PCT);

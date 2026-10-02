@@ -118,7 +118,7 @@ public:
 		bool adds2;
 		InstanceScript* instance;
 
-		void JustSummoned(Creature* summon)
+		void JustSummoned(Creature* summon) override
 		{
 			summons.Summon(summon);
 
@@ -152,7 +152,7 @@ public:
 			return true;
 		}
 
-		void Reset()
+		void Reset() override
 		{
 			me->RemoveAllAuras();
 			nextHole.clear();
@@ -252,12 +252,12 @@ public:
 			}
 		}
 
-		void EnterEvadeMode(EvadeReason /*why*/)
+		void EnterEvadeMode(EvadeReason /*why*/) override
 		{
 			Reset();
 		}
 
-		void EnterCombat(Unit* /**/) override
+		void JustEngagedWith(Unit* /**/) override
 		{
 			me->AddAura(42716);
 			instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
@@ -294,7 +294,7 @@ public:
 				case EVENT_POISON_SPIT:
 				{
 					std::list<Unit*> targets;
-					SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+					SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
 					targets.remove_if(checkSpec());
 
 					if (!targets.empty())
@@ -310,7 +310,7 @@ public:
 				case EVENT_TOXIC_WOUND:
 				{
 					std::list<Unit*> targets;
-					SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+					SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
 					targets.remove_if(checkSpec());
 
 					if (!targets.empty())
@@ -362,7 +362,7 @@ public:
 			events.Reset();
 		}
 
-		void EnterCombat(Unit* /**/) override
+		void JustEngagedWith(Unit* /**/) override
 		{
 			switch (me->GetEntry())
 			{
@@ -377,7 +377,7 @@ public:
 			}
 		}
 
-		void DamageTaken(Unit* /*attacker*/, uint32& damage)
+		void DamageTaken(Unit* /*attacker*/, uint32& damage) override
 		{
 			uint32 damageToDeal = damage;
 
@@ -387,7 +387,7 @@ public:
 			}
 		}
 
-		void JustDied(Unit*)
+		void JustDied(Unit*) override
 		{
 			instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
 		}
@@ -442,7 +442,7 @@ public:
 		uint32 damageTimer;
 		std::list<Unit*> targets;
 
-		void OnInitialize()
+		void OnInitialize() override
 		{
 			damageTimer = 0;
 		}

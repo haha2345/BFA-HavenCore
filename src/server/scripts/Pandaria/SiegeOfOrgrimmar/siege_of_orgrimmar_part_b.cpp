@@ -230,12 +230,12 @@ class npc_siege_of_orgrimmar_jaina_proudmoore_2 : public CreatureScript
                 secondGalakrasIntroDone = false;
             }
 
-            void Reset()
+            void Reset() override
             {
 
             }
 
-            void DoAction(const int32 action)
+            void DoAction(const int32 action) override
             {
                 if (action == ACTION_FIRST_INTRO_GALAKRAS)
                 {
@@ -273,7 +273,7 @@ class npc_siege_of_orgrimmar_jaina_proudmoore_2 : public CreatureScript
                 me->RemoveUnitFlag(UnitFlags(UNIT_NPC_FLAG_GOSSIP));
             }
 
-            void UpdateAI(const uint32 diff)
+            void UpdateAI(const uint32 diff) override
             {
                 m_SceneHelper.UpdateSceneHelper(diff);
             }
@@ -459,12 +459,12 @@ class npc_siege_of_orgrimmar_lorthemar_theron_2 : public CreatureScript
                 secondGalakrasIntroDone = false;
             }
 
-            void Reset()
+            void Reset() override
             {
 
             }
 
-            void DoAction(const int32 action)
+            void DoAction(const int32 action) override
             {
                 if (action == ACTION_FIRST_INTRO_GALAKRAS)
                 {
@@ -484,7 +484,7 @@ class npc_siege_of_orgrimmar_lorthemar_theron_2 : public CreatureScript
                 }
             }
 
-            void sGossipSelect(Player* player, uint32 menuId, uint32 gossipListId) override
+            void sGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
             {
                 player->PlayerTalkClass->SendCloseGossip();
 
@@ -502,7 +502,7 @@ class npc_siege_of_orgrimmar_lorthemar_theron_2 : public CreatureScript
                 me->RemoveUnitFlag(UnitFlags(UNIT_NPC_FLAG_GOSSIP));
             }
 
-            void UpdateAI(const uint32 diff)
+            void UpdateAI(const uint32 diff) override
             {
                 m_SceneHelper.UpdateSceneHelper(diff);
             }
@@ -736,7 +736,7 @@ class npc_siege_of_orgrimmar_dragonmaw_bonecrusher : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_FRACTURE, urand(8000, 12000));
                 events.ScheduleEvent(EVENT_SHATTERING_ROAR, urand(2000, 4000));
@@ -803,7 +803,7 @@ class npc_siege_of_orgrimmar_dragonmaw_tidal_shaman : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_CHAIN_HEAL, urand(5000, 12000));
                 events.ScheduleEvent(EVENT_HEALING_TIDE_TOTEM, urand(10000, 20000));
@@ -872,12 +872,12 @@ class npc_siege_of_orgrimmar_healing_tide_totem : public CreatureScript
                 pInstance = creature->GetInstanceScript();
             }
 
-            void Reset()
+            void Reset() override
             {
                 me->AddAura(SPELL_HEALING_TIDE_AURA, me);
             }
 
-            void UpdateAI(const uint32 diff) override
+            void UpdateAI(const uint32 /*diff*/) override
             {
 
             }
@@ -910,7 +910,7 @@ class npc_siege_of_orgrimmar_dragonmaw_elite_grunt : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_THROW_AXE, 1000);
             }
@@ -986,13 +986,13 @@ class npc_siege_of_orgrimmar_korkron_cannon : public CreatureScript
     public:
         npc_siege_of_orgrimmar_korkron_cannon() : CreatureScript("npc_siege_of_orgrimmar_korkron_cannon") { }
 
-        CreatureAI* GetAI(Creature* creature) const
+        CreatureAI* GetAI(Creature* creature) const override
         {
             return new npc_siege_of_orgrimmar_korkron_cannonAI(creature);
         }
 
         // prevent menu
-        bool OnGossipHello(Player* player, Creature* creature) override
+        bool OnGossipHello(Player* /*player*/, Creature* /*creature*/) override
         {
             return true;
         }
@@ -1006,7 +1006,7 @@ class npc_siege_of_orgrimmar_korkron_cannon : public CreatureScript
                 isMineActivated = false;
             }
 
-            void Reset()
+            void Reset() override
             {
                 me->SetUnitFlags(UnitFlags(UNIT_NPC_FLAG_GOSSIP));
             }
@@ -1486,7 +1486,7 @@ class npc_siege_of_orgrimmar_blind_blademaster : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_BLIND_CLEAVE, urand(8000, 15000));
                 events.ScheduleEvent(EVENT_SWIFT_STRIKE, urand(1000, 3000));
@@ -1974,7 +1974,7 @@ class npc_siege_of_orgrimmar_overseer_komak : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/) override
+            void JustEngagedWith(Unit* /*unit*/) override
             {
 
             }
@@ -1996,9 +1996,7 @@ class npc_siege_of_orgrimmar_overseer_komak : public CreatureScript
                 if (me->HasUnitState(UNIT_STATE_CASTING))
                     return;
 
-                if (uint32 eventId = events.ExecuteEvent())
-                {
-                }
+                events.ExecuteEvent();
 
                 DoMeleeAttackIfReady();
             }
@@ -2056,7 +2054,7 @@ class npc_siege_of_orgrimmar_overlord_runthak : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_BONECRACKER, urand(8000, 12000));
             }
@@ -2141,7 +2139,7 @@ class npc_siege_of_orgrimmar_hellscream_demolisher : public CreatureScript
                 m_State = ATTACK_STATE_MELEE;
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_HURL_BOULDER, 1000);
                 events.ScheduleEvent(EVENT_UPDATE_ATTACK_STATE, 1000);
@@ -2273,7 +2271,7 @@ class npc_siege_of_orgrimmar_korkron_shadowmage : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_MIND_SPIKE, 1);
                 events.ScheduleEvent(EVENT_SHADOWFLAME, urand(8000, 12000));
@@ -2360,7 +2358,7 @@ class npc_siege_of_orgrimmar_korkron_arcweaver : public CreatureScript
                 events.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/)
+            void JustEngagedWith(Unit* /*unit*/)
             {
                 events.ScheduleEvent(EVENT_ARCANE_SHOCK, 1);
                 events.ScheduleEvent(EVENT_MAGICSTRIKE, urand(5000, 10000));
@@ -2453,7 +2451,7 @@ class npc_siege_of_orgrimmar_korkron_assassin : public CreatureScript
                 me->AddAura(SPELL_STEALTH, me);
             }
 
-            void EnterCombat(Unit* victim)
+            void JustEngagedWith(Unit* victim)
             {
                 DoCast(victim, SPELL_ASSASSINS_MARK);
                 me->ClearUnitState(UNIT_STATE_CASTING);
@@ -2516,7 +2514,7 @@ class spell_siege_of_orgrimmar_fracture_aoe : public SpellScriptLoader
                 Trinity::Containers::RandomResize(targets, 1);
             }
 
-            void HandleHitTarget(SpellEffIndex effIndex)
+            void HandleHitTarget(SpellEffIndex /*effIndex*/)
             {
                 if (!GetCaster() || !GetHitUnit())
                     return;
@@ -2552,7 +2550,7 @@ class spell_siege_of_orgrimmar_tidal_wave_aoe : public SpellScriptLoader
                 Trinity::Containers::RandomResize(targets, 1);
             }
 
-            void HandleHitTarget(SpellEffIndex effIndex)
+            void HandleHitTarget(SpellEffIndex /*effIndex*/)
             {
                 if (!GetCaster() || !GetHitUnit())
                     return;

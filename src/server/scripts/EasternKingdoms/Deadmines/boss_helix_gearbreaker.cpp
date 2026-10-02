@@ -17,7 +17,17 @@
 
 #include "ScriptMgr.h"
 #include "deadmines.h"
+#include "ObjectMgr.h"
+#include "Player.h"
+#include "QuestDef.h"
 #include "Vehicle.h"
+#include <set>
+
+enum DeadminesHordeQuest
+{
+    QUEST_TRAITORS = 27844,
+    NPC_SLINKY_SHARPSHIV = 46906
+};
 
 enum eSpels
 {
@@ -49,6 +59,11 @@ const Position OafPos[2] =
 {
     {-289.809f, -527.215f, 49.8021f, 0},
     {-289.587f, -489.575f, 49.9126f, 0},
+};
+
+const Position SlinkySpawn =
+{
+    -273.8260f, -477.7030f, 49.2435f, 1.04438f
 };
 
 const Position CrewSpawn[] =
@@ -101,6 +116,7 @@ public:
         uint32 uiTimer;
         uint32 numberKillMineRat;
         Creature* oaf;
+        std::set<ObjectGuid> _traitorsOfferedTo;
 
         void Reset() override
         {
@@ -108,6 +124,7 @@ public:
             Phase = 1;
             uiTimer = 2000;
             numberKillMineRat = 0;
+            _traitorsOfferedTo.clear();
 
             if (!me)
                 return;
@@ -117,14 +134,67 @@ public:
             me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
             summons.DespawnAll();
             OafSupport();
+
+            // Slinky Sharpshiv is Horde-only. Do not summon her from Reset(),
+            // because boss/grid reset can run before the first player enters the
+            // instance and the instance faction has been established.
         }
 
-        void EnterCombat(Unit* /*pWho*/) override
+        Creature* EnsureSlinkyForHorde(Player* player)
+        {
+            if (!player || player->GetTeam() != HORDE)
+                return nullptr;
+
+            if (Creature* slinky = me->FindNearestCreature(NPC_SLINKY_SHARPSHIV, 150.0f, true))
+                return slinky;
+
+            // Spawn at the pre-Helix doorway as soon as a Horde player enters
+            // Helix's loaded grid. Alliance players never cause this summon.
+            return me->SummonCreature(
+                NPC_SLINKY_SHARPSHIV,
+                SlinkySpawn,
+                TEMPSUMMON_MANUAL_DESPAWN);
+        }
+
+        void MoveInLineOfSight(Unit* who) override
+        {
+            if (Player* player = who ? who->ToPlayer() : nullptr)
+            {
+                // If an old/pre-existing summon somehow survived into an
+                // Alliance run, remove it immediately.
+                if (player->GetTeam() == ALLIANCE)
+                {
+                    if (Creature* slinky = me->FindNearestCreature(NPC_SLINKY_SHARPSHIV, 150.0f, true))
+                        slinky->DespawnOrUnsummon();
+                }
+                else if (Creature* slinky = EnsureSlinkyForHorde(player))
+                {
+                    if (player->GetQuestStatus(QUEST_TRAITORS) == QUEST_STATUS_NONE &&
+                        _traitorsOfferedTo.find(player->GetGUID()) == _traitorsOfferedTo.end() &&
+                        player->IsWithinDistInMap(slinky, 15.0f))
+                    {
+                        if (Quest const* quest = sObjectMgr->GetQuestTemplate(QUEST_TRAITORS))
+                        {
+                            if (player->CanTakeQuest(quest, false))
+                            {
+                                player->PrepareQuestMenu(slinky->GetGUID());
+                                player->SendPreparedQuest(slinky);
+                                _traitorsOfferedTo.insert(player->GetGUID());
+                            }
+                        }
+                    }
+                }
+            }
+
+            BossAI::MoveInLineOfSight(who);
+        }
+
+        void JustEngagedWith(Unit* /*pWho*/) override
         {
             if (!me)
                 return;
 
-            _EnterCombat();
+            _JustEngagedWith();
             Talk(5);
             me->SetInCombatWithZone();
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
@@ -160,6 +230,9 @@ public:
 
         void JustSummoned(Creature* summoned) override
         {
+            if (summoned->GetEntry() == NPC_SLINKY_SHARPSHIV)
+                return;
+
             summons.Summon(summoned);
         }
 
@@ -280,7 +353,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit* /*pWho*/) override
+        void JustEngagedWith(Unit* /*pWho*/) override
         {
             events.ScheduleEvent(EVENT_OAFQUARD, 5000);
         }
@@ -332,7 +405,7 @@ public:
                     }
                 }
 
-                if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO))
+                if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT))
                     DoStartMovement(target);
             }
         }
@@ -455,7 +528,7 @@ struct npc_helix_crew : public Scripted_NoMovementAI
             me->Attack(victim, false);
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         me->GetScheduler().Schedule(5s, [this](TaskContext context)
         {

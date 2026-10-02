@@ -152,9 +152,9 @@ class boss_murozond : public CreatureScript
                 DoAction(ACTION_MUROZOND_REMOVE_TEMPORAL_BOMB);
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
-                _EnterCombat();
+                _JustEngagedWith();
 
                 DoAction(ACTION_MUROZOND_REMOVE_TEMPORAL_BOMB);
                 me->setActive(false);
@@ -406,7 +406,7 @@ public:
                         std::list<Creature*> playerClones;
                         player->GetCreatureListWithEntryInGrid(playerClones, NPC_PLAYER_CLONE_ENTRY, 200.0f);
 
-                        Creature* myClone;
+                        Creature* myClone = nullptr;
                         for (std::list<Creature*>::iterator iter = playerClones.begin(); iter != playerClones.end(); ++iter)
                         {
                             if (!(*iter) || (*iter)->isDead())

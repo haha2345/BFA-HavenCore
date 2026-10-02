@@ -45,6 +45,8 @@
 #include "ScriptLoader.h"
 #include "ScriptMgr.h"
 #include "ScriptReloadMgr.h"
+#include "SecretMgr.h"
+#include "SharedDefines.h"
 #include "TCSoap.h"
 #include "World.h"
 #include "WorldSocket.h"
@@ -95,7 +97,7 @@ public:
 
     static void Start(std::shared_ptr<FreezeDetector> const& freezeDetector)
     {
-        freezeDetector->_timer.expires_from_now(boost::posix_time::seconds(5));
+        freezeDetector->_timer.expires_after(Seconds(5));
         freezeDetector->_timer.async_wait(std::bind(&FreezeDetector::Handler, std::weak_ptr<FreezeDetector>(freezeDetector), std::placeholders::_1));
     }
 
@@ -260,6 +262,7 @@ extern int main(int argc, char** argv)
     });
 
     // Initialize the World
+    sSecretMgr->Initialize(SECRET_OWNER_WORLDSERVER);
     sWorld->SetInitialWorldSettings();
 
     std::shared_ptr<void> mapManagementHandle(nullptr, [](void*)
@@ -494,7 +497,7 @@ void FreezeDetector::Handler(std::weak_ptr<FreezeDetector> freezeDetectorRef, bo
                 ABORT();
             }
 
-            freezeDetector->_timer.expires_from_now(boost::posix_time::seconds(1));
+            freezeDetector->_timer.expires_after(Seconds(1));
             freezeDetector->_timer.async_wait(std::bind(&FreezeDetector::Handler, freezeDetectorRef, std::placeholders::_1));
         }
     }

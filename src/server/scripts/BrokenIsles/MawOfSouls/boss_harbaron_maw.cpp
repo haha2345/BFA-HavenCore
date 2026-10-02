@@ -117,15 +117,15 @@ class boss_harbaron : public CreatureScript
             boss_harbaron_AI(Creature* creature) : BossAI(creature, DATA_HARBARON)
             {}
 
-            void Reset()
+            void Reset() override
             {
                 _Reset();
             }
 
-            void EnterCombat(Unit* /**/) override
+            void JustEngagedWith(Unit* /**/) override
             {
                 Talk(SAY_AGGRO);
-                _EnterCombat();
+                _JustEngagedWith();
                 events.ScheduleEvent(EVENT_FRAGMENT, Seconds(19));
                 events.ScheduleEvent(EVENT_COSMIC_SCYHTE, Seconds(3));
                 events.ScheduleEvent(EVENT_SHACKLED_SERVITOR, Seconds(7));
@@ -277,13 +277,13 @@ class npc_mos_shackled_servitor : public CreatureScript
             npc_mos_shackled_servitor_AI(Creature* creature) : ScriptedAI(creature)
             {}
 
-            void Reset()
+            void Reset() override
             {
                 DoCast(me, SPELL_GHOST_VISUAL, true);
                 me->AddUnitState(UNIT_STATE_ROOT);
             }
 
-            void EnterCombat(Unit* /**/) override
+            void JustEngagedWith(Unit* /**/) override
             {
                 DoCast(me, SPELL_VOID_SNAP);
                 _events.ScheduleEvent(EVENT_VOID_SNAP, Seconds(6));
@@ -425,7 +425,7 @@ class npc_mos_cosmic_scythe : public CreatureScript
             {
             }
 
-            void Reset()
+            void Reset() override
             {
                 _timerCast = 0;
             }
@@ -530,7 +530,7 @@ class spell_harbaron_nether_rip : public SpellScriptLoader
                 }
             }
 
-            void Register()
+            void Register() override
             {
                 OnEffectPeriodic += AuraEffectPeriodicFn(spell_harbaron_nether_rip_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             }

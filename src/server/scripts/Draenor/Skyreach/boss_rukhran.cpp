@@ -94,7 +94,7 @@ public:
             if (Player* player = me->SelectRandomPlayerInRange(100.0f, true))
             {
                 m_PlayerTargetGuid = player->GetGUID();
-                me->AddThreat(player, 1000000.0f);
+                me->GetThreatManager().AddThreat(player, 1000000.0f);
                 me->CastSpell(player, uint32(Spells::FIXATE));
                 events.ScheduleEvent(uint32(Events::UPDATE_POSITION), 500);
             }
@@ -181,7 +181,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             events.ScheduleEvent(uint32(Events::BLAZE_OF_GLORY), 2000);
         }
@@ -276,7 +276,7 @@ public:
             me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_CONFUSE, true);
         }
 
-        void Reset()
+        void Reset() override
         {
             events.Reset();
 
@@ -315,7 +315,7 @@ public:
             me->CastStop();
         }
 
-        void MovementInform(uint32 p_Type, uint32 p_Id)
+        void MovementInform(uint32 p_Type, uint32 p_Id) override
         {
             switch (p_Type)
             {
@@ -349,12 +349,12 @@ public:
             }
         }
 
-        void JustReachedHome()
+        void JustReachedHome() override
         {
             _JustReachedHome();
         }
 
-        void JustDied(Unit* /*p_Killer*/)
+        void JustDied(Unit* /*p_Killer*/) override
         {
             _JustDied();
 
@@ -382,9 +382,9 @@ public:
         }
 
 
-        void EnterCombat(Unit* /*unit*/)
+        void JustEngagedWith(Unit* /*unit*/) override
         {
-            _EnterCombat();
+            _JustEngagedWith();
 
             events.ScheduleEvent(uint32(Events::PIERCE_ARMOR), 6000);
             events.ScheduleEvent(uint32(Events::SUMMON_SOLAR_FLARE), 10000);
@@ -396,7 +396,7 @@ public:
                 instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         }
 
-        void SpellHitTarget(Unit* p_Target, SpellInfo const* p_SpellInfo)
+        void SpellHitTarget(Unit* p_Target, SpellInfo const* p_SpellInfo) override
         {
             if ((p_SpellInfo->Id == uint32(Spells::SCREECH_DMG) || p_SpellInfo->Id == uint32(Spells::QUILLS_DMG)) && p_Target)
             {
@@ -404,7 +404,7 @@ public:
             }
         }
 
-        void UpdateAI(const uint32 diff)
+        void UpdateAI(const uint32 diff) override
         {
             if (!UpdateVictim() || (me->GetVictim() && me->GetVictim()->GetDistance(me) > 50.0f))
             {

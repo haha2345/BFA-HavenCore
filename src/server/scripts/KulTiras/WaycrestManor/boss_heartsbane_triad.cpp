@@ -201,25 +201,25 @@ public:
 		}
 	}
 
-	void EnterCombat(Unit* /*unit*/) override
+	void JustEngagedWith(Unit* /*unit*/) override
 	{
 		switch (me->GetEntry())
 		{
 		case NPC_SISTER_SOLENA:
 			 Talk(SAY_SOLENA_AGGRO);
-			 _EnterCombat();			 
+			 _JustEngagedWith();			 
 			 events.ScheduleEvent(EVENT_SOUL_BOLT, 3s);
 			 events.ScheduleEvent(EVENT_FOCUSING_IRIS, 5s);
 			 break;
 
 		case NPC_SISTER_BRIAR:		
-			 _EnterCombat();
+			 _JustEngagedWith();
 			 events.ScheduleEvent(EVENT_BRAMBLE_BOLT, 3s);
 			 events.ScheduleEvent(EVENT_FOCUSING_IRIS, 5s);
 			 break;
 
 		case NPC_SISTER_MALADY:
-			 _EnterCombat();
+			 _JustEngagedWith();
 			 events.ScheduleEvent(EVENT_RUINOUS_BOLT, 3s);
 			 events.ScheduleEvent(EVENT_FOCUSING_IRIS, 5s);
 			 break;

@@ -147,9 +147,15 @@ void BattlegroundAB::PostUpdateImpl(uint32 diff)
                     m_TeamScores[team] = BG_AB_MAX_TEAM_SCORE;
 
                 if (team == TEAM_ALLIANCE)
-                    UpdateWorldState(BG_AB_OP_RESOURCES_ALLY, m_TeamScores[team]);
+                {
+                    UpdateWorldState(BG_AB_OP_RESOURCES_ALLY,     m_TeamScores[team]);
+                    UpdateWorldState(BG_AB_OP_RESOURCES_ALLY_NEW, m_TeamScores[team]);
+                }
                 else if (team == TEAM_HORDE)
-                    UpdateWorldState(BG_AB_OP_RESOURCES_HORDE, m_TeamScores[team]);
+                {
+                    UpdateWorldState(BG_AB_OP_RESOURCES_HORDE,     m_TeamScores[team]);
+                    UpdateWorldState(BG_AB_OP_RESOURCES_HORDE_NEW, m_TeamScores[team]);
+                }
                 // update achievement flags
                 // we increased m_TeamScores[team] so we just need to check if it is 500 more than other teams resources
                 uint8 otherTeam = (team + 1) % BG_TEAMS_COUNT;
@@ -203,6 +209,14 @@ void BattlegroundAB::StartingEventOpenDoors()
     }
     DoorOpen(BG_AB_OBJECT_GATE_A);
     DoorOpen(BG_AB_OBJECT_GATE_H);
+
+    // Broadcast BFA score WorldStates so the client shows 0/1500 from the start
+    UpdateWorldState(BG_AB_OP_RESOURCES_MAX,     BG_AB_MAX_TEAM_SCORE);
+    UpdateWorldState(BG_AB_OP_RESOURCES_MAX_NEW, BG_AB_MAX_TEAM_SCORE);
+    UpdateWorldState(BG_AB_OP_RESOURCES_ALLY,     0);
+    UpdateWorldState(BG_AB_OP_RESOURCES_ALLY_NEW, 0);
+    UpdateWorldState(BG_AB_OP_RESOURCES_HORDE,     0);
+    UpdateWorldState(BG_AB_OP_RESOURCES_HORDE_NEW, 0);
 
     // Achievement: Let's Get This Done
     StartCriteriaTimer(CRITERIA_TIMED_TYPE_EVENT, AB_EVENT_START_BATTLE);
@@ -266,6 +280,9 @@ void BattlegroundAB::_ChangeBanner(uint8 node, uint8 type, uint8 teamIndex, bool
     ArathiBannerWorldState worldstateValue = AB_NEUTRAL;
 
     uint32 SpellVisualID = SPELL_VISUAL_NEUTRAL;
+    uint32 bannerFaction = 0;
+    if (GameObjectTemplateAddon const* addon = AB_banner->GetTemplateAddon())
+        bannerFaction = addon->faction;
 
     if (type == BG_AB_NODE_TYPE_CONTESTED)
     {
@@ -273,11 +290,13 @@ void BattlegroundAB::_ChangeBanner(uint8 node, uint8 type, uint8 teamIndex, bool
         {
             SpellVisualID = SPELL_VISUAL_ALLIANCE_CONTESTED;
             worldstateValue = AB_ALLIANCE_CONTESTED;
+            bannerFaction = 84;
         }
 		else
         {
             SpellVisualID = SPELL_VISUAL_HORDE_CONTESTED;
             worldstateValue = AB_HORDE_CONTESTED;
+            bannerFaction = 83;
         }
 
     }
@@ -288,17 +307,21 @@ void BattlegroundAB::_ChangeBanner(uint8 node, uint8 type, uint8 teamIndex, bool
         {
             SpellVisualID = SPELL_VISUAL_ALLIANCE_OCCUPIED;
             worldstateValue = AB_ALLIANCE_OCCUPIED;
+            bannerFaction = 84;
         }
 		else
         {
             SpellVisualID = SPELL_VISUAL_HORDE_OCCUPIED;
             worldstateValue = AB_HORDE_OCCUPIED;
+            bannerFaction = 83;
         }
     }
 
 
     // Update the visual of the banner
     AB_banner->SetSpellVisualID(SpellVisualID);
+    // Update the faction of the banner to hide the gear icon for the owning team
+    AB_banner->SetFaction(bannerFaction);
 
     // Update the worldstate
     m_BannerWorldState[node] = worldstateValue;
@@ -330,10 +353,13 @@ void BattlegroundAB::FillInitialWorldStates(WorldPackets::WorldState::InitWorldS
     packet.Worldstates.emplace_back(uint32(BG_AB_OP_OCCUPIED_BASES_HORDE), int32(horde));
 
     // Team scores
-    packet.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_MAX), int32(BG_AB_MAX_TEAM_SCORE));
+    packet.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_MAX),     int32(BG_AB_MAX_TEAM_SCORE));
+    packet.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_MAX_NEW), int32(BG_AB_MAX_TEAM_SCORE));
     packet.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_WARNING), int32(BG_AB_WARNING_NEAR_VICTORY_SCORE));
-    packet.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_ALLY), int32(m_TeamScores[TEAM_ALLIANCE]));
-    packet.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_HORDE), int32(m_TeamScores[TEAM_HORDE]));
+    packet.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_ALLY),     int32(m_TeamScores[TEAM_ALLIANCE]));
+    packet.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_ALLY_NEW), int32(m_TeamScores[TEAM_ALLIANCE]));
+    packet.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_HORDE),     int32(m_TeamScores[TEAM_HORDE]));
+    packet.Worldstates.emplace_back(uint32(BG_AB_OP_RESOURCES_HORDE_NEW), int32(m_TeamScores[TEAM_HORDE]));
 
     // Banner world states
     for (int obj = BG_AB_OBJECT_BANNER; obj < BG_AB_DYNAMIC_NODES_COUNT; ++obj)
@@ -384,7 +410,7 @@ void BattlegroundAB::_NodeOccupied(uint8 node, Team team)
 
     uint8 capturedNodes = 0;
     for (uint8 i = 0; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
-        if (m_Nodes[i] == GetTeamIndexByTeamId(team) + BG_AB_NODE_TYPE_OCCUPIED && !m_NodeTimers[i])
+        if (m_Nodes[i] == uint8(GetTeamIndexByTeamId(team)) + BG_AB_NODE_TYPE_OCCUPIED && !m_NodeTimers[i])
             ++capturedNodes;
 
     if (capturedNodes >= 5)
@@ -445,7 +471,9 @@ void BattlegroundAB::EventPlayerClickedOnFlag(Player* source, GameObject* /*targ
     TeamId teamIndex = GetTeamIndexByTeamId(source->GetTeam());
 
     // Check if player really could use this banner, not cheated
-    if (!(m_Nodes[node] == 0 || teamIndex == m_Nodes[node]%2))
+    // The client shouldn't even show the gear icon due to faction changes,
+    // but this prevents packet injection from cheating the state.
+    if (!(m_Nodes[node] == BG_AB_NODE_TYPE_NEUTRAL || teamIndex == m_Nodes[node] % 2))
         return;
 
     source->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
@@ -476,7 +504,7 @@ void BattlegroundAB::EventPlayerClickedOnFlag(Player* source, GameObject* /*targ
         {
             UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
             m_prevNodes[node] = m_Nodes[node];
-            m_Nodes[node] = teamIndex + BG_AB_NODE_TYPE_CONTESTED;
+            m_Nodes[node] = uint8(teamIndex) + BG_AB_NODE_TYPE_CONTESTED;
             // create new contested banner
             _ChangeBanner(node, BG_AB_NODE_TYPE_CONTESTED, teamIndex, true);
             _SendNodeUpdate(node);
@@ -492,7 +520,7 @@ void BattlegroundAB::EventPlayerClickedOnFlag(Player* source, GameObject* /*targ
         {
             UpdatePlayerScore(source, SCORE_BASES_DEFENDED, 1);
             m_prevNodes[node] = m_Nodes[node];
-            m_Nodes[node] = teamIndex + BG_AB_NODE_TYPE_OCCUPIED;
+            m_Nodes[node] = uint8(teamIndex) + BG_AB_NODE_TYPE_OCCUPIED;
             // create new occupied banner
             _ChangeBanner(node, BG_AB_NODE_TYPE_OCCUPIED, teamIndex, true);
             _SendNodeUpdate(node);
@@ -511,7 +539,7 @@ void BattlegroundAB::EventPlayerClickedOnFlag(Player* source, GameObject* /*targ
     {
         UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
         m_prevNodes[node] = m_Nodes[node];
-        m_Nodes[node] = teamIndex + BG_AB_NODE_TYPE_CONTESTED;
+        m_Nodes[node] = uint8(teamIndex) + BG_AB_NODE_TYPE_CONTESTED;
         // create new contested banner
         _ChangeBanner(node, BG_AB_NODE_TYPE_CONTESTED, teamIndex, true);
         _SendNodeUpdate(node);

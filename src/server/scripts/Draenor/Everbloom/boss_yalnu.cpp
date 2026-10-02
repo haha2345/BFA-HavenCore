@@ -170,7 +170,7 @@ public:
                 instance->SetBossState(DATA_YALNU, NOT_STARTED);
         }
 
-        void EnterCombat(Unit* /*attacker*/) override
+        void JustEngagedWith(Unit* /*attacker*/) override
         {
             me->setActive(true);
             DoZoneInCombat();
@@ -202,14 +202,14 @@ public:
 
         bool playersInThreat()
         {
-            const std::list<HostileReference*>& threatList = me->getThreatManager().getThreatList();
+            const std::vector<ThreatReference*>& threatList = me->GetThreatManager().GetModifiableThreatList();
             if (threatList.empty())
                 return false;
 
-            for (std::list<HostileReference*>::const_iterator itr = threatList.begin(); itr != threatList.end(); ++itr)
+            for (std::vector<ThreatReference*>::const_iterator itr = threatList.begin(); itr != threatList.end(); ++itr)
             {
-                HostileReference* ref = (*itr);
-                if (Unit* target = ref->getTarget())
+                ThreatReference* ref = (*itr);
+                if (Unit* target = ref->GetVictim())
                 {
                     if (target->IsPlayer())
                         return true;
@@ -623,7 +623,7 @@ public:
             tendonRipTimer = 6000;
         }
 
-        void EnterCombat(Unit* /*attacker*/) override
+        void JustEngagedWith(Unit* /*attacker*/) override
         {
             me->SetObjectScale(1.0f);
         }

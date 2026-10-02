@@ -314,9 +314,9 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
-            _EnterCombat();
+            _JustEngagedWith();
 
             me->RemoveAura(eSadanaSpells::SpellShadowRitual);
 
@@ -431,7 +431,7 @@ public:
 
                 for (uint8 l_I = 0; l_I < 2; l_I++)
                 {
-                    if (Unit* target = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 100.0f, true, -eSadanaSpells::SpellDaggerFallGroundMarker))
+                    if (Unit* target = SelectTarget(SelectAggroTarget::SELECT_TARGET_RANDOM, 0, 100.0f, true, true, -eSadanaSpells::SpellDaggerFallGroundMarker))
                     {
                         me->SummonCreature(eSadanaCreatures::CreatureDaggerFall, target->GetPositionX(), target->GetPositionY(), DaggerFallAltitude, target->GetOrientation(), TempSummonType::TEMPSUMMON_MANUAL_DESPAWN);
                         target->CastSpell(target, eSadanaSpells::SpellDaggerFallGroundMarker);
@@ -859,7 +859,7 @@ public:
                     break;
                 }
 
-                for (uint32 l_I = 0; l_I < 4; l_I++)
+                for (uint32 l_I = 0; l_I < 3; l_I++)
                     me->RemoveAura(l_LunarRuneEntries[l_I]);
 
                 me->RemoveAura(eSadanaSpells::SpellLunarRitual);

@@ -15,83 +15,85 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+// compatibility for booost 1.74 (no boost/process/v1/) and 1.88 (no boost/process/)
+#if __has_include(<boost/process/v1/args.hpp>)
+#define BOOST_PROCESS_V1_HEADER(header) <boost/process/v1/header>
+#define BOOST_PROCESS_VERSION 1
+#else
+#define BOOST_PROCESS_V1_HEADER(header) <boost/process/header>
+#endif
+
 #include "StartProcess.h"
 #include "Errors.h"
 #include "Log.h"
+#include "Memory.h"
 #include "Optional.h"
-
-#include <boost/algorithm/string/join.hpp>
-#include <boost/iostreams/copy.hpp>
-#include <boost/process/args.hpp>
-#include <boost/process/child.hpp>
-#include <boost/process/env.hpp>
-#include <boost/process/exe.hpp>
-#include <boost/process/io.hpp>
-#include <boost/process/pipe.hpp>
-#include <boost/process/search_path.hpp>
+#include BOOST_PROCESS_V1_HEADER(args.hpp)
+#include BOOST_PROCESS_V1_HEADER(child.hpp)
+#include BOOST_PROCESS_V1_HEADER(env.hpp)
+#include BOOST_PROCESS_V1_HEADER(error.hpp)
+#include BOOST_PROCESS_V1_HEADER(exe.hpp)
+#include BOOST_PROCESS_V1_HEADER(io.hpp)
+#include BOOST_PROCESS_V1_HEADER(pipe.hpp)
+#include BOOST_PROCESS_V1_HEADER(search_path.hpp)
+#include <algorithm>
 
 using namespace boost::process;
-using namespace boost::iostreams;
 
 namespace Trinity
 {
-
-template<typename T>
-class TCLogSink
-{
-    T callback_;
-
-public:
-    typedef char      char_type;
-    typedef sink_tag  category;
-
-    // Requires a callback type which has a void(std::string) signature
-    TCLogSink(T callback)
-        : callback_(std::move(callback)) { }
-
-    std::streamsize write(const char* str, std::streamsize size)
-    {
-        std::string consoleStr(str, size);
-        std::string utf8;
-        if (consoleToUtf8(consoleStr, utf8))
-            callback_(utf8);
-        return size;
-    }
-};
-
-template<typename T>
-auto MakeTCLogSink(T&& callback)
-    -> TCLogSink<typename std::decay<T>::type>
-{
-    return { std::forward<T>(callback) };
-}
-
 template<typename T>
 static int CreateChildProcess(T waiter, std::string const& executable,
                               std::vector<std::string> const& argsVector,
                               std::string const& logger, std::string const& input,
                               bool secure)
 {
+#if TRINITY_COMPILER == TRINITY_COMPILER_MICROSOFT
+#pragma warning(push)
+#pragma warning(disable:4297)
+/*
+  Silence warning with boost 1.83
+
+    boost/process/pipe.hpp(132,5): warning C4297: 'boost::process::basic_pipebuf<char,std::char_traits<char>>::~basic_pipebuf': function assumed not to throw an exception but does
+    boost/process/pipe.hpp(132,5): message : destructor or deallocator has a (possibly implicit) non-throwing exception specification
+    boost/process/pipe.hpp(124,6): message : while compiling class template member function 'boost::process::basic_pipebuf<char,std::char_traits<char>>::~basic_pipebuf(void)'
+    boost/process/pipe.hpp(304,42): message : see reference to class template instantiation 'boost::process::basic_pipebuf<char,std::char_traits<char>>' being compiled
+*/
+#endif
     ipstream outStream;
     ipstream errStream;
+#if TRINITY_COMPILER == TRINITY_COMPILER_MICROSOFT
+#pragma warning(pop)
+#endif
 
     if (!secure)
     {
+        std::string joinedArgs;
+        for (std::string const& arg : argsVector)
+        {
+            if (!joinedArgs.empty())
+                joinedArgs += ' ';
+            joinedArgs += arg;
+        }
+
         TC_LOG_TRACE(logger, "Starting process \"%s\" with arguments: \"%s\".",
-                executable.c_str(), boost::algorithm::join(argsVector, " ").c_str());
+                executable.c_str(), joinedArgs.c_str());
     }
+
+    // prepare file with only read permission (boost process opens with read_write)
+    auto inputFile = Trinity::make_unique_ptr_with_deleter(!input.empty() ? fopen(input.c_str(), "rb") : nullptr, &::fclose);
 
     // Start the child process
     child c = [&]()
     {
-        if (!input.empty())
+        if (inputFile)
         {
             // With binding stdin
             return child{
                 exe = boost::filesystem::absolute(executable).string(),
                 args = argsVector,
                 env = environment(boost::this_process::environment()),
-                std_in = input,
+                std_in = inputFile.get(),
                 std_out = outStream,
                 std_err = errStream
             };
@@ -110,18 +112,20 @@ static int CreateChildProcess(T waiter, std::string const& executable,
         }
     }();
 
-    auto outInfo = MakeTCLogSink([&](std::string const& msg)
+    std::string line;
+    while (std::getline(outStream, line, '\n'))
     {
-        TC_LOG_INFO(logger, "%s", msg.c_str());
-    });
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+        if (!line.empty())
+            TC_LOG_INFO(logger, "%s", line.c_str());
+    }
 
-    auto outError = MakeTCLogSink([&](std::string const& msg)
+    while (std::getline(errStream, line, '\n'))
     {
-        TC_LOG_ERROR(logger, "%s", msg.c_str());
-    });
-
-    copy(outStream, outInfo);
-    copy(errStream, outError);
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+        if (!line.empty())
+            TC_LOG_ERROR(logger, "%s", line.c_str());
+    }
 
     // Call the waiter in the current scope to prevent
     // the streams from closing too early on leaving the scope.
@@ -222,7 +226,7 @@ public:
     /// Tries to terminate the process
     void Terminate() override
     {
-        if (!my_child)
+        if (my_child)
         {
             was_terminated = true;
             try

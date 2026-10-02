@@ -433,7 +433,7 @@ public:
             return me->FindNearestCreature(NPC_LULIN, 500.0f, false);
         }
 
-        void EnterEvadeMode(EvadeReason why)
+        void EnterEvadeMode(EvadeReason /*why*/)
         {
             if (Creature* lulin = LulinDead())
             {
@@ -491,8 +491,6 @@ public:
 
             if (instance)
             {
-                Creature* lulin = instance->GetCreature(instance->GetData64(NPC_LULIN));
-                Creature* suen = instance->GetCreature(instance->GetData64(NPC_SUEN));
 
                 switch (TwinActive(instance, me))
                 {
@@ -570,7 +568,7 @@ public:
                     (*itr)->SetGoState(GO_STATE_READY);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             Talk(TALK_S_AGGRO);
             if (Creature* lulin = Lulin())
@@ -653,7 +651,7 @@ public:
             }
         }
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& damage)
         {
             if (me->HasAura(SPELL_NUCLEAR_INFERNO))
             {
@@ -723,7 +721,7 @@ public:
                     events.ScheduleEvent(EVENT_FAN_OF_FLAMES, TIMER_FAN_OF_FLAMES);
                     break;
                 case EVENT_FLAMES_OF_PASSION:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_FARTHEST, 0, 500.0f, true))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 500.0f, true))
                     {
                         me->CastSpell(target, 137414, true); // flames of passion damage
                         me->GetMotionMaster()->MoveJump(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 35.0f, 30.0f, 0);
@@ -901,8 +899,6 @@ public:
 
             if (instance)
             {
-                Creature* lulin = instance->GetCreature(instance->GetData64(NPC_LULIN));
-                Creature* suen = instance->GetCreature(instance->GetData64(NPC_SUEN));
 
                 switch (TwinActive(instance, me))
                 {
@@ -942,7 +938,7 @@ public:
             }
         }
 
-        void EnterEvadeMode(EvadeReason w)
+        void EnterEvadeMode(EvadeReason /*w*/)
         {
      
             DeactivateObjects();
@@ -980,7 +976,7 @@ public:
                     (*itr)->SetGoState(GO_STATE_ACTIVE);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             Talk(TALK_L_AGGRO);
             ActivateObjects();
@@ -1001,7 +997,7 @@ public:
             }
         }
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& damage)
         {
             if (me->HasAura(SPELL_TIDAL_FORCE))
             {
@@ -1224,7 +1220,7 @@ public:
                     me->AddAura(SPELL_BEAST_OF_NIGHTMARES, target);
                     if (Creature* beast = me->SummonCreature(NPC_BEAST_OF_NIGHTMARES, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation(), TEMPSUMMON_MANUAL_DESPAWN))
                     {
-                        beast->AddThreat(target, 9999999.9f);
+                        beast->GetThreatManager().AddThreat(target, 9999999.9f);
                         beast->AI()->AttackStart(target);
                     }
                     events.ScheduleEvent(EVENT_BEAST_OF_NIGHTMARES, TIMER_BEAST_OF_NIGHTMARE);
@@ -1530,7 +1526,7 @@ public:
                 case EVENT_STAR_ATTACK:
                 {
                     std::list<Unit*> players;
-                    SelectTargetList(players, Is25ManRaid() ? 8 : 4, SELECT_TARGET_RANDOM, 300.0f, true);
+                    SelectTargetList(players, Is25ManRaid() ? 8 : 4, SELECT_TARGET_RANDOM, 0, 300.0f, true);
                     players.remove_if(notValidSpec());
                     if (!players.empty())
                         for (std::list<Unit*>::iterator itr = players.begin(); itr != players.end(); ++itr)
@@ -1562,7 +1558,7 @@ public:
         void Star10()
         {
             std::list<Unit*> targets;
-            SelectTargetList(targets, 1, SELECT_TARGET_RANDOM, 500.0f, true);
+            SelectTargetList(targets, 1, SELECT_TARGET_RANDOM, 0, 500.0f, true);
             targets.remove_if(notValidSpec()); // in this case, tank specc'ed players
 
             if (!targets.empty())
@@ -1575,7 +1571,7 @@ public:
         void Star25()
         {
             std::list<Unit*> targets;
-            SelectTargetList(targets, 25, SELECT_TARGET_RANDOM, 500.0f, true);
+            SelectTargetList(targets, 25, SELECT_TARGET_RANDOM, 0, 500.0f, true);
             targets.remove_if(notValidSpec()); // in this case, tank specc'ed players
 
             if (!targets.empty())
@@ -1603,7 +1599,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_tears_of_the_sun_AuraScript);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             Unit* caster = GetCaster();
             if (!caster)
@@ -1720,7 +1716,7 @@ public:
                 me->SetFacingTo(ori);
                 me->SetFacingToObject(suen);
                 me->AI()->AttackStart(suen);
-                me->AddThreat(suen, 999999999.9f);
+                me->GetThreatManager().AddThreat(suen, 999999999.9f);
             }
 
             while (uint32 eventId = events.ExecuteEvent())
@@ -1779,7 +1775,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_nuclear_inferno_AuraScript);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             if (!GetCaster())
                 return;
@@ -1903,7 +1899,7 @@ public:
             return me->FindNearestCreature(NPC_ICE_COMET, 8.0f);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             if (Creature* IceComet = comet())
                 IceComet->Kill(IceComet);
@@ -1926,7 +1922,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_invoke_celestials_AuraScript);
 
-        void HandleOnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* caster = GetCaster();
             Unit* target = GetTarget()->ToPlayer();
@@ -2127,7 +2123,7 @@ public:
                 }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
@@ -2171,7 +2167,7 @@ public:
             return me->FindNearestCreature(NPC_YULON_CONSTELATION_CORRECT_2, 500.0f, true);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
@@ -2806,7 +2802,7 @@ public:
                 }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
@@ -2850,7 +2846,7 @@ public:
             return me->FindNearestCreature(NPC_CHIJI_CONSTELLATION_CORRECT_2, 500.0f, true);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
@@ -3559,7 +3555,7 @@ public:
                 }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
@@ -3602,7 +3598,7 @@ public:
             return me->FindNearestCreature(NPC_NIUZAO_CONSTELLATION_CORRECT_2, 500.0f, true);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
@@ -4267,7 +4263,7 @@ public:
                 }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
@@ -4310,7 +4306,7 @@ public:
             return me->FindNearestCreature(NPC_XUEN_CONSTELLATION_CORRECT_2, 500.0f, true);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             Map::PlayerList const& playerList = me->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
@@ -5195,14 +5191,14 @@ public:
     {
         PrepareAuraScript(bfa_spell_celestial_cooldown_AuraScript);
 
-        void HandleOnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (!GetCaster())
                 return;
             GetCaster()->RemoveNpcFlag(UNIT_NPC_FLAG_GOSSIP);
         }
 
-        void HandleOnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void HandleOnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (!GetCaster())
                 return;

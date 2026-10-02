@@ -95,7 +95,7 @@ public:
         InstanceScript* instance;
         SummonList summons;
 
-        void Reset()
+        void Reset() override
         {
             _Reset();
 
@@ -104,7 +104,7 @@ public:
             me->RemoveAllAreaTriggers();
         }
 
-        void JustDied(Unit*)
+        void JustDied(Unit*) override
         {
             _JustDied();
             SelectSoundAndText(me, 4);
@@ -112,7 +112,7 @@ public:
             summons.DespawnAll();
         }
 
-        void JustSummoned(Creature* summon)
+        void JustSummoned(Creature* summon) override
         {
             summons.Summon(summon);
 
@@ -125,7 +125,7 @@ public:
             }
         }
 
-        void EnterEvadeMode(EvadeReason /*why*/)
+        void EnterEvadeMode(EvadeReason /*why*/) override
         {
             _DespawnAtEvade(15);
         }
@@ -191,7 +191,7 @@ public:
             }
         }
 
-        void KilledUnit(Unit*)
+        void KilledUnit(Unit*) override
         {
             SelectSoundAndText(me, 3);
         }
@@ -214,20 +214,20 @@ public:
 
         void HandleBloodMirrorSpawns()
         {
-            float x;
-            float y;
+            float x = 875.113159f;
+            float y = 1240.381958f;
 
             switch (urand(1, 3))
             {
-            case 1:
+            case 0:
                 x = 875.113159f;
                 y = 1240.381958f;
                 break;
-            case 2:
+            case 1:
                 x = 879.703979f;
                 y = 1224.49646f;
                 break;
-            case 3:
+            case 2:
                 x = 858.541931f;
                 y = 1221.745239f;
                 break;
@@ -237,10 +237,10 @@ public:
             me->SummonCreature(NPC_BLOOD_EFFIGY, x, y, me->GetPositionZ(), TEMPSUMMON_CORPSE_DESPAWN);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*) override
         {
             SelectSoundAndText(me, 1);
-            _EnterCombat();
+            _JustEngagedWith();
 
             events.ScheduleEvent(EVENT_BLOOD_BOLT, TIMER_BLOOD_BOLT);
             events.ScheduleEvent(EVENT_BLOOD_MIRROR, TIMER_BLOOD_MIRROR);
@@ -255,7 +255,7 @@ public:
             events.DelayEvents(3 * IN_MILLISECONDS);
 
             std::list<Unit*> targets;
-            SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+            SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
             if (!targets.empty())
                 if (targets.size() >= 1)
                     targets.resize(1);
@@ -289,7 +289,7 @@ public:
             events.DelayEvents(3 * IN_MILLISECONDS);
 
             std::list<Unit*> targets;
-            SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+            SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
             if (!targets.empty())
                 if (targets.size() >= 1)
                     targets.resize(1);
@@ -304,7 +304,7 @@ public:
             }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             events.Update(diff);
 
@@ -427,7 +427,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             events.ScheduleEvent(EVENT_BLOOD_BOLT, TIMER_BLOOD_BOLT);
 
@@ -438,7 +438,7 @@ public:
         void HandleFeast()
         {
             std::list<Unit*> targets;
-            SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+            SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
             if (!targets.empty())
                 if (targets.size() >= 1)
                     targets.resize(1);

@@ -1125,7 +1125,7 @@ public:
         {
             Unit* caster = GetCaster();
             if (Unit* target = GetHitUnit())
-                if (target->CanHaveThreatList() && target->getThreatManager().getThreat(caster) > 0.0f)
+                if (target->CanHaveThreatList() && target->GetThreatManager().IsThreatenedBy(caster, true))
                     caster->CastSpell(target, SPELL_WARLOCK_SOULSHATTER, true);
         }
 
@@ -1873,7 +1873,7 @@ public:
                     dreadstalker->SetMaxHealth(caster->GetMaxHealth() / 3);
                     dreadstalker->SetHealth(caster->GetHealth() / 3);
                     dreadstalker->AI()->AttackStart(target);
-                    dreadstalker->AddThreat(target, 9999999.f);
+                    dreadstalker->GetThreatManager().AddThreat(target, 9999999.f);
                 }
             }
 

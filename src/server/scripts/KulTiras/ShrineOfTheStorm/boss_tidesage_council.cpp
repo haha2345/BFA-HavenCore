@@ -214,10 +214,10 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             SelectSoundAndText(me, 1);
-            _EnterCombat();
+            _JustEngagedWith();
             if (Creature* faye = Faye())
                 faye->SetInCombatWithZone();
             HandleManaRegen();
@@ -316,7 +316,7 @@ public:
         EventMap events;
         InstanceScript* instance;
 
-        void JustDied(Unit*)
+        void JustDied(Unit*) override
         {
             Creature* otherAlive = Ironhull();
             if (otherAlive)
@@ -353,7 +353,7 @@ public:
             }
         }
 
-        void DoAction(int32 action)
+        void DoAction(int32 action) override
         {
             switch (action)
             {
@@ -397,13 +397,13 @@ public:
                 me->CastSpell(ironhullBoss, SPELL_SWIFTNESS_WARD);
         }
 
-        void Reset()
+        void Reset() override
         {
             _Reset();
             events.Reset();
         }
 
-        void EnterEvadeMode(EvadeReason /*why*/)
+        void EnterEvadeMode(EvadeReason /*why*/) override
         {
             _DespawnAtEvade(15);
             Reset();
@@ -432,9 +432,9 @@ public:
             events.ScheduleEvent(EVENT_REGEN_MANA, TIMER_REGEN_MANA);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*) override
         {
-            _EnterCombat();
+            _JustEngagedWith();
             if (Creature* iron = Ironhull())
                 iron->SetInCombatWithZone();
 
@@ -444,7 +444,7 @@ public:
                 events.ScheduleEvent(EVENT_BLESSING_OF_THE_TEMPEST, TIMER_BLESSING_OF_THE_TEMPEST);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 diff) override
         {
             events.Update(diff);
 
@@ -491,7 +491,7 @@ public:
             DoMeleeAttackIfReady();
         }
 
-        void OnSpellCastInterrupt(SpellInfo const* spell) override
+        void OnSpellCastInterrupt(SpellInfo const* /*spell*/) override
         {
             if (me->HasAura(SPELL_BLESSING_OF_THE_TEMPEST))
             {

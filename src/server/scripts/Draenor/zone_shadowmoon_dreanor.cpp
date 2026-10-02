@@ -618,7 +618,7 @@ public:
                             Omra->SetSpeed(MOVE_RUN, 0.4f);
                             Omra->GetMotionMaster()->MovePoint(1, BurialEventPos[1], true);
                         }
-                        events.ScheduleEvent(EVENT_SOUL_EFFIGY_02, 4.5 * IN_MILLISECONDS);
+                        events.ScheduleEvent(EVENT_SOUL_EFFIGY_02, 4.5 * AsUnderlyingType(IN_MILLISECONDS));
 
                         break;
                     }
@@ -659,7 +659,7 @@ public:
                         if (TempSummon* Omra = GetOmra())
                             Omra->Say(SAY_OMRA_04, LANG_UNIVERSAL, Omra);
 
-                        events.ScheduleEvent(EVENT_SOUL_EFFIGY_06, 7.5 * IN_MILLISECONDS);
+                        events.ScheduleEvent(EVENT_SOUL_EFFIGY_06, 7.5 * AsUnderlyingType(IN_MILLISECONDS));
 
                         break;
                     }
@@ -960,7 +960,7 @@ public:
                     gara->GetAI()->DoAction(ACTION_SUMMON_XAN);
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             events.Reset();
 
@@ -994,7 +994,7 @@ public:
                 {
                     case EVENT_CONSUMING_VOID:
                     {
-                        if (Unit* victim = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+                        if (Unit* victim = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
                             me->CastSpell(victim, SPELL_CONSUMING_VOID);
 
                         events.ScheduleEvent(EVENT_CONSUMING_VOID, urand(40, 60) * IN_MILLISECONDS);
@@ -1002,7 +1002,7 @@ public:
                     }
                     case EVENT_GRIP_OF_THE_VOID:
                     {
-                        if (Unit* victim = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 50.0f, true))
+                        if (Unit* victim = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 50.0f, true))
                             me->CastSpell(victim, SPELL_GRIP_OF_THE_VOID);
 
                         events.ScheduleEvent(EVENT_GRIP_OF_THE_VOID, urand(20, 30) * IN_MILLISECONDS);
@@ -1010,7 +1010,7 @@ public:
                     }
                     case EVENT_NEGATE:
                     {
-                        if (Unit* victim = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 10.0f, true))
+                        if (Unit* victim = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 10.0f, true))
                             me->CastSpell(victim, SPELL_NEGATE);
 
                         events.ScheduleEvent(EVENT_NEGATE, urand(10, 25) * IN_MILLISECONDS);
@@ -1036,7 +1036,7 @@ public:
                     }
                     case EVENT_VOID_BOLT:
                     {
-                        if (Unit* victim = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 40.0f))
+                        if (Unit* victim = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 40.0f))
                             me->CastSpell(victim, SPELL_VOID_BOLT);
 
                         events.ScheduleEvent(EVENT_VOID_BOLT, urand(2, 6) * IN_MILLISECONDS);
@@ -1073,7 +1073,7 @@ public:
                 gara->GetAI()->DoAction(ACTION_XAN_DEATH);
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             events.ScheduleEvent(EVENT_CONSUMING_VOID, urand(40, 60) * IN_MILLISECONDS);
             events.ScheduleEvent(EVENT_GRIP_OF_THE_VOID, urand(10, 20) * IN_MILLISECONDS);
@@ -1099,7 +1099,7 @@ public:
                 {
                     case EVENT_CONSUMING_VOID:
                     {
-                        if (Unit* victim = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+                        if (Unit* victim = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
                             me->CastSpell(victim, SPELL_CONSUMING_VOID);
 
                         events.ScheduleEvent(EVENT_CONSUMING_VOID, urand(40, 60) * IN_MILLISECONDS);
@@ -1107,7 +1107,7 @@ public:
                     }
                     case EVENT_GRIP_OF_THE_VOID:
                     {
-                        if (Unit* victim = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 50.0f, true))
+                        if (Unit* victim = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 50.0f, true))
                             me->CastSpell(victim, SPELL_GRIP_OF_THE_VOID);
 
                         events.ScheduleEvent(EVENT_GRIP_OF_THE_VOID, urand(30, 35) * IN_MILLISECONDS);
@@ -1115,7 +1115,7 @@ public:
                     }
                     case EVENT_NEGATE:
                     {
-                        if (Unit* victim = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 10.0f, true))
+                        if (Unit* victim = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 10.0f, true))
                             me->CastSpell(victim, SPELL_NEGATE);
 
                         events.ScheduleEvent(EVENT_NEGATE, urand(20, 25) * IN_MILLISECONDS);
@@ -1141,7 +1141,7 @@ public:
                     }
                     case EVENT_VOID_BOLT:
                     {
-                        if (Unit* victim = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 40.0f))
+                        if (Unit* victim = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 40.0f))
                             me->CastSpell(victim, SPELL_VOID_BOLT);
 
                         events.ScheduleEvent(EVENT_VOID_BOLT, urand(2, 5) * IN_MILLISECONDS);

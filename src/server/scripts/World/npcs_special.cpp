@@ -290,7 +290,7 @@ public:
             me->RemoveNpcFlag(UNIT_NPC_FLAG_QUESTGIVER);
         }
 
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
 
         void UpdateAI(uint32 diff) override
         {
@@ -718,7 +718,7 @@ public:
 
         void UpdateAI(uint32 diff) override;
 
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
     };
 
     bool OnQuestAccept(Player* player, Creature* creature, Quest const* quest) override
@@ -792,7 +792,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
 
         void SpellHit(Unit* caster, SpellInfo const* spell) override
         {
@@ -998,7 +998,7 @@ public:
             me->SetHealth(me->CountPctFromMaxHealth(70));
         }
 
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
 
         void SpellHit(Unit* caster, SpellInfo const* spell) override
         {
@@ -1105,7 +1105,7 @@ public:
             me->AddUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
         }
 
@@ -1306,7 +1306,7 @@ public:
         npc_steam_tonkAI(Creature* creature) : ScriptedAI(creature) { }
 
         void Reset() override { }
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
 
         void OnPossess(bool apply)
         {
@@ -1359,7 +1359,7 @@ public:
             Initialize();
         }
 
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
         void AttackStart(Unit* /*who*/) override { }
         void MoveInLineOfSight(Unit* /*who*/) override { }
 
@@ -1429,7 +1429,7 @@ public:
 
         void DamageTaken(Unit* doneBy, uint32& damage) override
         {
-            me->AddThreat(doneBy, float(damage));    // just to create threat reference
+            AddThreat(doneBy, float(damage));    // just to create threat reference
             _damageTimes[doneBy->GetGUID()] = time(nullptr);
             damage = 0;
         }
@@ -1450,21 +1450,28 @@ public:
                 {
                     case EVENT_TD_CHECK_COMBAT:
                     {
-                        time_t now = time(nullptr);
-                        for (std::unordered_map<ObjectGuid, time_t>::iterator itr = _damageTimes.begin(); itr != _damageTimes.end();)
+                        time_t const now = GameTime::GetGameTime();
+                        auto const& pveRefs = me->GetCombatManager().GetPvECombatRefs();
+                        for (auto itr = _damageTimes.begin(); itr != _damageTimes.end();)
                         {
                             // If unit has not dealt damage to training dummy for 5 seconds, remove him from combat
                             if (itr->second < now - 5)
                             {
-                                if (Unit* unit = ObjectAccessor::GetUnit(*me, itr->first))
-                                    unit->getHostileRefManager().deleteReference(me);
+                                auto it = pveRefs.find(itr->first);
+                                if (it != pveRefs.end())
+                                    it->second->EndCombat();
 
                                 itr = _damageTimes.erase(itr);
                             }
                             else
                                 ++itr;
                         }
-                        _events.ScheduleEvent(EVENT_TD_CHECK_COMBAT, 1000);
+
+                        for (auto const& pair : pveRefs)
+                            if (_damageTimes.find(pair.first) == _damageTimes.end())
+                                _damageTimes[pair.first] = now;
+
+                        _events.Repeat(1s);
                         break;
                     }
                     case EVENT_TD_DESPAWN:
@@ -2053,7 +2060,7 @@ class npc_train_wrecker : public CreatureScript
                             {
                                 me->SetFacingTo(target->GetOrientation());
                                 me->HandleEmoteCommand(EMOTE_ONESHOT_ATTACK1H);
-                                _timer = 1.5 * IN_MILLISECONDS;
+                                _timer = 1.5 * AsUnderlyingType(IN_MILLISECONDS);
                                 _nextAction = EVENT_DO_WRECK;
                             }
                             else

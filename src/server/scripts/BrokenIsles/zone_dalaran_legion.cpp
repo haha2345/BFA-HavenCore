@@ -882,9 +882,6 @@ struct npc_great_eagle : public ScriptedAI
     npc_great_eagle(Creature* creature) : ScriptedAI(creature) { }
 
     uint8 curID;
-    void Reset()
-    {
-    }
 
     void SpellHit(Unit* /*caster*/, SpellInfo const* /*spell*/) override
     {
@@ -892,7 +889,7 @@ struct npc_great_eagle : public ScriptedAI
         me->GetMotionMaster()->MovePoint(1, -854.9718f, 4185.322f, 754.1122f);
     }
 
-    void MovementInform(uint32 type, uint32 id)
+    void MovementInform(uint32 type, uint32 id) override
     {
         if (type != POINT_MOTION_TYPE)
             return;
@@ -1006,7 +1003,7 @@ struct npc_arcane_anomaly_98266 : public ScriptedAI
         me->RemoveNpcFlag(UNIT_NPC_FLAG_SPELLCLICK);
     }
 
-    void OnSpellClick(Unit* clicker, bool& /*result*/)
+    void OnSpellClick(Unit* clicker, bool& /*result*/) override
     {
         if (Player* player = clicker->ToPlayer())
         {
@@ -1128,7 +1125,7 @@ struct npc_wyrmtongue_hoarder_89407 : public ScriptedAI
         }
     }
 
-    void EnterCombat(Unit* /*attacker*/) override
+    void JustEngagedWith(Unit* /*attacker*/) override
     {
         events.Reset();
         events.ScheduleEvent(1, 5s);
@@ -1136,7 +1133,7 @@ struct npc_wyrmtongue_hoarder_89407 : public ScriptedAI
 
     void UpdateAI(uint32 diff) override
     {
-        if (me->getThreatManager().isThreatListEmpty())
+        if (me->GetThreatManager().IsThreatListEmpty())
         {
             if (roll_chance_i(25))
                 me->GetMotionMaster()->MoveRandom(10.f);

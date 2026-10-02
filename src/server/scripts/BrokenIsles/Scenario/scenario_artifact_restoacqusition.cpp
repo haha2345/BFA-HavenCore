@@ -216,7 +216,7 @@ struct scenario_artifact_restoacqusition : public InstanceScript
                 //move to destromath
             }
 
-            ///destromath enterCombat 207423
+            ///destromath JustEngagedWith 207423
             //In Mannoroth's name!
 
             ///lyess
@@ -368,7 +368,7 @@ struct npc_zen_tabra_104658 : public ScriptedAI
 {
     npc_zen_tabra_104658(Creature* creature) : ScriptedAI(creature) { Initialize(); }
 
-    void DoAction(int32 param)
+    void DoAction(int32 param) override
     {
         switch (param)
         {
@@ -412,7 +412,7 @@ struct npc_celestine_of_the_harvest_104657 : public ScriptedAI
 {
     npc_celestine_of_the_harvest_104657(Creature* creature) : ScriptedAI(creature) { Initialize(); }
 
-    void DoAction(int32 param)
+    void DoAction(int32 param) override
     {
         switch (param)
         {
@@ -488,7 +488,7 @@ struct npc_archdruid_hamuul_runetotem_104659 : public ScriptedAI
 {
     npc_archdruid_hamuul_runetotem_104659(Creature* creature) : ScriptedAI(creature) { Initialize(); }
 
-    void DoAction(int32 param)
+    void DoAction(int32 param) override
     {
         switch (param)
         {
@@ -647,7 +647,7 @@ struct npc_destromath_104619 : public BossAI
         BossAI::Reset();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         me->Say("In Mannoroth's name!", LANG_UNIVERSAL);
     }
@@ -666,7 +666,7 @@ struct npc_destromath_104619 : public BossAI
         events.ScheduleEvent(SPELL_FEL_SLIME, 12s);
     }
 
-    void DoAction(int32 param)
+    void DoAction(int32 param) override
     {
         switch (param)
         {

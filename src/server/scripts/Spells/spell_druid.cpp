@@ -2435,7 +2435,7 @@ public:
                         caster->CastSpell(GetTarget(), SPELL_DRU_SHOOTING_STARS_TRIGGERED, true);
         }
 
-        void Register()
+        void Register() override
         {
             OnEffectPeriodic += AuraEffectPeriodicFn(spell_dru_moonfire_sunfire_dot_AuraScript::OnTick, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE);
         }
@@ -2635,7 +2635,7 @@ public:
             amount = -1;
         }
 
-        void Absorb(AuraEffect* aurEff, DamageInfo& dmgInfo, uint32& absorbAmount)
+        void Absorb(AuraEffect* /*aurEff*/, DamageInfo& dmgInfo, uint32& absorbAmount)
         {
             absorbAmount = std::min(uint32(CalculatePct(GetTarget()->GetTotalAttackPowerValue(BASE_ATTACK), 24)), dmgInfo.GetDamage());
             if (dmgInfo.GetAttacker())
@@ -2686,7 +2686,7 @@ public:
                     caster->CastSpell(caster, SPELL_DRUID_BRAMBLES_BARSKIN_DAMAGE, true);
         }
 
-        void Register()
+        void Register() override
         {
             OnEffectPeriodic += AuraEffectPeriodicFn(spell_dru_barkskin_AuraScript::OnTick, EFFECT_4, SPELL_AURA_PERIODIC_DUMMY);
         }
@@ -2718,7 +2718,7 @@ public:
             return ValidateSpellInfo({ SPELL_DRUID_CENARION_WARD_TRIGGERED });
         }
 
-        void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+        void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
         {
             PreventDefaultAction();
 
@@ -2781,7 +2781,7 @@ public:
             return ValidateSpellInfo({ SPELL_DRUID_GALACTIC_GUARDIAN_TRIGGERED });
         }
 
-        void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+        void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
         {
             PreventDefaultAction();
 
@@ -3495,7 +3495,7 @@ public:
             return true;
         }
 
-        void HandleEffectProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+        void HandleEffectProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
         {
             PreventDefaultAction();
 
@@ -3676,7 +3676,7 @@ public:
     {
         PrepareSpellScript(spell_dru_skull_bash_charge_SpellScript);
 
-        void HandleCharge(SpellEffIndex effIndex)
+        void HandleCharge(SpellEffIndex /*effIndex*/)
         {
             if (!GetCaster())
                 return;
@@ -3807,7 +3807,7 @@ public:
             }
         }
 
-        void OnPeriodic(AuraEffect const* AurEff)
+        void OnPeriodic(AuraEffect const* /*AurEff*/)
         {
             if (Unit* target = GetTarget())
                 if (GetCaster()->HasAura(SPELL_DRU_CULTIVATION) && !target->HasAura(SPELL_DRU_CULTIVATION_HEAL) && target->HealthBelowPct(60))
@@ -3875,7 +3875,7 @@ public:
             }
         }
 
-        void HandleBeforeHit(SpellMissInfo missInfo)
+        void HandleBeforeHit(SpellMissInfo /*missInfo*/)
         {
             Unit* caster = GetCaster();
             if (!caster)
@@ -3932,7 +3932,7 @@ public:
         }
     };
 
-    SpellScript* GetSpellScript() const
+    SpellScript* GetSpellScript() const override
     {
         return new spell_dru_rejuvenation_SpellScript();
     }
@@ -4190,7 +4190,7 @@ class spell_druid_earthwarden_triggered : public AuraScript
         amount = -1;
     }
 
-    void Absorb(AuraEffect* auraEffect, DamageInfo& dmgInfo, uint32& absorbAmount)
+    void Absorb(AuraEffect* /*auraEffect*/, DamageInfo& dmgInfo, uint32& absorbAmount)
     {
         if (dmgInfo.GetDamageType() == DIRECT_DAMAGE)
         {
@@ -4201,7 +4201,7 @@ class spell_druid_earthwarden_triggered : public AuraScript
         }
     }
 
-    void Register()
+    void Register() override
     {
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_druid_earthwarden_triggered::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
         OnEffectAbsorb += AuraEffectAbsorbFn(spell_druid_earthwarden_triggered::Absorb, EFFECT_0);
@@ -4233,7 +4233,7 @@ class spell_druid_earthwarden : public AuraScript
         return false;
     }
 
-    void OnProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    void OnProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
     {
         PreventDefaultAction();
         if (!GetCaster()->ToPlayer()->GetSpellHistory()->HasCooldown(SPELL_DRUID_EARTHWARDEN))
@@ -4241,7 +4241,7 @@ class spell_druid_earthwarden : public AuraScript
         GetCaster()->ToPlayer()->GetSpellHistory()->AddCooldown(SPELL_DRUID_EARTHWARDEN, 0, std::chrono::milliseconds(500));
     }
 
-    void Register()
+    void Register() override
     {
         DoCheckProc += AuraCheckProcFn(spell_druid_earthwarden::CheckProc);
         OnEffectProc += AuraEffectProcFn(spell_druid_earthwarden::OnProc, EFFECT_0, SPELL_AURA_DUMMY);
@@ -4312,7 +4312,7 @@ class spell_druid_rend_and_tear : public AuraScript
         amount = -1;
     }
 
-    void Absorb(AuraEffect* auraEffect, DamageInfo& dmgInfo, uint32& absorbAmount)
+    void Absorb(AuraEffect* /*auraEffect*/, DamageInfo& dmgInfo, uint32& absorbAmount)
     {
         Unit* caster = GetCaster();
         Unit* attacker = dmgInfo.GetAttacker();
@@ -4334,7 +4334,7 @@ class spell_druid_rend_and_tear : public AuraScript
         spellMod->value = GetCaster()->GetShapeshiftForm() == FORM_BEAR_FORM ? aurEff->GetAmount() : 0;
     }
 
-    void Register()
+    void Register() override
     {
         DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_druid_rend_and_tear::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
         OnEffectAbsorb += AuraEffectAbsorbFn(spell_druid_rend_and_tear::Absorb, EFFECT_0);
@@ -4591,7 +4591,7 @@ class dru_predator : public PlayerScript
 public:
     dru_predator() : PlayerScript("dru_predator") { }
 
-    void OnPVPKill(Player* killer, Player* killed) 
+    void OnPVPKill(Player* killer, Player* /*killed*/) 
     { 
         if (killer->getClass() != CLASS_DRUID)
             return;
@@ -4603,7 +4603,7 @@ public:
             killer->GetSpellHistory()->ResetCooldown(SPELL_DRU_TIGER_FURY);
     }
 
-    void OnCreatureKill(Player* killer, Creature* killed) 
+    void OnCreatureKill(Player* killer, Creature* /*killed*/) 
     { 
         if (killer->getClass() != CLASS_DRUID)
             return;

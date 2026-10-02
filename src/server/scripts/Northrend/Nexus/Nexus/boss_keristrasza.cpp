@@ -90,11 +90,11 @@ class boss_keristrasza : public CreatureScript
                 _Reset();
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
                 Talk(SAY_AGGRO);
                 DoCastAOE(SPELL_INTENSE_COLD);
-                _EnterCombat();
+                _JustEngagedWith();
 
                 events.ScheduleEvent(EVENT_CRYSTAL_FIRE_BREATH, 14000);
                 events.ScheduleEvent(EVENT_CRYSTAL_CHAINS_CRYSTALIZE, DUNGEON_MODE(30000, 11000));
@@ -115,7 +115,7 @@ class boss_keristrasza : public CreatureScript
 
             bool CheckContainmentSpheres(bool removePrison = false)
             {
-                for (uint32 i = ANOMALUS_CONTAINMET_SPHERE; i < (ANOMALUS_CONTAINMET_SPHERE + DATA_CONTAINMENT_SPHERES); ++i)
+                for (uint32 i = ANOMALUS_CONTAINMET_SPHERE; i < (ANOMALUS_CONTAINMET_SPHERE + AsUnderlyingType(DATA_CONTAINMENT_SPHERES)); ++i)
                 {
                     GameObject* containmentSpheres = ObjectAccessor::GetGameObject(*me, instance->GetGuidData(i));
                     if (!containmentSpheres || containmentSpheres->GetGoState() != GO_STATE_ACTIVE)

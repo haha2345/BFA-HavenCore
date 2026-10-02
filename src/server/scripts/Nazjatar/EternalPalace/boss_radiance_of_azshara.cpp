@@ -168,10 +168,10 @@ public:
                 me->CastSpell(target, SPELL_RADIANT_FURY, true);
         }
 
-        void EnterCombat(Unit*) override
+        void JustEngagedWith(Unit*) override
         {
             Talk(3);      
-            _EnterCombat();
+            _JustEngagedWith();
             ChangePhase(1);
         }
 
@@ -359,11 +359,11 @@ public:
                 case EVENT_SQAULL_TRAP:
                 {
                     for (uint8 i = 0; i < 7; ++i)
+                        me->CastSpell(squallTrapPosition[0][i], SPELL_SQUALL_TRAP_AT);
+                    for (uint8 i = 0; i < 5; ++i)
                         me->CastSpell(squallTrapPosition[1][i], SPELL_SQUALL_TRAP_AT);
                     for (uint8 i = 0; i < 5; ++i)
                         me->CastSpell(squallTrapPosition[2][i], SPELL_SQUALL_TRAP_AT);
-                    for (uint8 i = 0; i < 5; ++i)
-                        me->CastSpell(squallTrapPosition[3][i], SPELL_SQUALL_TRAP_AT);
                     break;
                 }
                 }
@@ -387,7 +387,7 @@ public:
     {
         PrepareSpellScript(bfa_spell_arcanado_burst_cast_SpellScript);
 
-        void AfterCast(SpellEffIndex index)
+        void AfterCast(SpellEffIndex /*index*/)
         {
             Unit* caster = GetCaster();
             if (!caster)
@@ -434,7 +434,7 @@ public:
     {
         PrepareSpellScript(bfa_spell_arcane_bomb_radiance_dummy_SpellScript);
 
-        void AfterCast(SpellEffIndex index)
+        void AfterCast(SpellEffIndex /*index*/)
         {
             Unit* caster = GetCaster();
             if (!caster)
@@ -662,7 +662,7 @@ public:
     public:
         PrepareAuraScript(bfa_spell_arcane_bomb_radiance_Aurascript);
 
-        void HandleDispel(DispelInfo* dispelInfo)
+        void HandleDispel(DispelInfo* /*dispelInfo*/)
         {
             if (!GetCaster() || !GetUnitOwner())
                 return;
@@ -779,7 +779,7 @@ public:
             instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
         }
 
-        void EnterCombat(Unit*) override
+        void JustEngagedWith(Unit*) override
         {
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
 
@@ -876,7 +876,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_ancient_tempest_players_AuraScript);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             Unit* caster = GetCaster();
             Unit* target = GetTarget()->ToPlayer();
@@ -886,7 +886,7 @@ public:
             target->CastSpell(target, SPELL_ANCIENT_TEMPEST_DAMAGE, true);
         }
 
-        void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* caster = GetCaster();
             Unit* target = GetTarget()->ToPlayer();
@@ -896,7 +896,7 @@ public:
             target->ApplyMovementForce(caster->GetGUID(), caster->GetPosition(), -5.0f, 0);
         }
 
-        void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* caster = GetCaster();
             Unit* target = GetTarget()->ToPlayer();
@@ -935,7 +935,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit*) override
+        void JustEngagedWith(Unit*) override
         {
             events.ScheduleEvent(EVENT_CHAIN_LIGHTNING, TIMER_CHAIN_LIGHTNING);
         }

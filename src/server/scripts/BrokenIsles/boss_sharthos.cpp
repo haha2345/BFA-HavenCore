@@ -63,7 +63,7 @@ public:
             events.Reset();
         }
 
-        void EnterCombat(Unit* who) override
+        void JustEngagedWith(Unit* who) override
         {
             if (!who)
                 return;
@@ -157,7 +157,7 @@ public:
         };
 
         // Called on each AreaTrigger update
-        void OnUpdate(uint32 diff)
+        void OnUpdate(uint32 diff) override
         {
             if (checkTimer <= diff)
             {

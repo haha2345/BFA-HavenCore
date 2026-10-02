@@ -1605,6 +1605,30 @@ class spell_gen_elune_candle : public SpellScriptLoader
         }
 };
 
+// Monel-Hardened Stirrups allows gathering while mounted.
+class spell_gen_monel_hardened_stirrups : public AuraScript
+{
+    PrepareAuraScript(spell_gen_monel_hardened_stirrups);
+
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Player* player = GetTarget()->ToPlayer())
+            player->AddPlayerLocalFlag(PLAYER_LOCAL_FLAG_CAN_USE_OBJECTS_MOUNTED);
+    }
+
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Player* player = GetTarget()->ToPlayer())
+            player->RemovePlayerLocalFlag(PLAYER_LOCAL_FLAG_CAN_USE_OBJECTS_MOUNTED);
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_gen_monel_hardened_stirrups::HandleApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_gen_monel_hardened_stirrups::HandleRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
 enum FishingSpells
 {
     SPELL_FISHING_NO_FISHING_POLE   = 131476,
@@ -4613,8 +4637,22 @@ class spell_gen_mobile_bank : public SpellScript
 
     void SpawnChest(SpellEffIndex /*effIndex*/)
     {
-        if (GetCaster()->IsPlayer() && GetCaster()->ToPlayer()->GetGuildId())
-            GetCaster()->SummonGameObject(GOB_MOBILE_BANK, GetCaster()->GetPositionWithDistInFront(2.f), QuaternionData::fromEulerAnglesZYX(GetCaster()->GetOrientation() - float(M_PI), 0.f, 0.f), 5 * MINUTE * IN_MILLISECONDS);
+        if (!GetCaster()->IsPlayer())
+            return;
+
+        Player* player = GetCaster()->ToPlayer();
+        if (!player->GetGuildId())
+            return;
+
+        ObjectGuid guildGuid = ObjectGuid::Create<HighGuid::Guild>(player->GetGuildId());
+        // Pass GuildGUID into the summon so it is present in the create-object update
+        // (set before AddToMap). Setting it after the summon returns is too late for
+        // the client to render the guild emblem on the Mobile Bank.
+        if (GameObject* mobileBank = GetCaster()->SummonGameObject(GOB_MOBILE_BANK, GetCaster()->GetPositionWithDistInFront(2.f), QuaternionData::fromEulerAnglesZYX(GetCaster()->GetOrientation() - float(M_PI), 0.f, 0.f), 5 * MINUTE * IN_MILLISECONDS, false, guildGuid))
+        {
+            TC_LOG_INFO("guild", "[EMBLEM-TRACE] MobileBank spawn: Player=%s GameObject=[%s] Guild=[%s]",
+                player->GetName().c_str(), mobileBank->GetGUID().ToString().c_str(), guildGuid.ToString().c_str());
+        }
     }
 
     void Register() override
@@ -4853,10 +4891,7 @@ public:
 
 enum GilneasPrison
 {
-    SPELL_SUMMON_RAVENOUS_WORGEN_1 = 66836,
-    SPELL_SUMMON_RAVENOUS_WORGEN_2 = 66925,
-
-    NPC_WORGEN_RUNT                = 35456,
+    NPC_WORGEN_RUNT = 35456,
 };
 
 Position const WorgenRuntHousePos[] =
@@ -4878,7 +4913,6 @@ Position const WorgenRuntHousePos[] =
     { -1634.344f, 1491.3f, 70.10101f, 4.6248f },
     { -1631.979f, 1491.585f, 71.11481f, 4.032866f },
     { -1627.273f, 1499.689f, 68.89395f, 4.251452f },
-    { -1622.665f, 1489.818f, 71.03797f, 3.776179f },
 };
 
 class spell_gen_gilneas_prison_periodic_dummy : public SpellScriptLoader
@@ -4890,38 +4924,25 @@ class spell_gen_gilneas_prison_periodic_dummy : public SpellScriptLoader
         {
             PrepareSpellScript(spell_gen_gilneas_prison_periodic_dummy_SpellScript);
 
-            bool Validate(SpellInfo const* /*spellInfo*/) override
-            {
-                return ValidateSpellInfo(
-                    {
-                        SPELL_SUMMON_RAVENOUS_WORGEN_1, // House roof
-                        SPELL_SUMMON_RAVENOUS_WORGEN_2, // Cathedral roof
-                    });
-            }
-
+            // Roof runners only — do not CastSpell 66836/66925 (those land at the caster).
             void HandleDummy(SpellEffIndex /*effIndex*/)
             {
-                if (Unit* caster = GetCaster())
+                Unit* caster = GetCaster();
+                if (!caster)
+                    return;
+
+                switch (RAND(0, 1))
                 {
-                    switch (RAND(0, 1))
-                    {
-                        case 0:
-                            caster->CastSpell(caster, SPELL_SUMMON_RAVENOUS_WORGEN_1, true);
-                            for (uint8 i = 0; i < 7; i++)
-                                if (Creature* runt = caster->SummonCreature(NPC_WORGEN_RUNT, WorgenRuntHousePos[i]))
-                                    runt->AI()->DoAction(i);
-                            break;
-                        case 1:
-                            caster->CastSpell(caster, SPELL_SUMMON_RAVENOUS_WORGEN_2, true);
-                            for (uint8 i = 7; i < 16; i++)
-                                if (Creature* runt = caster->SummonCreature(NPC_WORGEN_RUNT, WorgenRuntHousePos[i]))
-                                    runt->AI()->DoAction(i);
-                            if (RAND(0, 1) == 1)
-                                for (uint8 i = 0; i < RAND(1, 3); i++)
-                                    if (Creature* runt = caster->SummonCreature(NPC_WORGEN_RUNT, WorgenRuntHousePos[i]))
-                                        runt->AI()->DoAction(i);
-                            break;
-                    }
+                    case 0:
+                        for (uint8 i = 0; i < 7; ++i)
+                            if (Creature* runt = caster->SummonCreature(NPC_WORGEN_RUNT, WorgenRuntHousePos[i]))
+                                runt->AI()->DoAction(i);
+                        break;
+                    case 1:
+                        for (uint8 i = 7; i < 15; ++i)
+                            if (Creature* runt = caster->SummonCreature(NPC_WORGEN_RUNT, WorgenRuntHousePos[i]))
+                                runt->AI()->DoAction(i);
+                        break;
                 }
             }
 
@@ -5019,7 +5040,7 @@ public:
         {
             if (Unit* owner = GetUnitOwner())
             {
-                if (Player* plr = owner->ToPlayer())
+                if (owner->ToPlayer())
                    // if (dmgInfo.GetAbsorb() < owner->GetHealth() || owner->HasAura(148010) || !plr->isInTankSpec())
                     {
                         dmgInfo.AbsorbDamage(-(int32(absorbAmount)));
@@ -5450,7 +5471,7 @@ class spell_legion_hearty_feast : public AuraScript
     {
         if (auto caster = GetUnitOwner())
         {
-            if (auto plr = caster->ToPlayer())
+            if (caster->ToPlayer())
             {
                 uint32 spellId = 0;
 
@@ -5503,7 +5524,7 @@ class spell_legion_food_table : public AuraScript
     {
         if (auto caster = GetUnitOwner())
         {
-            if (auto plr = caster->ToPlayer())
+            if (caster->ToPlayer())
             {
                 uint32 spellId = 0;
 
@@ -6655,7 +6676,7 @@ public:
 
         void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
         {
-            if (Player* player = GetCaster()->ToPlayer())
+            if (GetCaster()->ToPlayer())
             {
                // if (player->GetBattleground() && player->GetBattleground()->GetJoinType() == MS::Battlegrounds::JoinType::Arena2v2)
                 {
@@ -8396,6 +8417,7 @@ void AddSC_generic_spell_scripts()
     new spell_gen_dungeon_credit();
     new spell_gen_elune_candle();
     new spell_gen_fishing();
+    RegisterAuraScript(spell_gen_monel_hardened_stirrups);
     new spell_gen_gadgetzan_transporter_backfire();
     new spell_gen_gift_of_naaru();
     new spell_gen_gnomish_transporter();

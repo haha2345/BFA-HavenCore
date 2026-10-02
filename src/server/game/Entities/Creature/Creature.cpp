@@ -281,9 +281,7 @@ bool AssistDelayEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
             if (assistant && assistant->CanAssistTo(&m_owner, victim) && !assistant->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC))
             {
                 assistant->SetNoCallAssistance(true);
-                assistant->CombatStart(victim);
-                if (assistant->IsAIEnabled)
-                    assistant->AI()->AttackStart(victim);
+                assistant->EngageWithTarget(victim);
             }
         }
     }
@@ -634,12 +632,14 @@ bool Creature::UpdateEntry(uint32 entry, CreatureData const* data /*= nullptr*/,
         AIM_Initialize();
 
     LoadMechanicTemplateImmunity();
+
+    GetThreatManager().EvaluateSuppressed();
     return true;
 }
 
 void Creature::Update(uint32 diff)
 {
-    if (IsAIEnabled && m_TriggerJustRespawned)
+    if (IsAIEnabled && m_TriggerJustRespawned && m_deathState != DEAD)
     {
         m_TriggerJustRespawned = false;
         AI()->JustRespawned();
@@ -710,6 +710,8 @@ void Creature::Update(uint32 diff)
             if (!IsAlive())
                 break;
 
+            GetThreatManager().Update(diff);
+
             if (m_shouldReacquireTarget && !IsFocusing(nullptr, true))
             {
                 SetTarget(m_suppressedTarget);
@@ -738,7 +740,7 @@ void Creature::Update(uint32 diff)
             }
 
             // periodic check to see if the creature has passed an evade boundary
-            if (IsAIEnabled && !IsInEvadeMode() && IsInCombat())
+            if (IsAIEnabled && !IsInEvadeMode() && IsEngaged())
             {
                 if (diff >= m_boundaryCheckTime)
                 {
@@ -749,7 +751,7 @@ void Creature::Update(uint32 diff)
             }
 
             // if periodic combat pulse is enabled and we are both in combat and in a dungeon, do this now
-            if (m_combatPulseDelay > 0 && IsInCombat() && GetMap()->IsDungeon())
+            if (m_combatPulseDelay > 0 && IsEngaged() && GetMap()->IsDungeon())
             {
                 if (diff > m_combatPulseTime)
                     m_combatPulseTime = 0;
@@ -767,13 +769,8 @@ void Creature::Update(uint32 diff)
                                 if (player->IsGameMaster())
                                     continue;
 
-                                if (player->IsAlive() && this->IsHostileTo(player))
-                                {
-                                    if (CanHaveThreatList())
-                                        AddThreat(player, 0.0f);
-                                    this->SetInCombatWith(player);
-                                    player->SetInCombatWith(this);
-                                }
+                                if (player->IsAlive() && IsHostileTo(player))
+                                    EngageWithTarget(player);
                             }
                         }
 
@@ -1164,6 +1161,8 @@ bool Creature::Create(ObjectGuid::LowType guidlow, Map* map, uint32 entry, float
         ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_KNOCK_BACK_DEST, true);
     }
 
+    GetThreatManager().Initialize();
+
     return true;
 }
 
@@ -1199,6 +1198,73 @@ Creature* Creature::CreateCreatureFromDB(ObjectGuid::LowType spawnId, Map* map, 
     }
 
     return creature;
+}
+
+Unit* Creature::SelectVictim()
+{
+    Unit* target = nullptr;
+
+    if (CanHaveThreatList())
+        target = GetThreatManager().GetCurrentVictim();
+    else if (!HasReactState(REACT_PASSIVE))
+    {
+        // We're a player pet, probably
+        target = getAttackerForHelper();
+        if (!target && IsSummon())
+        {
+            if (Unit* owner = ToTempSummon()->GetOwner())
+            {
+                if (owner->IsInCombat())
+                    target = owner->getAttackerForHelper();
+                if (!target)
+                {
+                    for (ControlList::const_iterator itr = owner->m_Controlled.begin(); itr != owner->m_Controlled.end(); ++itr)
+                    {
+                        if ((*itr)->IsInCombat())
+                        {
+                            target = (*itr)->getAttackerForHelper();
+                            if (target)
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else
+        return nullptr;
+
+    if (target && _IsTargetAcceptable(target) && CanCreatureAttack(target))
+    {
+        if (!IsFocusing())
+            SetInFront(target);
+        return target;
+    }
+
+    /// @todo a vehicle may eat some mob, so mob should not evade
+    if (GetVehicle())
+        return nullptr;
+
+    Unit::AuraEffectList const& iAuras = GetAuraEffectsByType(SPELL_AURA_MOD_INVISIBILITY);
+    if (!iAuras.empty())
+    {
+        for (Unit::AuraEffectList::const_iterator itr = iAuras.begin(); itr != iAuras.end(); ++itr)
+        {
+            if ((*itr)->GetBase()->IsPermanent())
+            {
+                AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_OTHER);
+                break;
+            }
+        }
+        return nullptr;
+    }
+
+    // enter evade mode only once the creature has drifted further from its spawn
+    // point than CONFIG_THREAT_RADIUS - otherwise it keeps its combat state
+    if (GetDistance(GetHomePosition()) >= sWorld->getFloatConfig(CONFIG_THREAT_RADIUS))
+        AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_HOSTILES);
+
+    return nullptr;
 }
 
 void Creature::InitializeReactState()
@@ -1903,7 +1969,7 @@ bool Creature::CanStartAttack(Unit const* who, bool force) const
         if (!_IsTargetAcceptable(who))
             return false;
 
-        if (who->IsInCombat() && IsWithinDist(who, ATTACK_DISTANCE))
+        if (who->IsEngaged() && IsWithinDist(who, ATTACK_DISTANCE))
             if (Unit* victim = who->getAttackerForHelper())
                 if (IsWithinDistInMap(victim, sWorld->getFloatConfig(CONFIG_CREATURE_FAMILY_ASSISTANCE_RADIUS)))
                     force = true;
@@ -2490,7 +2556,7 @@ bool Creature::CanAssistTo(const Unit* u, const Unit* enemy, bool checkfaction /
         return false;
 
     // skip fighting creature
-    if (IsInCombat())
+    if (IsEngaged())
         return false;
 
     // only free creature
@@ -2540,7 +2606,7 @@ bool Creature::_IsTargetAcceptable(Unit const* target) const
     Unit const* targetVictim = target->getAttackerForHelper();
 
     // if I'm already fighting target, or I'm hostile towards the target, the target is acceptable
-    if (GetVictim() == target || IsHostileTo(target))
+    if (IsEngagedBy(target) || IsHostileTo(target))
         return true;
 
     // a player is targeting me, but I'm not hostile towards it, and not currently attacking it, the target is not acceptable
@@ -2746,11 +2812,7 @@ void Creature::SetInCombatWithZone()
                 continue;
 
             if (player->IsAlive())
-            {
-                this->SetInCombatWith(player);
-                player->SetInCombatWith(this);
-                AddThreat(player, 0.0f);
-            }
+                EngageWithTarget(player);
         }
     }
 }
@@ -3397,6 +3459,37 @@ bool Creature::CanGiveExperience() const
         && !IsPet()
         && !IsTotem()
         && !(GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_XP_AT_KILL);
+}
+
+void Creature::AtEnterCombat()
+{
+    Unit::AtEnterCombat();
+
+    if (!(GetCreatureTemplate()->type_flags & CREATURE_TYPE_FLAG_MOUNTED_COMBAT_ALLOWED))
+        Dismount();
+
+    if (IsPet() || IsGuardian()) // update pets' speed for catchup OOC speed
+    {
+        UpdateSpeed(MOVE_RUN);
+        UpdateSpeed(MOVE_SWIM);
+        UpdateSpeed(MOVE_FLIGHT);
+    }
+}
+
+void Creature::AtExitCombat()
+{
+    Unit::AtExitCombat();
+
+    ClearUnitState(UNIT_STATE_ATTACK_PLAYER);
+    if (HasDynamicFlag(UNIT_DYNFLAG_TAPPED))
+        SetDynamicFlags(GetCreatureTemplate()->dynamicflags);
+
+    if (IsPet() || IsGuardian()) // update pets' speed for catchup OOC speed
+    {
+        UpdateSpeed(MOVE_RUN);
+        UpdateSpeed(MOVE_SWIM);
+        UpdateSpeed(MOVE_FLIGHT);
+    }
 }
 
 void Creature::ReLoad(bool skipDB)

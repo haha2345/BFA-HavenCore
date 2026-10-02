@@ -151,9 +151,9 @@ private:
 			nzoth->EnterVehicle(me);
 	}
 
-	void EnterCombat(Unit* /*who*/) override
+	void JustEngagedWith(Unit* /*who*/) override
 	{
-		_EnterCombat();
+		_JustEngagedWith();
 		this->phase = 1;
 		events.ScheduleEvent(EVENT_CARAPACE_GAIN_ENERGY, 100ms);
 		events.ScheduleEvent(EVENT_MANDIBLE_SLAM, 3s);
@@ -211,7 +211,7 @@ private:
 			if (IsMythic())
 			{
 				UnitList tarlist;
-				SelectTargetList(tarlist, 6, SELECT_TARGET_RANDOM, 100.0f);
+				SelectTargetList(tarlist, 6, SELECT_TARGET_RANDOM, 0, 100.0f);
 				for (Unit* targets : tarlist)
 				{
 					me->CastSpell(targets, SPELL_MENTAL_DECAY, true);
@@ -221,7 +221,7 @@ private:
 			else
 			{
 				UnitList tarlist;
-				SelectTargetList(tarlist, 3, SELECT_TARGET_RANDOM, 100.0f);
+				SelectTargetList(tarlist, 3, SELECT_TARGET_RANDOM, 0, 100.0f);
 				for (Unit* targets : tarlist)
 				{
 					me->CastSpell(targets, SPELL_MENTAL_DECAY, true);
@@ -233,7 +233,7 @@ private:
 			if (IsMythic())
 			{
 				UnitList tarlist;
-				SelectTargetList(tarlist, 6, SELECT_TARGET_RANDOM, 100.0f);
+				SelectTargetList(tarlist, 6, SELECT_TARGET_RANDOM, 0, 100.0f);
 				for (Unit* targets : tarlist)
 				{
 					me->CastSpell(targets, SPELL_MADNESS_BOMB_MOD_SIZE, true);
@@ -242,7 +242,7 @@ private:
 			else
 			{
 				UnitList tarlist;
-				SelectTargetList(tarlist, 3, SELECT_TARGET_RANDOM, 100.0f);
+				SelectTargetList(tarlist, 3, SELECT_TARGET_RANDOM, 0, 100.0f);
 				for (Unit* targets : tarlist)
 				{
 					me->CastSpell(targets, SPELL_MADNESS_BOMB_MOD_SIZE, true);
@@ -267,7 +267,7 @@ private:
 		}
 	}
 
-	void DamageTaken(Unit* /*attacker*/, uint32& damage) override
+	void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/) override
 	{
 		if (this->phase == 1 && me->HealthBelowPct(50))
 		{
@@ -348,7 +348,7 @@ private:
 		}
 		case EVENT_MANDIBLE_SLAM:
 		{
-			if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+			if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
 				me->CastSpell(target, SPELL_MANDIBLE_SLAM, false);
 			break;
 		}
@@ -500,7 +500,7 @@ class aura_madness_bomb : public AuraScript
 {
 	PrepareAuraScript(aura_madness_bomb);
 
-	void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+	void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
 	{
 		Unit* target = GetTarget();
 		Unit* caster = GetCaster();
@@ -522,7 +522,7 @@ class aura_insanity_bomb : public AuraScript
 {
 	PrepareAuraScript(aura_insanity_bomb);
 
-	void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+	void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
 	{
 		Unit* target = GetTarget();
 		Unit* caster = GetCaster();
@@ -568,7 +568,7 @@ struct npc_nightmare_antigen : public ScriptedAI
 {
 	npc_nightmare_antigen(Creature* c) : ScriptedAI(c) { }
 
-	void IsSummonedBy(Unit* summoner) override
+	void IsSummonedBy(Unit* /*summoner*/) override
 	{
 		if (me->GetMapId() == MAP_NYALOTHA)
 			me->AI()->DoZoneInCombat(nullptr);
@@ -671,7 +671,7 @@ private:
 		ScriptedAI::Reset();
 	}
 
-	void EnterCombat(Unit* /*who*/) override
+	void JustEngagedWith(Unit* /*who*/) override
 	{
 		events.ScheduleEvent(EVENT_BREED_MADNESS, 3s);
 	}

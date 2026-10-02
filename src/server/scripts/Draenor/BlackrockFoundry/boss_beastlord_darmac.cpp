@@ -149,7 +149,7 @@ class boss_beastlord_darmac : public CreatureScript
 
             uint32 m_MountID;
 
-            bool CanRespawn()
+            bool CanRespawn() override
             {
                 if (m_Instance == nullptr)
                     return false;
@@ -221,7 +221,7 @@ class boss_beastlord_darmac : public CreatureScript
                 Talk(eTalks::TalkSlay);
             }
 
-            void EnterCombat(Unit* p_Attacker) override
+            void JustEngagedWith(Unit* p_Attacker) override
             {
               //  ClearDelayedOperations();
 
@@ -240,7 +240,7 @@ class boss_beastlord_darmac : public CreatureScript
 
             //    me->SetUInt32Value(UnitFields::UNIT_NPC_EMOTESTATE, 0);
 
-                _EnterCombat();
+                _JustEngagedWith();
 
                 Talk(eTalks::TalkAggro);
 
@@ -252,7 +252,7 @@ class boss_beastlord_darmac : public CreatureScript
                 m_Events.ScheduleEvent(eEvents::EventPinDown, eTimers::TimerPinDown);
             }
 
-            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER)
+            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER) override
             {
                 std::vector<uint32> l_Beasts = { eFoundryCreatures::BossIroncrusher, eFoundryCreatures::BossDreadwing, eFoundryCreatures::BossCruelfang };
 
@@ -358,7 +358,7 @@ class boss_beastlord_darmac : public CreatureScript
 
                        // AddTimedDelayedOperation(1 * TimeConstants::IN_MILLISECONDS, [this]() -> void
                         //{
-                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO))
+                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT))
                                 me->CastSpell(l_Target, eSpells::RendAndTearJumpSecond, true);
                        // });
 
@@ -510,7 +510,7 @@ class boss_beastlord_darmac : public CreatureScript
                // });
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 m_Events.DelayEvents(7 * TimeConstants::IN_MILLISECONDS);
 
@@ -696,7 +696,7 @@ class boss_beastlord_darmac : public CreatureScript
                 }
             }
 
-            void OnSpellCasted(SpellInfo const* p_SpellInfo)
+            void OnSpellCasted(SpellInfo const* p_SpellInfo) override
             {
                 switch (p_SpellInfo->Id)
                 {
@@ -963,7 +963,7 @@ class npc_foundry_cruelfang : public CreatureScript
                 m_RendAndTear = false;
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
                 if (m_Instance != nullptr)
                     m_Instance->SendEncounterUnit(EncounterFrameType::ENCOUNTER_FRAME_ENGAGE, me, 4);
@@ -972,7 +972,7 @@ class npc_foundry_cruelfang : public CreatureScript
                 m_Events.ScheduleEvent(eEvents::EventSavageHowl, eTimers::TimerSavageHowl);
             }
 
-            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER)
+            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER) override
             {
                 m_IsEvadeMode = true;
 
@@ -1046,7 +1046,7 @@ class npc_foundry_cruelfang : public CreatureScript
                 }
             }
 
-            void OnSpellCasted(SpellInfo const* p_SpellInfo)
+            void OnSpellCasted(SpellInfo const* p_SpellInfo) override
             {
                 if (p_SpellInfo->Id == eSpells::SavageHowlDamage)
                 {
@@ -1102,7 +1102,7 @@ class npc_foundry_cruelfang : public CreatureScript
 
                 if (m_CosmeticEvents.ExecuteEvent() == eEvents::EventRendAndTearSec)
                 {
-                    if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO))
+                    if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT))
                         me->CastSpell(l_Target, eSpells::RendAndTearJumpSecond, true);
                 }
 
@@ -1215,7 +1215,7 @@ class npc_foundry_dreadwing : public CreatureScript
                 m_IsEvadeMode = false;
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
                 if (m_Instance != nullptr)
                     m_Instance->SendEncounterUnit(EncounterFrameType::ENCOUNTER_FRAME_ENGAGE, me, 4);
@@ -1224,7 +1224,7 @@ class npc_foundry_dreadwing : public CreatureScript
                 m_Events.ScheduleEvent(eEvents::EventConflagration, eTimers::TimerConflagration);
             }
 
-            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER)
+            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER) override
             {
                 m_IsEvadeMode = true;
 
@@ -1438,7 +1438,7 @@ class npc_foundry_ironcrusher : public CreatureScript
                 m_Tantrum       = false;
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
                 if (m_Instance != nullptr)
                     m_Instance->SendEncounterUnit(EncounterFrameType::ENCOUNTER_FRAME_ENGAGE, me, 4);
@@ -1448,7 +1448,7 @@ class npc_foundry_ironcrusher : public CreatureScript
                 m_Events.ScheduleEvent(eEvents::EventCrushArmor, eTimers::TimerCrushArmor);
             }
 
-            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER)
+            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER) override
             {
                 m_IsEvadeMode = true;
 
@@ -1582,7 +1582,7 @@ class npc_foundry_ironcrusher : public CreatureScript
                     }
                     case eEvents::EventCrushArmor:
                     {
-                        if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO))
+                        if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT))
                             me->CastSpell(l_Target, eSpells::CrushArmor, true);
 
                         m_Events.ScheduleEvent(eEvents::EventCrushArmor, eTimers::TimerCrushArmor);

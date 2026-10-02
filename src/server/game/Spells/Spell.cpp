@@ -57,6 +57,7 @@
 #include "World.h"
 #include "WorldSession.h"
 #include <numeric>
+#include "GuildMgr.h"
 
 extern NonDefaultConstructible<pEffect> SpellEffects[TOTAL_SPELL_EFFECTS];
 
@@ -162,7 +163,7 @@ SpellCastTargets::SpellCastTargets(Unit* caster, WorldPackets::Spells::SpellCast
 
     if (spellCastRequest.SendCastFlags == 8)   // Archaeology
     {
-        uint32 kEntry, kCount, fEntry, fCount;
+        uint32 kEntry = 0, kCount = 0, fEntry = 0, fCount = 0;
         uint8 type;
 
         for (auto const& weight : spellCastRequest.Weight)
@@ -2555,7 +2556,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
 
         HealInfo healInfo(caster, unitTarget, addhealth, m_spellInfo, m_spellInfo->GetSchoolMask());
         caster->HealBySpell(healInfo, crit);
-        unitTarget->getHostileRefManager().threatAssist(caster, float(healInfo.GetEffectiveHeal()) * 0.5f, m_spellInfo);
+        unitTarget->GetThreatManager().ForwardThreatForAssistingMe(caster, float(healInfo.GetEffectiveHeal())*0.5f, m_spellInfo);
         m_healing = healInfo.GetEffectiveHeal();
 
         // Do triggers for unit
@@ -2625,8 +2626,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         if (missInfo == SPELL_MISS_RESIST && m_spellInfo->HasAttribute(SPELL_ATTR0_CU_PICKPOCKET) && unitTarget->GetTypeId() == TYPEID_UNIT)
         {
             m_caster->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TALK);
-            if (unitTarget->ToCreature()->IsAIEnabled)
-                unitTarget->ToCreature()->AI()->AttackStart(m_caster);
+            unitTarget->ToCreature()->EngageWithTarget(m_caster);
         }
     }
 
@@ -2636,7 +2636,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
     // spellHitTarget can be null if spell is missed in DoSpellHitOnUnit
     if (missInfo != SPELL_MISS_EVADE && spellHitTarget && !m_caster->IsFriendlyTo(unit) && (!m_spellInfo->IsPositive() || m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)))
     {
-        m_caster->CombatStart(unit, m_spellInfo->HasInitialAggro());
+        m_caster->AttackedTarget(unit, m_spellInfo->HasInitialAggro());
 
         if (!unit->IsStandState())
             unit->SetStandState(UNIT_STAND_STATE_STAND);
@@ -2690,6 +2690,19 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask)
         player->StartCriteriaTimer(CRITERIA_TIMED_TYPE_SPELL_TARGET, m_spellInfo->Id);
         player->UpdateCriteria(CRITERIA_TYPE_BE_SPELL_TARGET, m_spellInfo->Id, 0, 0, m_caster);
         player->UpdateCriteria(CRITERIA_TYPE_BE_SPELL_TARGET2, m_spellInfo->Id);
+
+        // Guild runs: BE_SPELL_TARGET(2) are group criteria types, so players do not
+        // forward them to their guild. Credit the guild that owns the instance once
+        // per cast, through a member of that guild (reference for the modifiers).
+        if (!m_guildSpellTargetCredited && player->GetMap()->IsDungeon())
+            if (ObjectGuid::LowType ownerGuildId = player->GetMap()->GetOwnerGuildId())
+                if (player->GetGuildId() == ownerGuildId)
+                    if (Guild* ownerGuild = sGuildMgr->GetGuildById(ownerGuildId))
+                    {
+                        m_guildSpellTargetCredited = true;
+                        ownerGuild->UpdateCriteria(CRITERIA_TYPE_BE_SPELL_TARGET, m_spellInfo->Id, 0, 0, m_caster, player);
+                        ownerGuild->UpdateCriteria(CRITERIA_TYPE_BE_SPELL_TARGET2, m_spellInfo->Id, 0, 0, nullptr, player);
+                    }
     }
 
     if (Player* player = m_caster->ToPlayer())
@@ -2717,14 +2730,17 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask)
             // assisting case, healing and resurrection
             if (unit->HasUnitState(UNIT_STATE_ATTACK_PLAYER))
             {
-                m_caster->SetContestedPvP();
-                if (m_caster->GetTypeId() == TYPEID_PLAYER)
-                    m_caster->ToPlayer()->UpdatePvP(true);
+                if (Player* playerOwner = m_caster->GetCharmerOrOwnerPlayerOrPlayerItself())
+                {
+                    playerOwner->SetContestedPvP();
+                    playerOwner->UpdatePvP(true);
+                }
             }
             if (unit->IsInCombat() && m_spellInfo->HasInitialAggro())
             {
-                m_caster->SetInCombatState(unit->GetCombatTimer() > 0, unit);
-                unit->getHostileRefManager().threatAssist(m_caster, 0.0f);
+                if (m_caster->HasUnitFlag(UNIT_FLAG_PVP_ATTACKABLE))               // only do explicit combat forwarding for PvP enabled units
+                    m_caster->GetCombatManager().InheritCombatStatesFrom(unit);    // for creature v creature combat, the threat forward does it for us
+                unit->GetThreatManager().ForwardThreatForAssistingMe(m_caster, 0.0f, nullptr, true);
             }
         }
     }
@@ -4232,7 +4248,7 @@ void Spell::SendSpellStart()
         {
             castData.RemainingRunes->Start = 0;
             castData.RemainingRunes->Count = 0;
-            for (uint8 i = 0; i < player->GetMaxPower(POWER_RUNES); ++i)
+            for (uint8 i = 0; i < MAX_RUNES; ++i)
                 castData.RemainingRunes->Cooldowns.push_back(0);
         }
     }
@@ -4351,7 +4367,7 @@ void Spell::SendSpellGo()
         {
             castData.RemainingRunes->Start = 0;
             castData.RemainingRunes->Count = 0;
-            for (uint8 i = 0; i < player->GetMaxPower(POWER_RUNES); ++i)
+            for (uint8 i = 0; i < MAX_RUNES; ++i)
                 castData.RemainingRunes->Cooldowns.push_back(0);
         }
     }
@@ -5010,14 +5026,14 @@ void Spell::HandleThreatSpells()
 
         // positive spells distribute threat among all units that are in combat with target, like healing
         if (m_spellInfo->IsPositive())
-            target->getHostileRefManager().threatAssist(m_caster, threatToAdd, m_spellInfo);
+            target->GetThreatManager().ForwardThreatForAssistingMe(m_caster, threatToAdd, m_spellInfo);
         // for negative spells threat gets distributed among affected targets
         else
         {
             if (!target->CanHaveThreatList())
                 continue;
 
-            target->AddThreat(m_caster, threatToAdd, m_spellInfo->GetSchoolMask(), m_spellInfo);
+            target->GetThreatManager().AddThreat(m_caster, threatToAdd, m_spellInfo, true);
         }
     }
     TC_LOG_DEBUG("spells", "Spell %u, added an additional %f threat for %s %u target(s)", m_spellInfo->Id, threat, m_spellInfo->IsPositive() ? "assisting" : "harming", uint32(m_UniqueTargetInfo.size()));
@@ -5628,6 +5644,18 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
                     // we need a go target in case of TARGET_GAMEOBJECT_TARGET
                     || (effect->TargetA.GetTarget() == TARGET_GAMEOBJECT_TARGET && !m_targets.GetGOTarget()))
                     return SPELL_FAILED_BAD_TARGETS;
+
+                if (GameObject* go = m_targets.GetGOTarget())
+                {
+                    GameObjectTemplate const* goInfo = go->GetGOInfo();
+
+                    if ((goInfo->type == GAMEOBJECT_TYPE_GATHERING_NODE ||
+                         goInfo->type == GAMEOBJECT_TYPE_CHEST) &&
+                        m_caster->IsMounted() &&
+                        !goInfo->IsUsableMounted() &&
+                        !m_caster->ToPlayer()->HasPlayerLocalFlag(PLAYER_LOCAL_FLAG_CAN_USE_OBJECTS_MOUNTED))
+                        return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
+                }
 
                 Item* pTempItem = nullptr;
                 if (m_targets.GetTargetMask() & TARGET_FLAG_TRADE_ITEM)
@@ -7639,6 +7667,10 @@ void Spell::DoAllEffectOnLaunchTarget(TargetInfo& targetInfo, float* multiplier)
         unit = m_caster;
     if (!unit)
         return;
+
+    // This will only cause combat - the target will engage once the projectile hits (in DoAllEffectOnTarget)
+    if (targetInfo.missCondition != SPELL_MISS_EVADE && !m_caster->IsFriendlyTo(unit) && (!m_spellInfo->IsPositive() || m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)) && (m_spellInfo->HasInitialAggro() || unit->IsEngaged()))
+        m_caster->SetInCombatWith(unit);
 
     for (SpellEffectInfo const* effect : GetEffects())
     {

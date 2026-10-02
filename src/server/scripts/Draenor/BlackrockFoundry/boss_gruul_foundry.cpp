@@ -133,12 +133,12 @@ class boss_gruul_foundry : public CreatureScript
                 }
             }
 
-            bool CanRespawn()
+            bool CanRespawn() override
             {
                 return false;
             }
 
-            void DoAction(int32 p_Action)
+            void DoAction(int32 p_Action) override
             {
                 switch (p_Action)
                 {
@@ -182,9 +182,9 @@ class boss_gruul_foundry : public CreatureScript
                 }
             }
 
-            void EnterCombat(Unit* /*p_Attacker*/) override
+            void JustEngagedWith(Unit* /*p_Attacker*/) override
             {
-                _EnterCombat();
+                _JustEngagedWith();
 
                 Talk(eTalks::Aggro);
 
@@ -235,7 +235,7 @@ class boss_gruul_foundry : public CreatureScript
                 }
             }
 
-            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER)
+            void EnterEvadeMode(EvadeReason /*why*/ = EVADE_REASON_OTHER) override
             {
                 me->RemoveAllAuras();
 
@@ -296,7 +296,7 @@ class boss_gruul_foundry : public CreatureScript
                 }
             }
 
-            void OnSpellCasted(SpellInfo const* p_SpellInfo)
+            void OnSpellCasted(SpellInfo const* p_SpellInfo) override
             {
                 switch (p_SpellInfo->Id)
                 {
@@ -372,7 +372,7 @@ class boss_gruul_foundry : public CreatureScript
                     m_Events.ScheduleEvent(eEvents::EventOverwhelmingBlows, 3 * TimeConstants::IN_MILLISECONDS);
             }
 
-            void RegeneratePower(Powers /*p_Power*/, int32& p_Value)
+            void RegeneratePower(Powers /*p_Power*/, int32& p_Value) override
             {
                 /// Gruul only regens by script
                 p_Value = 0;
@@ -424,7 +424,7 @@ class boss_gruul_foundry : public CreatureScript
                         {
                            // AddTimedDelayedOperation(l_CurrentSpell->GetCastTime() + 100, [this]() -> void
                           //  {
-                                if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO))
+                                if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT))
                                 {
                                     AttackStart(l_Target);
 
@@ -435,7 +435,7 @@ class boss_gruul_foundry : public CreatureScript
                         }
                         else
                         {
-                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO))
+                            if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT))
                             {
                                 AttackStart(l_Target);
 
@@ -475,7 +475,7 @@ class boss_gruul_foundry : public CreatureScript
                     }
                     case eEvents::EventOverwhelmingBlows:
                     {
-                        if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_TOPAGGRO))
+                        if (Unit* l_Target = SelectTarget(SelectAggroTarget::SELECT_TARGET_MAXTHREAT))
                             me->CastSpell(l_Target, eSpells::OverwhelmingBlowsProc, true);
 
                         break;
@@ -548,7 +548,7 @@ class boss_gruul_foundry : public CreatureScript
                         //{
                             me->SetReactState(ReactStates::REACT_PASSIVE);
 
-                            DoResetThreat();
+                            ResetThreatList();
 
                             me->GetMotionMaster()->Clear();
                             me->GetMotionMaster()->MovePoint(eSpells::SpellDestructiveRampage, g_CenterPos);
@@ -860,10 +860,10 @@ class spell_foundry_petrifying_slam_aoe : public SpellScriptLoader
             {
                 if (Unit* l_Caster = GetCaster())
                 {
-                    std::list<HostileReference*> l_ThreatList = l_Caster->getThreatManager().getThreatList();
-                    uint32 l_Count = (uint32)std::count_if(l_ThreatList.begin(), l_ThreatList.end(), [this, l_Caster](HostileReference* p_HostileRef) -> bool
+                    std::vector<ThreatReference*> l_ThreatList = l_Caster->GetThreatManager().GetModifiableThreatList();
+                    uint32 l_Count = (uint32)std::count_if(l_ThreatList.begin(), l_ThreatList.end(), [this, l_Caster](ThreatReference* p_HostileRef) -> bool
                     {
-                        Unit* l_Unit = ObjectAccessor::GetUnit(*l_Caster, p_HostileRef->getUnitGuid());
+                        Unit* l_Unit = p_HostileRef->GetVictim();
                         if (l_Unit == nullptr)
                             return false;
 

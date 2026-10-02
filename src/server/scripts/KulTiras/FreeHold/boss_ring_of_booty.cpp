@@ -529,7 +529,7 @@ struct npc_ludwig_von_tortollan : public ScriptedAI
         me->CastStop();
         me->InterruptNonMeleeSpells(true);
         me->SetReactState(ReactStates::REACT_PASSIVE);
-        me->DeleteThreatList();
+        me->GetThreatManager().ClearAllThreat();
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MoveTargetedHome();
     }
@@ -910,16 +910,16 @@ struct npc_shark_trothak : public ScriptedAI
                 delayShark = false;
                 AddTimedDelayedOperation(1500, [this]() -> void
                     {
-                        if (Unit* target = SelectTarget(SELECT_TARGET_NEAREST, 0, 0, true))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, 0, true))
                             me->CastSpell(target, RingOfBootySpells::FlailingShark, false);
                     });
             }
             else
-                if (Unit* target = SelectTarget(SELECT_TARGET_NEAREST, 0, 0, true))
+                if (Unit* target = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, 0, true))
                     me->CastSpell(target, RingOfBootySpells::FlailingShark, false);
             break;
         case EVENT_JUMP:///SPELL_EFFECT_JUMP_DEST use this id to movement  Inform
-            if (Unit* target = SelectTarget(SELECT_TARGET_NEAREST, 0, 0, true))
+            if (Unit* target = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, 0, true))
                 me->CastSpell(target, RingOfBootySpells::FlailingShark, false);
             break;
         }
@@ -964,8 +964,8 @@ struct at_shell_bounce : AreaTriggerAI
 
     void OnCreate() override
     {
-        float rotation;
-        float range;
+        float rotation = 0.0f;
+        float range = 0.0f;
 
         std::list<Player*> listPlayer;
         GetPlayerListInGrid(listPlayer, at, 100.0f);

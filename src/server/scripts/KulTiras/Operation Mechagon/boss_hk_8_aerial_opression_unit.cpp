@@ -69,9 +69,9 @@ struct boss_hk_8 : public BossAI
         }
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
-        _EnterCombat();
+        _JustEngagedWith();
     }
 
     void JustDied(Unit* /*killer*/) override
@@ -109,7 +109,7 @@ struct npc_tank_buster_mk1 : public ScriptedAI
         init_stage_two = false;        
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         if (instance)
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
@@ -144,7 +144,7 @@ struct npc_tank_buster_mk1 : public ScriptedAI
         }
     }
 
-    void DamageTaken(Unit* /*u*/, uint32& /*dmg*/)
+    void DamageTaken(Unit* /*u*/, uint32& /*dmg*/) override
     {
         if (me->HealthBelowPct(2) && !init_stage_two)
         {
@@ -186,7 +186,7 @@ struct npc_tank_buster_mk1 : public ScriptedAI
         switch (eventid)
         {
         case EVENT_WRECK:
-            if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+            if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
             {
                 DoCast(target, SPELL_WRECK, false);
                 me->GetScheduler().Schedule(2900ms, [target, this] (TaskContext /*context*/)

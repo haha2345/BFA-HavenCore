@@ -1243,7 +1243,7 @@ class boss_garrosh_hellscream : public CreatureScript
                 m_EnergyRegenerator.Reset();
             }
 
-            void EnterCombat(Unit* /*unit*/) override
+            void JustEngagedWith(Unit* /*unit*/) override
             {
                 Talk(SAY_GARROSH_AGGRO);
 
@@ -1343,7 +1343,7 @@ class boss_garrosh_hellscream : public CreatureScript
                 return 0;
             }
 
-            void DamageTaken(Unit* who, uint32& damage) override
+            void DamageTaken(Unit* /*who*/, uint32& damage) override
             {
                 if (m_Phase != (IsHeroic() ? PHASE_4 : PHASE_3))
                 {
@@ -1464,7 +1464,7 @@ class boss_garrosh_hellscream : public CreatureScript
                 me->RemoveUnitFlag(UnitFlags(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC));
             }
 
-            void ExecuteEvent(const uint32 eventId)
+            void ExecuteEvent(const uint32 eventId) override
             {
                 switch (eventId)
                 {
@@ -1782,7 +1782,7 @@ class boss_garrosh_hellscream : public CreatureScript
                 else
                 {
                     if (!me->isMoving())
-                        if (Unit* l_Target = SelectTarget(SELECT_TARGET_NEAREST, 0, 0.0f, true))
+                        if (Unit* l_Target = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, 0.0f, true))
                             me->GetMotionMaster()->MoveFollow(l_Target, 0.0f, 0.0f);
                 }
             }
@@ -1849,7 +1849,7 @@ class boss_garrosh_hellscream : public CreatureScript
 
                 ClumpCheckSelector selector;
                 std::list<Unit*> targets;
-                SelectTargetList(targets, selector, 1, SELECT_TARGET_RANDOM);
+                SelectTargetList(targets, 1, SELECT_TARGET_RANDOM, 0, selector);
 
                 if (targets.empty())
                     return;
@@ -2268,7 +2268,7 @@ struct npc_garrosh_hellscream_orcsAI : public ScriptedAI
 
 protected:
 
-    virtual void ExecuteEvent(const uint32 eventId)
+    virtual void ExecuteEvent(const uint32 eventId) override
     {
         if (eventId == EVENT_RESUME_FIGHT)
             ResumeFight();
@@ -2399,7 +2399,7 @@ class npc_garrosh_hellscream_farseer_wolf_rider : public CreatureScript
                 events.ScheduleEvent(EVENT_ANCESTRAL_CHAIN_HEAL, TIMER_ANCESTRAL_CHAIN_HEAL);
             }
 
-            void ExecuteEvent(const uint32 eventId)
+            void ExecuteEvent(const uint32 eventId) override
             {
                 OrcAI::ExecuteEvent(eventId);
 
@@ -2734,7 +2734,7 @@ class npc_garrosh_hellscream_embodied : public CreatureScript
                 }
             }
 
-            void EnterCombat(Unit* /*unit*/) override
+            void JustEngagedWith(Unit* /*unit*/) override
             {
                 switch (me->GetEntry())
                 {
@@ -3582,7 +3582,7 @@ class spell_garrosh_hellscream_touch_of_yshaarj : public SpellScriptLoader
                 {
                     uint8 targetsCount = pCreature->GetMap()->Is25ManRaid() ? 4 : 2;
                     std::list<Unit*> newTargets;
-                    pCreature->AI()->SelectTargetList(newTargets, TouchOfYshaarjTargetSelector(pCreature), targetsCount, SELECT_TARGET_RANDOM);
+                    pCreature->AI()->SelectTargetList(newTargets, targetsCount, SELECT_TARGET_RANDOM, 0, TouchOfYshaarjTargetSelector(pCreature));
 
                     for (auto target : newTargets)
                         targets.push_back(target);
@@ -3749,7 +3749,7 @@ class spell_garrosh_hellscream_touch_of_yshaarj : public SpellScriptLoader
                 }
             }
 
-            void Register()
+            void Register() override
             {
                 if (m_scriptSpellId == SPELL_TOUCH_OF_YSHAARJ_SINGLE || m_scriptSpellId == SPELL_TOUCH_OF_YSHAARJ_AOE)
                 {

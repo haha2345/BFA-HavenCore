@@ -202,12 +202,12 @@ public:
                 damage = 0;
         }
 
-        void EnterCombat(Unit*) override
+        void JustEngagedWith(Unit*) override
         {
             if (Creature* aspix = GetAspix())
                 aspix->SetInCombatWithZone();
             me->SetPower(POWER_ENERGY, 0);
-            _EnterCombat();
+            _JustEngagedWith();
 
             events.ScheduleEvent(EVENT_CHECK_ENERGY, TIMER_CHECK_ENERGY);
             events.ScheduleEvent(EVENT_GUST, TIMER_GUST);
@@ -448,13 +448,13 @@ public:
             _DespawnAtEvade(15);
         }
 
-        void DamageTaken(Unit* attacker, uint32& damage) override
+        void DamageTaken(Unit* /*attacker*/, uint32& damage) override
         {
             if (me->HasAura(SPELL_LIGHTNING_SHIELD_AURA))
                 damage = 0;
         }
 
-        void EnterCombat(Unit*) override
+        void JustEngagedWith(Unit*) override
         {
             SelectSoundAndText(me, 3);
             if (Creature* adderis = GetAdderis())
@@ -462,7 +462,7 @@ public:
 
             me->CastSpell(me, SPELL_LIGHTNING_SHIELD_AURA, true);
             me->SetPower(POWER_ENERGY, 0);
-            _EnterCombat();
+            _JustEngagedWith();
 
             events.ScheduleEvent(EVENT_CHECK_ENERGY, TIMER_CHECK_ENERGY);
             events.ScheduleEvent(EVENT_CYCLONE_STRIKE, TIMER_CYCLONE_STRIKE);

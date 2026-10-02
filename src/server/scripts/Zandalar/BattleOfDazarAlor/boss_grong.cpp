@@ -86,9 +86,9 @@ private:
         }
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
-        _EnterCombat();    
+        _JustEngagedWith();    
         DoCast(PERIODIC_ENERGY_GAIN);
         events.ScheduleEvent(EVENT_REVERBERATING_SLAM, 3s);
         events.ScheduleEvent(EVENT_BESTIAL_COMBO, 11s);
@@ -149,7 +149,7 @@ private:
             DoCastAOE(TANTRUM);
     }
 
-    void OnSpellFinished(SpellInfo const* spellInfo)
+    void OnSpellFinished(SpellInfo const* spellInfo) override
     {
         if (spellInfo->Id == FEROCIOUS_ROAR)
         {
@@ -222,7 +222,7 @@ private:
             switch (chooseSpell)
             {
             case 0: //Throw
-                if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 10.0f, true))
+                if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 10.0f, true))
                 {
                     target->EnterVehicle(me);                    
                     me->CastSpell(target, BESTIAL_THROW, false);
@@ -242,16 +242,16 @@ private:
                 break;
 
             case 1://Bite
-                if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 10.0f, true))
+                if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 10.0f, true))
                 {
                     me->CastSpell(nullptr, RENDERING_BITE_CAST, false);
-                    me->GetScheduler().Schedule(3100ms, [this, target](TaskContext context)
+                    me->GetScheduler().Schedule(3100ms, [this, target](TaskContext /*context*/)
                     {
                         me->CastSpell(target, RENDERING_BITE, true);
-                    }).Schedule(6200ms, [this, target](TaskContext context)
+                    }).Schedule(6200ms, [this, target](TaskContext /*context*/)
                     {
                         me->CastSpell(nullptr, RENDERING_BITE_CAST, false);
-                    }).Schedule(9300ms, [this, target](TaskContext context)
+                    }).Schedule(9300ms, [this, target](TaskContext /*context*/)
                     {
                         me->CastSpell(nullptr, RENDERING_BITE_CAST, true);
                     });
@@ -260,7 +260,7 @@ private:
 
             case 2:
                 //Smash
-                if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 10.0f, true))
+                if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 10.0f, true))
                 {
                     me->CastSpell(target, BESTIAL_SMASH, false);
                 }

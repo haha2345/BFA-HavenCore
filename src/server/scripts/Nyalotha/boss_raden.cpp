@@ -128,10 +128,10 @@ private:
 		me->AddAura(AURA_OVERRIDE_POWER_COLOR_ENTROPIC);
 	}
 
-	void EnterCombat(Unit* /*who*/) override
+	void JustEngagedWith(Unit* /*who*/) override
 	{
 		Talk(SAY_AGGRO);
-		_EnterCombat();
+		_JustEngagedWith();
 		events.ScheduleEvent(EVENT_RADEN_ENERGY, 100ms);
 		events.ScheduleEvent(EVENT_DRAW_VITA_VOID, 5s);
 		events.ScheduleEvent(EVENT_NULLYFYING_STRIKE, 21s);
@@ -139,7 +139,7 @@ private:
 		this->unstableVoidBounce = 0;
 	}
 
-	void DamageTaken(Unit* attacker, uint32& damage) override
+	void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/) override
 	{
 		if (this->phase == 1 && me->HealthBelowPct(40))
 		{
@@ -193,7 +193,7 @@ private:
 			break;
 		
 		case EVENT_NULLYFYING_STRIKE:
-			if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+			if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
 				me->CastSpell(target, SPELL_NULLYFYING_STRIKE, false);
 			events.Repeat(20s);
 			break;
@@ -208,7 +208,7 @@ private:
 			break;
 
 		case EVENT_DECAYING_STRIKE:
-			if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 100.0f, true))
+			if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 100.0f, true))
 			{
 				me->CastSpell(target, SPELL_DECAYING_STRIKE, false);
 				me->AddAura(SPELL_DECAYING_WOUND, target);
@@ -231,7 +231,7 @@ private:
 			if (IsMythic())
 			{
 				UnitList tarlist;
-				SelectTargetList(tarlist, 6, SELECT_TARGET_RANDOM, 100.0f);
+				SelectTargetList(tarlist, 6, SELECT_TARGET_RANDOM, 0, 100.0f);
 				for (Unit* targets : tarlist)
 				{					
 					me->CastSpell(targets->GetPosition(), SPELL_VOID_ERUPTION_MISSILE, true);
@@ -240,7 +240,7 @@ private:
 			else
 			{
 				UnitList tarlist;
-				SelectTargetList(tarlist, 3, SELECT_TARGET_RANDOM, 100.0f);
+				SelectTargetList(tarlist, 3, SELECT_TARGET_RANDOM, 0, 100.0f);
 				for (Unit* targets : tarlist)
 				{					
 					me->CastSpell(targets->GetPosition(), SPELL_VOID_ERUPTION_MISSILE, true);
@@ -254,7 +254,7 @@ private:
 			if (IsMythic())
 			{
 				UnitList tarlist;
-				SelectTargetList(tarlist, 4, SELECT_TARGET_RANDOM, 100.0f);
+				SelectTargetList(tarlist, 4, SELECT_TARGET_RANDOM, 0, 100.0f);
 				for (Unit* targets : tarlist)
 				{					
 					me->CastSpell(targets->GetPosition(), SPELL_CHARGED_BONDS, true);
@@ -263,7 +263,7 @@ private:
 			if (IsHeroic())
 			{
 				UnitList tarlist;
-				SelectTargetList(tarlist, 3, SELECT_TARGET_RANDOM, 100.0f);
+				SelectTargetList(tarlist, 3, SELECT_TARGET_RANDOM, 0, 100.0f);
 				for (Unit* targets : tarlist)
 				{
 					me->CastSpell(targets->GetPosition(), SPELL_CHARGED_BONDS, true);
@@ -272,7 +272,7 @@ private:
 			else
 			{
 				UnitList tarlist;
-				SelectTargetList(tarlist, 2, SELECT_TARGET_RANDOM, 100.0f);
+				SelectTargetList(tarlist, 2, SELECT_TARGET_RANDOM, 0, 100.0f);
 				for (Unit* targets : tarlist)
 				{
 					me->CastSpell(targets->GetPosition(), SPELL_CHARGED_BONDS, true);
@@ -287,7 +287,7 @@ private:
 	{
 	}*/
 
-	void SpellHitTarget(Unit* target, const SpellInfo* spellInfo) override
+	void SpellHitTarget(Unit* /*target*/, const SpellInfo* spellInfo) override
 	{
 		switch (spellInfo->Id)
 		{
@@ -305,7 +305,7 @@ private:
 		}
 	}
 
-	void SpellHitDest(SpellDestination const* dest, SpellInfo const* spellInfo)
+	void SpellHitDest(SpellDestination const* /*dest*/, SpellInfo const* spellInfo) override
 	{		
 		switch (spellInfo->Id)
 		{
@@ -314,7 +314,7 @@ private:
 		}
 	}
 
-	void CleanupEncounter(InstanceScript* instance, Creature* me)
+	void CleanupEncounter(InstanceScript* /*instance*/, Creature* me)
 	{
 		_JustReachedHome();
 		me->DespawnCreaturesInArea(NPC_ESSENCE_OF_VITA, 125.0f);
@@ -422,7 +422,7 @@ struct npc_essence_raden : public ScriptedAI
 		}
 	}
 
-	void UpdateAI(uint32 diff) override
+	void UpdateAI(uint32 /*diff*/) override
 	{
 		switch (me->GetEntry())
 		{
@@ -434,7 +434,7 @@ struct npc_essence_raden : public ScriptedAI
 					//Vita Empowered				
 					me->AddAura(SPELL_VITA_EMPOWERED, raden);
 					raden->CastSpell(nullptr, SPELL_UNLEASHED_VITA_DAMAGE, true);
-					raden->GetScheduler().Schedule(5s, [this, raden](TaskContext context)
+					raden->GetScheduler().Schedule(5s, [this, raden](TaskContext /*context*/)
 					{
 						if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
 						{
@@ -514,13 +514,13 @@ struct npc_void_hunter_crackling_stalker : public ScriptedAI
 		}
 	}
 
-	void IsSummonedBy(Unit* summoner)
+	void IsSummonedBy(Unit* summoner) override
 	{
 		if (summoner->IsInCombat())
 			me->AI()->DoZoneInCombat(nullptr);
 	}
 
-	void EnterCombat(Unit* /*unit*/) override
+	void JustEngagedWith(Unit* /*unit*/) override
 	{
 		switch (me->GetEntry())
 		{
@@ -573,7 +573,7 @@ class aura_unstable_vita : public AuraScript
 {
 	PrepareAuraScript(aura_unstable_vita);
 
-	void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+	void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
 	{
 		Unit* target = GetTarget();
 		Unit* caster = GetCaster();
@@ -592,7 +592,7 @@ class aura_unstable_vita : public AuraScript
 		}
 	}
 
-	void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+	void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
 	{
 		Unit* target = GetTarget();
 		Unit* caster = GetCaster();
@@ -601,7 +601,7 @@ class aura_unstable_vita : public AuraScript
 
 		if (GetTargetApplication()->GetRemoveMode() == AURA_REMOVE_BY_EXPIRE)
 		{
-			if (Player* player = target->SelectNearestPlayer(100.0f))
+			if (target->SelectNearestPlayer(100.0f))
 			{
 				caster->CastSpell(target, SPELL_UNSTABLE_VITA_DAMAGE, true);
 				caster->CastSpell(target, SPELL_UNSTABLE_VITA_AURA, true);

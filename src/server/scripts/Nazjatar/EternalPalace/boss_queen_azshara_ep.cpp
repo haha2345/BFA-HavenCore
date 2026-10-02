@@ -347,9 +347,9 @@ struct bfa_boss_queen_azshara : public BossAI
             me->SetPower(POWER_MANA, 0);
         }
 
-        void EnterCombat(Unit*) override
+        void JustEngagedWith(Unit*) override
         {
-            _EnterCombat();
+            _JustEngagedWith();
         }
 
         void KilledUnit(Unit* target) override
@@ -500,7 +500,7 @@ struct bfa_boss_queen_azshara : public BossAI
             }
         }
 
-        void DamageTaken(Unit* /*target*/, uint32& damage) override
+        void DamageTaken(Unit* /*target*/, uint32& /*damage*/) override
         {
             if (me->HealthBelowPct(70) && !phase3)
             {
@@ -578,7 +578,7 @@ struct bfa_boss_queen_azshara : public BossAI
             }
         }
 
-        void EnterEvadeMode(EvadeReason w) override
+        void EnterEvadeMode(EvadeReason /*w*/) override
         {
             Talk(13);
             RemoveFrames();
@@ -944,7 +944,7 @@ private:
         SendGossipMenuFor(player, 1, me);
     }
 
-    void sGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+    void sGossipSelect(Player* /*player*/, uint32 /*menuId*/, uint32 gossipListId) override
     { 
         if (gossipListId == 0)
             me->RemoveNpcFlag(UNIT_NPC_FLAG_GOSSIP);
@@ -977,7 +977,7 @@ struct bfa_npc_aethanel : public ScriptedAI
             azshara->AI()->DoAction(ACTION_COUNT_SERVANTS_P1);
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         events.ScheduleEvent(EVENT_LONGING, TIMER_PAINFUL_MEMORIES);
@@ -1052,7 +1052,7 @@ struct bfa_npc_cyranus : public ScriptedAI
                 azshara->AI()->DoAction(ACTION_COUNT_SERVANTS_P1);
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         events.ScheduleEvent(EVENT_LONGING, TIMER_LONGING);
@@ -1139,7 +1139,7 @@ class bfa_spell_cursed_heart : public AuraScript
 {
     PrepareAuraScript(bfa_spell_cursed_heart);
 
-    void HandlePeriodic(AuraEffect const* aureff)
+    void HandlePeriodic(AuraEffect const* /*aureff*/)
     {
         Unit* caster = GetCaster();
         if (!caster)
@@ -1201,7 +1201,7 @@ class bfa_spell_longing_aura : public AuraScript
         caster->RemoveAura(SPELL_CURSED_HEART_PERIODIC);
     }
 
-    void HandlePeriodic(AuraEffect const* aureff)
+    void HandlePeriodic(AuraEffect const* /*aureff*/)
     {
         Unit* caster = GetCaster()->ToCreature();
         if (!caster)
@@ -1257,7 +1257,7 @@ class bfa_spell_painful_memories_aura : public AuraScript
         caster->RemoveAura(SPELL_CURSED_HEART_PERIODIC);
     }
 
-    void HandlePeriodic(AuraEffect const* aureff)
+    void HandlePeriodic(AuraEffect const* /*aureff*/)
     {
         Unit* caster = GetCaster()->ToCreature();
         if (!caster)
@@ -1305,12 +1305,12 @@ private:
             _stun = false;
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(EVENT_SELECT_RANDOM_WARD, TIMER_SELECT_WARD);
         }
 
-        void MovementInform(uint32 type, uint32 pointId) override
+        void MovementInform(uint32 /*type*/, uint32 pointId) override
         {
             switch (pointId)
             {
@@ -1416,7 +1416,7 @@ class bfa_spell_ground_pound : public AuraScript
 {
     PrepareAuraScript(bfa_spell_ground_pound);
 
-   void HandlePeriodic(AuraEffect const* aureff)
+   void HandlePeriodic(AuraEffect const* /*aureff*/)
    {
         Unit* caster = GetCaster();
         if (!caster)
@@ -1472,7 +1472,7 @@ public:
             }
         }
 
-        void HandlePeriodic(AuraEffect const* aureff)
+        void HandlePeriodic(AuraEffect const* /*aureff*/)
         {
             Unit* target = GetTarget()->ToPlayer();
             if (!target)
@@ -1554,7 +1554,7 @@ struct bfa_npc_crushing_depths_stalker : public ScriptedAI
 {
     bfa_npc_crushing_depths_stalker(Creature* creature) : ScriptedAI(creature) { }
 
-    void DamageTaken(Unit* target, uint32& damage) override
+    void DamageTaken(Unit* /*target*/, uint32& damage) override
     {
         if (damage >= me->GetHealth())
             if (Unit* owner = me->GetOwner())
@@ -1730,7 +1730,7 @@ class bfa_spell_arcane_mastery_periodic : public AuraScript
 {
     PrepareAuraScript(bfa_spell_arcane_mastery_periodic);
 
-    void HandlePeriodic(AuraEffect const* aureff)
+    void HandlePeriodic(AuraEffect const* /*aureff*/)
     {
         Unit* caster = GetCaster();
             if (!caster)
@@ -1838,12 +1838,12 @@ struct bfa_npc_azshara_indomitable_devoted : public ScriptedAI
         events.Reset();
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         events.ScheduleEvent(EVENT_CHARGE_WARD, 2000);
     }
 
-    void MovementInform(uint32 type, uint32 pointId) override
+    void MovementInform(uint32 /*type*/, uint32 pointId) override
     {
         switch (pointId)
         {
@@ -1943,7 +1943,7 @@ class bfa_spell_march : public AuraScript
 {
     PrepareAuraScript(bfa_spell_march);
 
-    void HandlePeriodic(AuraEffect const* aureff)
+    void HandlePeriodic(AuraEffect const* /*aureff*/)
     {
         Unit* caster = GetCaster();
         if (!caster)
@@ -1963,7 +1963,7 @@ class bfa_spell_stay : public AuraScript
 {
     PrepareAuraScript(bfa_spell_stay);
 
-    void HandlePeriodic(AuraEffect const* aureff)
+    void HandlePeriodic(AuraEffect const* /*aureff*/)
     {
         Unit* caster = GetCaster();
         if (!caster)
@@ -2100,7 +2100,7 @@ struct bfa_npc_loyal_myrmidon : public ScriptedAI
         events.Reset();
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         events.ScheduleEvent(EVENT_CHARGED_SPEAR, TIMER_CHARGED_SPEAR);
     }
@@ -2149,7 +2149,7 @@ struct bfa_npc_tidemistresses : public ScriptedAI
             SetCombatMovement(false);
         }
 
-        void EnterCombat(Unit* /*unit*/) override
+        void JustEngagedWith(Unit* /*unit*/) override
         {
             events.ScheduleEvent(EVENT_STATIC_SHOCK, TIMER_STATIC_SHOCK);
             events.ScheduleEvent(EVENT_CHAIN_LIGHTNING, TIMER_CHAIN_LIGHTNING);
@@ -2191,7 +2191,7 @@ struct bfa_npc_tidemistresses : public ScriptedAI
                 }
                 case EVENT_CHAIN_LIGHTNING:
                 {
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true, true, 0))
                         me->CastSpell(target, SPELL_CHAIN_LIGHTNING);
                     events.ScheduleEvent(EVENT_CHAIN_LIGHTNING, TIMER_CHAIN_LIGHTNING);
                     break;
@@ -2247,7 +2247,7 @@ struct npc_lightning_orbs_ep : public ScriptedAI
 private:
     uint8 bounceCount;
 
-    void IsSummonedBy(Unit* summoner) override
+    void IsSummonedBy(Unit* /*summoner*/) override
     {
         me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
         this->bounceCount = 0;

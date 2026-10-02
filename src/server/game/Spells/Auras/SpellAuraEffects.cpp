@@ -40,6 +40,7 @@
 #include "Spell.h"
 #include "SpellHistory.h"
 #include "SpellMgr.h"
+#include "ThreatManager.h"
 #include "Unit.h"
 #include "Util.h"
 #include "Vehicle.h"
@@ -286,7 +287,7 @@ NonDefaultConstructible<pAuraEffectHandler> AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNULL,                                      //218 Affects item stats from equipment
     &AuraEffect::HandleModManaRegen,                              //219 SPELL_AURA_MOD_MANA_REGEN_FROM_STAT
     &AuraEffect::HandleModRatingFromStat,                         //220 SPELL_AURA_MOD_RATING_FROM_STAT
-    &AuraEffect::HandleNULL,                                      //221 SPELL_AURA_MOD_DETAUNT
+    &AuraEffect::HandleModDetaunt,                                //221 SPELL_AURA_MOD_DETAUNT
     &AuraEffect::HandleUnused,                                    //222 unused (3.2.0) only for spell 44586 that not used in real spell cast
     &AuraEffect::HandleUnused,                                    //223 unused (7.2.0)
     &AuraEffect::HandleEnableExtraTalent,                         //224 SPELL_AURA_ENABLE_EXTRA_TALENT
@@ -2145,14 +2146,22 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
                 }
             }
         }
-        target->CombatStop();
+
+        if (target->GetMap()->IsDungeon()) // feign death does not remove combat in dungeons
+        {
+            target->AttackStop();
+            if (Player* targetPlayer = target->ToPlayer())
+                targetPlayer->SendAttackSwingCancelAttack();
+        }
+        else
+            target->CombatStop(false, false);
+
         target->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_IMMUNE_OR_LOST_SELECTION);
 
         // prevent interrupt message
         if (GetCasterGUID() == target->GetGUID() && target->GetCurrentSpell(CURRENT_GENERIC_SPELL))
             target->FinishSpell(CURRENT_GENERIC_SPELL, false);
         target->InterruptNonMeleeSpells(true);
-        target->getHostileRefManager().deleteReferences();
 
         // stop handling the effect if it was removed by linked event
         if (aurApp->GetRemoveMode())
@@ -2202,7 +2211,15 @@ void AuraEffect::HandleModUnattackable(AuraApplication const* aurApp, uint8 mode
     // call functions which may have additional effects after chainging state of unit
     if (apply && (mode & AURA_EFFECT_HANDLE_REAL))
     {
-        target->CombatStop();
+        if (target->GetMap()->IsDungeon())
+        {
+            target->AttackStop();
+            if (Player* targetPlayer = target->ToPlayer())
+                targetPlayer->SendAttackSwingCancelAttack();
+        }
+        else
+            target->CombatStop();
+
         target->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_IMMUNE_OR_LOST_SELECTION);
     }
 }
@@ -2832,18 +2849,15 @@ void AuraEffect::HandleIgnoreMovementForces(AuraApplication const* aurApp, uint8
 /***        THREAT        ***/
 /****************************/
 
-void AuraEffect::HandleModThreat(AuraApplication const* aurApp, uint8 mode, bool apply) const
+void AuraEffect::HandleModThreat(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
 {
     if (!(mode & AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK))
         return;
 
-    Unit* target = aurApp->GetTarget();
-    for (int8 i = 0; i < MAX_SPELL_SCHOOL; ++i)
-        if (GetMiscValue() & (1 << i))
-            ApplyPercentModFloatVar(target->m_threatModifier[i], float(GetAmount()), apply);
+    aurApp->GetTarget()->GetThreatManager().UpdateMySpellSchoolModifiers();
 }
 
-void AuraEffect::HandleAuraModTotalThreat(AuraApplication const* aurApp, uint8 mode, bool apply) const
+void AuraEffect::HandleAuraModTotalThreat(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
 {
     if (!(mode & AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK))
         return;
@@ -2855,10 +2869,10 @@ void AuraEffect::HandleAuraModTotalThreat(AuraApplication const* aurApp, uint8 m
 
     Unit* caster = GetCaster();
     if (caster && caster->IsAlive())
-        target->getHostileRefManager().addTempThreat((float)GetAmount(), apply);
+        caster->GetThreatManager().UpdateMyTempModifiers();
 }
 
-void AuraEffect::HandleModTaunt(AuraApplication const* aurApp, uint8 mode, bool apply) const
+void AuraEffect::HandleModTaunt(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
 {
     if (!(mode & AURA_EFFECT_HANDLE_REAL))
         return;
@@ -2868,17 +2882,21 @@ void AuraEffect::HandleModTaunt(AuraApplication const* aurApp, uint8 mode, bool 
     if (!target->IsAlive() || !target->CanHaveThreatList())
         return;
 
-    Unit* caster = GetCaster();
-    if (!caster || !caster->IsAlive())
+    target->GetThreatManager().TauntUpdate();
+}
+
+void AuraEffect::HandleModDetaunt(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
+{
+    if (!(mode & AURA_EFFECT_HANDLE_REAL))
         return;
 
-    if (apply)
-        target->TauntApply(caster);
-    else
-    {
-        // When taunt aura fades out, mob will switch to previous target if current has less than 1.1 * secondthreat
-        target->TauntFadeOut(caster);
-    }
+    Unit* caster = GetCaster();
+    Unit* target = aurApp->GetTarget();
+
+    if (!caster || !caster->IsAlive() || !target->IsAlive() || !caster->CanHaveThreatList())
+        return;
+
+    caster->GetThreatManager().TauntUpdate();
 }
 
 /*****************************/
@@ -2893,6 +2911,8 @@ void AuraEffect::HandleModConfuse(AuraApplication const* aurApp, uint8 mode, boo
     Unit* target = aurApp->GetTarget();
 
     target->SetControlled(apply, UNIT_STATE_CONFUSED);
+    if (apply)
+        target->GetThreatManager().EvaluateSuppressed();
 }
 
 void AuraEffect::HandleModFear(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -2913,6 +2933,8 @@ void AuraEffect::HandleAuraModStun(AuraApplication const* aurApp, uint8 mode, bo
     Unit* target = aurApp->GetTarget();
 
     target->SetControlled(apply, UNIT_STATE_STUNNED);
+    if (apply)
+        target->GetThreatManager().EvaluateSuppressed();
 }
 
 void AuraEffect::HandleAuraModRoot(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -3295,6 +3317,9 @@ void AuraEffect::HandleAuraModSchoolImmunity(AuraApplication const* aurApp, uint
     if (GetSpellInfo()->HasAttribute(SPELL_ATTR1_DISPEL_AURAS_ON_IMMUNITY)
         && GetSpellInfo()->HasAttribute(SPELL_ATTR2_DAMAGE_REDUCED_SHIELD))
         target->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_IMMUNE_OR_LOST_SELECTION);
+
+    if (apply)
+        target->GetThreatManager().EvaluateSuppressed();
 }
 
 void AuraEffect::HandleAuraModDmgImmunity(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -3304,6 +3329,9 @@ void AuraEffect::HandleAuraModDmgImmunity(AuraApplication const* aurApp, uint8 m
 
     Unit* target = aurApp->GetTarget();
     m_spellInfo->ApplyAllSpellImmunitiesTo(target, GetSpellEffectInfo(), apply);
+
+    if (apply)
+        target->GetThreatManager().EvaluateSuppressed();
 }
 
 void AuraEffect::HandleAuraModDispelImmunity(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -3769,8 +3797,7 @@ void AuraEffect::HandleAuraModMaxPower(AuraApplication const* aurApp, uint8 mode
         return;
 
     Unit* target = aurApp->GetTarget();
-    Powers power = Powers(GetMiscValue());
-    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + power);
+    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + GetMiscValue());
 
     target->HandleStatModifier(unitMod, TOTAL_VALUE, float(GetAmount()), apply);
 }
@@ -3876,8 +3903,7 @@ void AuraEffect::HandleAuraModIncreaseEnergy(AuraApplication const* aurApp, uint
         return;
 
     Unit* target = aurApp->GetTarget();
-    Powers powerType = Powers(GetMiscValue());
-    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + powerType);
+    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + GetMiscValue());
 
     target->HandleStatModifier(unitMod, TOTAL_VALUE, float(GetAmount()), apply);
 }
@@ -3890,7 +3916,7 @@ void AuraEffect::HandleAuraModIncreaseEnergyPercent(AuraApplication const* aurAp
     Unit* target = aurApp->GetTarget();
 
     Powers powerType = Powers(GetMiscValue());
-    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + powerType);
+    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + AsUnderlyingType(powerType));
 
     // Save old powers for further calculation
     int32 oldPower = target->GetPower(powerType);
@@ -3987,7 +4013,7 @@ void AuraEffect::HandleAuraModMaxPowerPct(AuraApplication const* aurApp, uint8 m
         return;
 
     Powers powerType = Powers(GetMiscValue());
-    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + powerType);
+    UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + AsUnderlyingType(powerType));
 
     // Save old powers for further calculation
     int32 oldPower = target->GetPower(powerType);
@@ -4587,7 +4613,7 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
                 case 1515:                                      // Tame beast
                     // FIX_ME: this is 2.0.12 threat effect replaced in 2.1.x by dummy aura, must be checked for correctness
                     if (caster && target->CanHaveThreatList())
-                        target->AddThreat(caster, 10.0f);
+                        target->GetThreatManager().AddThreat(caster, 10.0f);
                     break;
                 case 13139:                                     // net-o-matic
                     // root to self part of (root_target->charge->root_self sequence
@@ -4972,7 +4998,7 @@ void AuraEffect::HandleForceReaction(AuraApplication const* aurApp, uint8 mode, 
     player->GetReputationMgr().ApplyForceReaction(factionId, factionRank, apply);
     player->GetReputationMgr().SendForceReactions();
 
-    // stop fighting if at apply forced rank friendly or at remove real rank friendly
+    // stop fighting at apply (if forced rank friendly) or at remove (if real rank friendly)
     if ((apply && factionRank >= REP_FRIENDLY) || (!apply && player->GetReputationRank(factionId) >= REP_FRIENDLY))
         player->StopAttackFaction(factionId);
 }
@@ -5930,7 +5956,7 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
         HealInfo healInfo(caster, caster, heal, GetSpellInfo(), GetSpellInfo()->GetSchoolMask());
         caster->HealBySpell(healInfo);
 
-        caster->getHostileRefManager().threatAssist(caster, healInfo.GetEffectiveHeal() * 0.5f, GetSpellInfo());
+        caster->GetThreatManager().ForwardThreatForAssistingMe(caster, healInfo.GetEffectiveHeal()*0.5f, GetSpellInfo());
         caster->ProcSkillsAndAuras(caster, PROC_FLAG_DONE_PERIODIC, PROC_FLAG_TAKEN_PERIODIC, PROC_SPELL_TYPE_HEAL, PROC_SPELL_PHASE_NONE, hitMask, nullptr, nullptr, &healInfo);
     }
 
@@ -6049,7 +6075,7 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
     SpellPeriodicAuraLogInfo pInfo(this, heal, damage, heal - healInfo.GetEffectiveHeal(), healInfo.GetAbsorb(), 0, 0.0f, crit);
     target->SendPeriodicAuraLog(&pInfo);
 
-    target->getHostileRefManager().threatAssist(caster, float(healInfo.GetEffectiveHeal()) * 0.5f, GetSpellInfo());
+    target->GetThreatManager().ForwardThreatForAssistingMe(caster, float(healInfo.GetEffectiveHeal())*0.5f, GetSpellInfo());
 
     // %-based heal - does not proc auras
     if (GetAuraType() == SPELL_AURA_OBS_MOD_HEALTH)
@@ -6097,7 +6123,8 @@ void AuraEffect::HandlePeriodicManaLeechAuraTick(Unit* target, Unit* caster) con
     if (gainAmount)
     {
         gainedAmount = caster->ModifyPower(powerType, gainAmount);
-        target->AddThreat(caster, float(gainedAmount) * 0.5f, GetSpellInfo()->GetSchoolMask(), GetSpellInfo());
+        // energize is not modified by threat modifiers
+        target->GetThreatManager().AddThreat(caster, float(gainedAmount) * 0.5f, GetSpellInfo(), true);
     }
 
     // Drain Mana
@@ -6148,7 +6175,7 @@ void AuraEffect::HandleObsModPowerAuraTick(Unit* target, Unit* caster) const
     int32 gain = target->ModifyPower(powerType, amount);
 
     if (caster)
-        target->getHostileRefManager().threatAssist(caster, float(gain) * 0.5f, GetSpellInfo());
+        target->GetThreatManager().ForwardThreatForAssistingMe(caster, float(gain)*0.5f, GetSpellInfo(), true);
 
     target->SendPeriodicAuraLog(&pInfo);
 }
@@ -6181,7 +6208,7 @@ void AuraEffect::HandlePeriodicEnergizeAuraTick(Unit* target, Unit* caster) cons
     target->SendPeriodicAuraLog(&pInfo);
 
     if (caster)
-        target->getHostileRefManager().threatAssist(caster, float(gain) * 0.5f, GetSpellInfo());
+        target->GetThreatManager().ForwardThreatForAssistingMe(caster, float(gain)*0.5f, GetSpellInfo(), true);
 }
 
 void AuraEffect::HandlePeriodicPowerBurnAuraTick(Unit* target, Unit* caster) const

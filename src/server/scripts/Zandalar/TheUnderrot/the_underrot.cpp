@@ -43,7 +43,7 @@ struct npc_underrot_faceless_corruptor : public ScriptedAI
         events.Reset();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         events.ScheduleEvent(EVENT_MADDENING_GAZE, 3s, 5s); // dump SAI id 0: 3000,5000 then 12000,15000; not DBC
         events.ScheduleEvent(EVENT_ABYSSAL_REACH, 10s);     // dump SAI id 1: 10000,10000 then 18000,22000; not DBC

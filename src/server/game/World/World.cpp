@@ -48,6 +48,7 @@
 #include "CreatureGroups.h"
 #include "CreatureTextMgr.h"
 #include "DatabaseEnv.h"
+#include "DetourMemoryFunctions.h"
 #include "DisableMgr.h"
 #include "GameEventMgr.h"
 #include "GameObjectModel.h"
@@ -57,7 +58,8 @@
 #include "GitRevision.h"
 #include "GridNotifiersImpl.h"
 #include "GroupMgr.h"
-#include "GuildFinderMgr.h"
+#include "ClubFinderMgr.h"
+#include "ClubStreamHistoryMgr.h"
 #include "GuildMgr.h"
 #include "InstanceSaveMgr.h"
 #include "IPLocation.h"
@@ -67,7 +69,6 @@
 #include "LootMgr.h"
 #include "M2Stores.h"
 #include "MapManager.h"
-#include "Memory.h"
 #include "Metric.h"
 #include "MiscPackets.h"
 #include "MMapFactory.h"
@@ -1863,6 +1864,9 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.loading", "Loading Vehicle Accessories...");
     sObjectMgr->LoadVehicleAccessories();                       // must be after LoadCreatureTemplates() and LoadNPCSpellClickSpells()
 
+    TC_LOG_INFO("server.loading", "Loading Vehicle Seat Addon Data...");
+    sObjectMgr->LoadVehicleSeatAddon();                        // must be after loading VehicleSeat.db2
+
     TC_LOG_INFO("server.loading", "Loading SpellArea Data...");                // must be after quest load
     sSpellMgr->LoadSpellAreas();
 
@@ -2002,7 +2006,10 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.loading", "Loading Guilds...");
     sGuildMgr->LoadGuilds();
 
-    sGuildFinderMgr->LoadFromDB();
+    sClubFinderMgr->LoadFromDB();
+
+    TC_LOG_INFO("server.loading", "Loading club stream history...");
+    sClubStreamHistoryMgr->LoadFromDB();
 
     TC_LOG_INFO("server.loading", "Loading Groups...");
     sGroupMgr->LoadGroups();
@@ -3428,6 +3435,9 @@ void World::ResetWeeklyQuests()
     for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
         if (itr->second->GetPlayer())
             itr->second->GetPlayer()->ResetWeeklyQuestStatus();
+
+    // Guild challenges are weekly (Guild.h GuildChallengesMaxCount).
+    sGuildMgr->ResetGuildChallenges();
 
     m_NextWeeklyQuestReset = time_t(m_NextWeeklyQuestReset + WEEK);
     sWorld->setWorldState(WS_WEEKLY_QUEST_RESET_TIME, uint32(m_NextWeeklyQuestReset));

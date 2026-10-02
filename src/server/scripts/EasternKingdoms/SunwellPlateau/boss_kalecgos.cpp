@@ -205,7 +205,7 @@ public:
                     me->AddUnitFlag(UnitFlags(UNIT_FLAG_NON_ATTACKABLE + UNIT_FLAG_NOT_SELECTABLE));
                     me->InterruptNonMeleeSpells(true);
                     me->RemoveAllAuras();
-                    me->DeleteThreatList();
+                    me->GetThreatManager().ClearAllThreat();
                     me->CombatStop();
                     ++TalkSequence;
                 }
@@ -298,11 +298,11 @@ public:
 
                 if (SpectralBlastTimer <= diff)
                 {
-                    ThreatContainer::StorageType const& m_threatlist = me->getThreatManager().getThreatList();
+                    std::vector<ThreatReference*> const& m_threatlist = me->GetThreatManager().GetModifiableThreatList();
                     std::list<Unit*> targetList;
-                    for (ThreatContainer::StorageType::const_iterator itr = m_threatlist.begin(); itr!= m_threatlist.end(); ++itr)
+                    for (std::vector<ThreatReference*>::const_iterator itr = m_threatlist.begin(); itr!= m_threatlist.end(); ++itr)
                     {
-                        Unit* target = (*itr)->getTarget();
+                        Unit* target = (*itr)->GetVictim();
                         if (target
                                 && target->GetTypeId() == TYPEID_PLAYER
                                 && (!target->GetVictim() || target->GetGUID() != me->EnsureVictim()->GetGUID())
@@ -350,7 +350,7 @@ public:
                 damage = 0;
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             me->SetStandState(UNIT_STAND_STATE_STAND);
             Talk(SAY_EVIL_AGGRO);
@@ -629,13 +629,13 @@ public:
             TeleportAllPlayersBack();
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             if (Creature* Kalec = me->SummonCreature(NPC_KALEC, me->GetPositionX() + 10, me->GetPositionY() + 5, me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 0))
             {
                 KalecGUID = Kalec->GetGUID();
-                me->CombatStart(Kalec);
-                me->AddThreat(Kalec, 100.0f);
+                me->AttackedTarget(Kalec, true);
+                AddThreat(Kalec, 100.0f);
                 Kalec->setActive(true);
             }
             Talk(SAY_SATH_AGGRO);
@@ -762,12 +762,12 @@ public:
 
             if (ResetThreat <= diff)
             {
-                ThreatContainer::StorageType threatlist = me->getThreatManager().getThreatList();
-                for (ThreatContainer::StorageType::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
+                std::vector<ThreatReference*> threatlist = me->GetThreatManager().GetModifiableThreatList();
+                for (std::vector<ThreatReference*>::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
                 {
-                    if (Unit* unit = ObjectAccessor::GetUnit(*me, (*itr)->getUnitGuid()))
+                    if (Unit* unit = (*itr)->GetVictim())
                         if (unit->GetPositionZ() > me->GetPositionZ() + 5)
-                            me->getThreatManager().modifyThreatPercent(unit, -100);
+                            me->GetThreatManager().ModifyThreatByPercent(unit, -100);
                 }
                 ResetThreat = 1000;
             } else ResetThreat -= diff;

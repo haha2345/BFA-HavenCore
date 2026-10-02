@@ -62,9 +62,9 @@ inline bool roll_chance_i(int chance)
 }
 
 /*
-* SFMT wrapper satisfying UniformRandomNumberGenerator concept for use in <random> algorithms
+* Wrapper satisfying UniformRandomNumberGenerator concept for use in <random> algorithms
 */
-class TC_COMMON_API SFMTEngine
+class RandomEngine
 {
 public:
     typedef uint32 result_type;
@@ -72,8 +72,6 @@ public:
     static constexpr result_type min() { return std::numeric_limits<result_type>::min(); }
     static constexpr result_type max() { return std::numeric_limits<result_type>::max(); }
     result_type operator()() const { return rand32(); }
-
-    static SFMTEngine& Instance();
 };
 
 #endif // Random_h__

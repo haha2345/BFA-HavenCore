@@ -106,7 +106,7 @@ struct npc_apprentice_mirveda : public ScriptedAI
         }
     }
 
-    void EnterCombat(Unit* /*who*/) override { }
+    void JustEngagedWith(Unit* /*who*/) override { }
 
     void JustSummoned(Creature* summoned) override
     {
@@ -252,7 +252,7 @@ class npc_second_trial_paladin : public CreatureScript
 public:
     npc_second_trial_paladin() : CreatureScript("npc_second_trial_paladin") {}
 
-    CreatureAI* GetAI(Creature* creature) const
+    CreatureAI* GetAI(Creature* creature) const override
     {
         return new npc_secondTrialAI(creature);
     }
@@ -314,8 +314,6 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*who*/) override {}
-
         void UpdateAI(uint32 diff) override
         {
             if (questPhase == 1)
@@ -328,7 +326,7 @@ public:
 
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true))
                     {
-                        me->AddThreat(target, 5000000.0f);
+                        me->GetThreatManager().AddThreat(target, 5000000.0f);
                         AttackStart(target);
                     }
                 }
@@ -400,7 +398,7 @@ public:
                   //  CAST_PLR(Killed)->FailQuest(QUEST_SECOND_TRIAL);
       //  }
 
-        void JustDied(Unit* killer);
+        void JustDied(Unit* killer) override;
     };
 };
 
@@ -438,7 +436,7 @@ public:
         return true;
     }
 
-    CreatureAI* GetAI(Creature* creature) const
+    CreatureAI* GetAI(Creature* creature) const override
     {
         return new master_kelerun_bloodmournAI(creature);
     }
@@ -462,7 +460,7 @@ public:
                 paladinGuid[i].Clear();
         }
 
-        void EnterCombat(Unit* /*who*/) override {}
+        void JustEngagedWith(Unit* /*who*/) override {}
 
         void UpdateAI(uint32 diff) override
         {

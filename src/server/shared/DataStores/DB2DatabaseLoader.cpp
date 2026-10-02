@@ -86,7 +86,7 @@ char* DB2DatabaseLoader::Load(bool custom, uint32& records, char**& indexTable, 
     char* tempDataTable = new char[result->GetRowCount() * recordSize];
     uint32* newIndexes = new uint32[result->GetRowCount()];
     if (stringFields)
-        stringPool.reserve(std::max(stringPool.capacity(), stringPool.size() + stringFields * result->GetRowCount() + 1));
+        stringPool.reserve(std::max<uint64>(stringPool.capacity(), stringPool.size() + stringFields * result->GetRowCount() + 1));
 
     uint32 rec = 0;
     uint32 newRecords = 0;
@@ -221,7 +221,7 @@ void DB2DatabaseLoader::LoadStrings(bool custom, uint32 locale, uint32 records, 
     uint32 fieldCount = _loadInfo->Meta->FieldCount;
     uint32 recordSize = _loadInfo->Meta->GetRecordSize();
 
-    stringPool.reserve(std::max(stringPool.capacity(), stringPool.size() + stringFields * result->GetRowCount() + 1));
+    stringPool.reserve(std::max<uint64>(stringPool.capacity(), stringPool.size() + stringFields * result->GetRowCount() + 1));
 
     do
     {

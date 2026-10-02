@@ -179,7 +179,7 @@ public:
                 }
         }
 
-        void EnterEvadeMode(EvadeReason w)
+        void EnterEvadeMode(EvadeReason /*w*/)
         {
             ScriptedAI::EnterEvadeMode();
 
@@ -204,7 +204,7 @@ public:
                 instance->SetBossState(DATA_PRIMORDIUS, DONE);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
             me->ModifyAuraState(AURA_STATE_CONFLAGRATE, true);
@@ -235,7 +235,7 @@ public:
                 NowCreature->DespawnOrUnsummon();
         }
 
-        void KilledUnit(Unit* victim)
+        void KilledUnit(Unit* /*victim*/)
         {
             Talk(TALK_KILL_PLAYER);
         }
@@ -309,7 +309,7 @@ public:
                     if (me->HasAura(SPELL_PATHOGEN_GLANDS))
                     {
                         std::list<Unit*> targets;
-                        SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                        SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                         if (!targets.empty())
                             if (targets.size() >= 1)
                                 targets.resize(1);
@@ -567,7 +567,7 @@ public:
             targetsPlayers = targets.size();
         }
 
-        void RecalculateDamage(SpellEffIndex effIndex)
+        void RecalculateDamage(SpellEffIndex /*effIndex*/)
         {
             SetHitDamage(GetHitDamage() / targetsPlayers);
         }
@@ -596,7 +596,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_acidic_spines_AuraScript);
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             if (!GetCaster())
                 return;
@@ -625,7 +625,7 @@ public:
     {
         PrepareSpellScript(bfa_spell_add_mutations_players_SpellScript);
 
-        void HandleEffectHitTarget(SpellEffIndex eff_idx)
+        void HandleEffectHitTarget(SpellEffIndex /*eff_idx*/)
         {
             if (Unit* pUnit = GetHitUnit())
             {
@@ -746,7 +746,7 @@ public:
         {
             me->GetMotionMaster()->MoveChase(summoner);
             //me->AI()->AttackStart(summoner);
-            //me->AddThreat(summoner, 99999999.9f);
+            //me->GetThreatManager().AddThreat(summoner, 99999999.9f);
         }
 
         void JustDied(Unit*)
@@ -761,7 +761,7 @@ public:
             }
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             if (Creature* primordius = me->FindNearestCreature(NPC_PRIMORDIUS, 500.0f, true))
             {
@@ -798,7 +798,7 @@ public:
 
         EventMap events;
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             events.ScheduleEvent(EVENT_BLACK_BLOOD, 30000, 0, 0);
         }
@@ -858,12 +858,12 @@ public:
             me->SetUnitFlags(UNIT_FLAG_NOT_SELECTABLE);
         }
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             me->CastSpell(me, 136049, true);
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             if (Creature* primordius = me->FindNearestCreature(NPC_PRIMORDIUS, 500.0f, true))
             {
@@ -908,7 +908,7 @@ public:
 
         EventMap events;
 
-        void IsSummonedBy(Unit* summoner)
+        void IsSummonedBy(Unit* /*summoner*/)
         {
             me->CastSpell(me, SPELL_VOLATILE_POOL);
             me->SetSpeed(MOVE_RUN, 0.5f);
@@ -924,7 +924,7 @@ public:
             events.Reset();
         }
 
-        void UpdateAI(uint32 diff)
+        void UpdateAI(uint32 /*diff*/)
         {
             if (Creature* primordius = me->FindNearestCreature(NPC_PRIMORDIUS, 500.0f, true))
             {
@@ -946,7 +946,7 @@ public:
                     {
                         me->GetMotionMaster()->MoveChase(primordius);
                         //me->AI()->AttackStart(primordius);
-                        //me->AddThreat(primordius, 99999999.9f);
+                        //me->GetThreatManager().AddThreat(primordius, 99999999.9f);
                     }
                     break;
                 }
@@ -985,7 +985,7 @@ public:
     {
         PrepareSpellScript(bfa_spell_congeal_blood_SpellScript);
 
-        void OnHit(SpellEffIndex index)
+        void OnHit(SpellEffIndex /*index*/)
         {
             if (Unit* target = GetHitUnit())
             {
@@ -1027,7 +1027,7 @@ public:
     {
         PrepareSpellScript(bfa_spell_black_blood_SpellScript);
 
-        void OnHit(SpellEffIndex index)
+        void OnHit(SpellEffIndex /*index*/)
         {
             if (Unit* target = GetHitUnit())
             {

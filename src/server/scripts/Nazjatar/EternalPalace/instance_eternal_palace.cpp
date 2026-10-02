@@ -45,7 +45,7 @@ struct instance_eternal_palace : public InstanceScript
         LoadDoorData(doorData);
     }
 
-    void OnPlayerEnter(Player* player) override
+    void OnPlayerEnter(Player* /*player*/) override
     {
         intro_conv = true;
         if (intro_conv == true)
@@ -116,7 +116,7 @@ struct npc_generic_ashvane : public ScriptedAI
         ScriptedAI::Reset();
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         switch (me->GetEntry())
         {

@@ -63,9 +63,9 @@ struct boss_king_mechagon : public BossAI
         me->AddUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
-        _EnterCombat();
+        _JustEngagedWith();
     }
 
     void EnterEvadeMode(EvadeReason /*why*/) override
@@ -107,9 +107,9 @@ struct npc_aeriel_unit : public BossAI
         vehicle = me->GetVehicleKit();
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
-        _EnterCombat();
+        _JustEngagedWith();
         if (Creature* king = me->FindNearestCreature(NPC_KING_MECHAGON, 100.0f, true))
         {
             king->EnterVehicle(me);
@@ -180,7 +180,7 @@ struct npc_aeriel_unit : public BossAI
 
         case EVENT_RECALIBRATE:
         {
-            if (Unit* targets = SelectTarget(SELECT_TARGET_FARTHEST, 0, 100.0f, true))
+            if (Unit* targets = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 100.0f, true))
             {
                 std::list<Creature*> plasma_orbs_list;
                 plasma_orbs_list.clear();
@@ -252,9 +252,9 @@ struct npc_omega_buster : public BossAI
         me->SetCombatReach(40.0f);
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
-        _EnterCombat();        
+        _JustEngagedWith();        
         events.ScheduleEvent(EVENT_GIGA_ZAP, 5s);
         events.ScheduleEvent(EVENT_PLASMA_ORBS, 10s);
         events.ScheduleEvent(EVENT_RECALIBRATE, 15s);
@@ -325,7 +325,7 @@ struct npc_omega_buster : public BossAI
 
         case EVENT_RECALIBRATE:
         {
-            if (Unit* targets = SelectTarget(SELECT_TARGET_FARTHEST, 0, 100.0f, true))
+            if (Unit* targets = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 100.0f, true))
             {
                 std::list<Creature*> plasma_orbs_list;
                 plasma_orbs_list.clear();

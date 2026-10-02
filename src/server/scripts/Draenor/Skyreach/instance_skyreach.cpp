@@ -86,7 +86,7 @@ public:
             // instance->SetObjectVisibility(1000.0f);
         }
 
-        void OnCreatureCreate(Creature* p_Creature)
+        void OnCreatureCreate(Creature* p_Creature) override
         {
             switch (p_Creature->GetEntry())
             {
@@ -119,8 +119,8 @@ public:
                 {
                     p_Creature->AddAura(RandomSpells::SUBMERGED, p_Creature);
                     p_Creature->SetReactState(ReactStates::REACT_PASSIVE);
-                    p_Creature->getThreatManager().clearReferences();
-                    p_Creature->getThreatManager().resetAllAggro();
+                    p_Creature->GetThreatManager().ClearAllThreat();
+                    p_Creature->GetThreatManager().ResetAllThreat();
                 }
                 break;
             case MobEntries::SKYREACH_RAVEN_WHISPERER:
@@ -224,7 +224,7 @@ public:
             }
         }
 
-        void OnGameObjectCreate(GameObject* p_Gameobject)
+        void OnGameObjectCreate(GameObject* p_Gameobject) override
         {
             switch (p_Gameobject->GetEntry())
             {
@@ -262,7 +262,7 @@ public:
            //     m_ConditionCompleted = true;
         }
 
-        bool SetBossState(uint32 p_ID, EncounterState p_State)
+        bool SetBossState(uint32 p_ID, EncounterState p_State) override
         {
             if (!InstanceScript::SetBossState(p_ID, p_State))
                 return false;
@@ -300,8 +300,8 @@ public:
                         {
                             l_Constructor->CombatStop();
                             l_Constructor->SetReactState(ReactStates::REACT_PASSIVE);
-                            l_Constructor->getThreatManager().clearReferences();
-                            l_Constructor->getThreatManager().resetAllAggro();
+                            l_Constructor->GetThreatManager().ClearAllThreat();
+                            l_Constructor->GetThreatManager().ResetAllThreat();
                         }
                     }
 
@@ -369,7 +369,7 @@ public:
             return true;
         }
 
-        void SetData(uint32 p_Type, uint32 p_Data)
+        void SetData(uint32 p_Type, uint32 p_Data) override
         {
             switch (p_Type)
             {
@@ -417,7 +417,7 @@ public:
 
                 if (Creature* l_Araknath = instance->GetCreature(m_AraknathGuid))
                 {
-                    l_Araknath->getThreatManager().resetAllAggro();
+                    l_Araknath->GetThreatManager().ResetAllThreat();
 
                     if (l_Araknath->GetAI())
                         l_Araknath->GetAI()->Reset();
@@ -565,7 +565,7 @@ public:
             }
         }
 
-        void OnPlayerEnter(Player* p_Player)
+        void OnPlayerEnter(Player* p_Player) override
         {
             if (!p_Player->IsInWorld())
                 return;
@@ -576,7 +576,7 @@ public:
             m_PlayerGuidToBlockId[p_Player->GetGUID()] = 0;
         }
 
-        void Update(uint32 p_Diff)
+        void Update(uint32 p_Diff) override
         {
             UpdateOperations(p_Diff);
             /*

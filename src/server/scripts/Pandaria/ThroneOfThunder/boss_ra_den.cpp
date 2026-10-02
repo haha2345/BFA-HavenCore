@@ -246,7 +246,7 @@ public:
             events.ScheduleEvent(EVENT_SANGUINE_VOLLEY, TIMER_SANGUINE_VOLLEY);
         }
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& damage)
         {
             if (damage >= me->GetHealth())
             {
@@ -433,7 +433,7 @@ public:
                 }
         }
 
-        void SetData(uint32 type, uint32 data)
+        void SetData(uint32 type, uint32 /*data*/)
         {
             switch (type)
             {
@@ -467,12 +467,12 @@ public:
             return 0;
         }
 
-        void KilledUnit(Unit* killed)
+        void KilledUnit(Unit* /*killed*/)
         {
             me->GetAI()->SetData(DATA_I_THOUGHT_HE_WAS_SUPPOSED_TO_BE_HARD, 1);
         }
 
-        void DamageTaken(Unit* who, uint32& damage)
+        void DamageTaken(Unit* /*who*/, uint32& damage)
         {
             if (me->HealthBelowPct(40) && !phaseTwo)
             {
@@ -523,7 +523,7 @@ public:
                     player->RemoveAura(SPELL_UNLEASHED_ANIMA);
         }
 
-        void EnterEvadeMode(EvadeReason w)
+        void EnterEvadeMode(EvadeReason /*w*/)
         {
             if (encounterCompleted)
                 return;
@@ -658,7 +658,7 @@ public:
             tmp10->GetMotionMaster()->MovePoint(POINT_10, CorruptedAnimaPosition[0]);
         }
 
-        void EnterCombat(Unit*)
+        void JustEngagedWith(Unit*)
         {
             events.ScheduleEvent(EVENT_MATERIALS_OF_CREATION, 10 * IN_MILLISECONDS);
             events.ScheduleEvent(EVENT_ENERGY_REGEN, TIMER_ENERGY_REGEN);
@@ -822,7 +822,7 @@ public:
                 {
                     Talk(TALK_UNSTABLE_VITA);
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -836,7 +836,7 @@ public:
                 {
                     Talk(TALK_UNSTABLE_ANIMA);
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 500.0f, true);
+                    SelectTargetList(targets, 5, SELECT_TARGET_RANDOM, 0, 500.0f, true);
                     if (!targets.empty())
                         if (targets.size() >= 1)
                             targets.resize(1);
@@ -909,7 +909,7 @@ public:
 
         void IsSummonedBy(Unit* summoner)
         {
-            //me->AddThreat(summoner, 999999999.9f);
+            //me->GetThreatManager().AddThreat(summoner, 999999999.9f);
             //me->AI()->AttackStart(summoner);
             me->GetMotionMaster()->MovePoint(0, summoner->GetPositionX(), summoner->GetPositionY(), summoner->GetPositionZ() + 1.0f, false);
             me->GetMotionMaster()->MoveChase(summoner);
@@ -999,7 +999,7 @@ public:
 
         void IsSummonedBy(Unit* summoner)
         {
-            //me->AddThreat(summoner, 999999999.9f);
+            //me->GetThreatManager().AddThreat(summoner, 999999999.9f);
             //me->AI()->AttackStart(summoner);
             me->GetMotionMaster()->MoveChase(summoner);
             events.ScheduleEvent(EVENT_CHECK_IF_BOSS_NEARBY, 1000);
@@ -1205,7 +1205,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_unstable_vita_AuraScript);
 
-        void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* caster = GetCaster();
 
@@ -1227,7 +1227,7 @@ public:
             }
         }
 
-        void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             AuraRemoveMode remove = GetTargetApplication()->GetRemoveMode();
             if (remove != AURA_REMOVE_BY_EXPIRE)
@@ -1297,7 +1297,7 @@ public:
     {
         PrepareSpellScript(bfa_spell_unstable_vita_damage_SpellScript);
 
-        void HandleOnHit(SpellEffIndex index)
+        void HandleOnHit(SpellEffIndex /*index*/)
         {
             if (Unit* caster = GetCaster())
             {
@@ -1460,7 +1460,7 @@ public:
                     player->RemoveAura(SPELL_ANIMA_SENSITIVITY);
         }
 
-        void MovementInform(uint32 type, uint32 id)
+        void MovementInform(uint32 /*type*/, uint32 id)
         {
             switch (id)
             {
@@ -1608,7 +1608,7 @@ public:
                 me->CastSpell(who, 139078, true);
         }
 
-        void MovementInform(uint32 type, uint32 id)
+        void MovementInform(uint32 /*type*/, uint32 id)
         {
             switch (id)
             {
@@ -1718,7 +1718,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_unstable_anima_AuraScript);
 
-        void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes mode)
+        void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* caster = GetCaster();
             Unit* target = GetTarget()->ToPlayer();
@@ -1744,7 +1744,7 @@ public:
             target->RemoveAura(138294); // visual circle
         }
 
-        void OnPeriodic(AuraEffect const* aurEff)
+        void OnPeriodic(AuraEffect const* /*aurEff*/)
         {
             Unit* caster = GetCaster();
             Unit* target = GetTarget()->ToPlayer();
@@ -1804,12 +1804,12 @@ public:
             targetsPlayers = targets.size();
         }
 
-        void RecalculateDamage(SpellEffIndex effIndex)
+        void RecalculateDamage(SpellEffIndex /*effIndex*/)
         {
             SetHitDamage(GetHitDamage() / targetsPlayers);
         }
 
-        void OnHit(SpellEffIndex index)
+        void OnHit(SpellEffIndex /*index*/)
         {
             if (Unit* caster = GetCaster())
             {
@@ -1874,7 +1874,7 @@ public:
     {
         PrepareAuraScript(bfa_spell_murderous_strke_AuraScript);
 
-        void CalculateAmount(AuraEffect const* auraEffect, int32& amount, bool& /*canBeRecalculated*/)
+        void CalculateAmount(AuraEffect const* /*auraEffect*/, int32& amount, bool& /*canBeRecalculated*/)
         {
             Unit* target = GetCaster()->GetVictim();
             if (!target)
@@ -1908,7 +1908,7 @@ public:
     {
         PrepareSpellScript(bfa_spell_ruin_bolt_SpellScript);
 
-        void RecalculateDamage(SpellEffIndex effIndex)
+        void RecalculateDamage(SpellEffIndex /*effIndex*/)
         {
             SetHitDamage(1000000);
         }
@@ -1935,7 +1935,7 @@ public:
     {
         PrepareSpellScript(bfa_spell_fatal_strike_SpellScript);
 
-        void RecalculateDamage(SpellEffIndex effIndex)
+        void RecalculateDamage(SpellEffIndex /*effIndex*/)
         {
             Unit* target = GetHitUnit();
             if (!target)

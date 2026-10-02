@@ -239,14 +239,14 @@ class boss_halion : public CreatureScript
                         controller->AI()->EnterEvadeMode(why);
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
                 Talk(SAY_AGGRO);
 
                 events.Reset();
                 events.SetPhase(PHASE_ONE);
 
-                _EnterCombat();
+                _JustEngagedWith();
                 me->AddAura(SPELL_TWILIGHT_PRECISION, me);
                 events.ScheduleEvent(EVENT_ACTIVATE_FIREWALL, Seconds(5));
                 events.ScheduleEvent(EVENT_BREATH, randtime(Seconds(5), Seconds(15)));
@@ -281,6 +281,9 @@ class boss_halion : public CreatureScript
 
             void DamageTaken(Unit* attacker, uint32& damage) override
             {
+                if (damage >= me->GetHealth() && !events.IsInPhase(PHASE_THREE))
+                    damage = me->GetHealth() - 1;
+
                 if (me->HealthBelowPctDamaged(75, damage) && events.IsInPhase(PHASE_ONE))
                 {
                     events.SetPhase(PHASE_TWO);
@@ -346,7 +349,7 @@ class boss_halion : public CreatureScript
                             break;
                         case EVENT_METEOR_STRIKE:
                         {
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, -SPELL_TWILIGHT_REALM))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, true, -SPELL_TWILIGHT_REALM))
                             {
                                 _meteorStrikePos = target->GetPosition();
                                 me->CastSpell(_meteorStrikePos.GetPositionX(), _meteorStrikePos.GetPositionY(), _meteorStrikePos.GetPositionZ(), SPELL_METEOR_STRIKE, true, nullptr, nullptr, me->GetGUID());
@@ -357,7 +360,7 @@ class boss_halion : public CreatureScript
                         }
                         case EVENT_FIERY_COMBUSTION:
                         {
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, -SPELL_TWILIGHT_REALM))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, true, -SPELL_TWILIGHT_REALM))
                                 me->CastSpell(target, SPELL_FIERY_COMBUSTION, TRIGGERED_IGNORE_SET_FACING);
                             events.ScheduleEvent(EVENT_FIERY_COMBUSTION, Seconds(25));
                             break;
@@ -416,11 +419,11 @@ class boss_twilight_halion : public CreatureScript
                 events.ScheduleEvent(EVENT_SOUL_CONSUMPTION, Seconds(15));
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
                 events.SetPhase(PHASE_TWO);
 
-                _EnterCombat();
+                _JustEngagedWith();
                 me->AddAura(SPELL_TWILIGHT_PRECISION, me);
                 events.ScheduleEvent(EVENT_CLEAVE, Seconds(3));
                 events.ScheduleEvent(EVENT_BREATH, Seconds(12));
@@ -461,9 +464,11 @@ class boss_twilight_halion : public CreatureScript
 
             void DamageTaken(Unit* attacker, uint32& damage) override
             {
-                //Needed because we already have UNIT_FLAG_IN_COMBAT, otherwise EnterCombat won't ever be called
+                if (damage >= me->GetHealth() && !events.IsInPhase(PHASE_THREE))
+                    damage = me->GetHealth() - 1;
+                //Needed because we already have UNIT_FLAG_IN_COMBAT, otherwise JustEngagedWith won't ever be called
                 if (!events.IsInPhase(PHASE_TWO) && !events.IsInPhase(PHASE_THREE))
-                    EnterCombat(attacker);
+                    JustEngagedWith(attacker);
 
                 if (me->HealthBelowPctDamaged(50, damage) && events.IsInPhase(PHASE_TWO))
                 {
@@ -528,7 +533,7 @@ class boss_twilight_halion : public CreatureScript
                             events.ScheduleEvent(EVENT_BREATH, randtime(Seconds(10), Seconds(14)));
                             break;
                         case EVENT_SOUL_CONSUMPTION:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, SPELL_TWILIGHT_REALM))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, true, SPELL_TWILIGHT_REALM))
                                 me->CastSpell(target, SPELL_SOUL_CONSUMPTION, TRIGGERED_IGNORE_SET_FACING);
                             events.ScheduleEvent(EVENT_SOUL_CONSUMPTION, Seconds(20));
                             break;
@@ -598,7 +603,7 @@ class npc_halion_controller : public CreatureScript
                 DoCast(me, SPELL_CLEAR_DEBUFFS);
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
                 _twilightDamageTaken = 0;
                 _materialDamageTaken = 0;
@@ -607,7 +612,7 @@ class npc_halion_controller : public CreatureScript
                 _events.ScheduleEvent(EVENT_EVADE_CHECK, Seconds(5));
             }
 
-            void EnterEvadeMode(EvadeReason /*why*/) override
+            void JustExitedCombat() override
             {
                 if (Creature* twilightHalion = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_TWILIGHT_HALION)))
                 {
@@ -624,16 +629,7 @@ class npc_halion_controller : public CreatureScript
                 _instance->SetBossState(DATA_HALION, FAIL);
                 _summons.DespawnAll();
 
-                uint32 corpseDelay = me->GetCorpseDelay();
-                uint32 respawnDelay = me->GetRespawnDelay();
-
-                me->SetCorpseDelay(1);
-                me->SetRespawnDelay(30);
-
-                me->DespawnOrUnsummon();
-
-                me->SetCorpseDelay(corpseDelay);
-                me->SetRespawnDelay(respawnDelay);
+                me->DespawnOrUnsummon(0, 30s);
             }
 
             void DoAction(int32 action) override
@@ -693,14 +689,11 @@ class npc_halion_controller : public CreatureScript
 
             void UpdateAI(uint32 diff) override
             {
-                // The IsInCombat() check is needed because that check should be false when Halion is
+                // The IsEngaged() check is needed because that check should be false when Halion is
                 // not engaged, while it would return true without as UpdateVictim() checks for
                 // combat state.
-                if (!_events.IsInPhase(PHASE_INTRO) && me->IsInCombat() && !UpdateVictim())
-                {
-                    EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
+                if (me->IsEngaged() && !UpdateVictim())
                     return;
-                }
 
                 _events.Update(diff);
 
@@ -737,9 +730,10 @@ class npc_halion_controller : public CreatureScript
                                     twilightHalion->CastSpell((Unit*)nullptr, SPELL_TWILIGHT_MENDING, true);
                             break;
                         case EVENT_TRIGGER_BERSERK:
-                            for (uint8 i = DATA_HALION; i <= DATA_TWILIGHT_HALION; i++)
-                                if (Creature* halion = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(i)))
-                                    halion->CastSpell(halion, SPELL_BERSERK, true);
+                            if (Creature* halion = _instance->GetCreature(DATA_HALION))
+                                halion->CastSpell(halion, SPELL_BERSERK, true);
+                            if (Creature* halion = _instance->GetCreature(DATA_TWILIGHT_HALION))
+                                halion->CastSpell(halion, SPELL_BERSERK, true);
                             break;
                         case EVENT_SHADOW_PULSARS_SHOOT:
                             if (Creature* orbCarrier = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_ORB_CARRIER)))

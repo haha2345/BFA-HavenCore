@@ -98,9 +98,9 @@ class boss_echo_of_tyrande : public CreatureScript
                 Summons.DespawnAll();
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
-                _EnterCombat();
+                _JustEngagedWith();
 
                 PhaseCount = 0;
 
@@ -182,10 +182,10 @@ class boss_echo_of_tyrande : public CreatureScript
                         break;
                     case EVENT_STARDUST:
                     {
-                        ThreatContainer::StorageType threatlist = me->getThreatManager().getThreatList();
-                        for (ThreatContainer::StorageType::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
+                        std::vector<ThreatReference*> threatlist = me->GetThreatManager().GetModifiableThreatList();
+                        for (std::vector<ThreatReference*>::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
                         {
-                            if (Unit* unit = ObjectAccessor::GetUnit(*me, (*itr)->getUnitGuid()))
+                            if (Unit* unit = (*itr)->GetVictim())
                                 if (unit->IsPlayer())
                                     me->CastSpell(unit, SPELL_STARDUST, false);
                         }
@@ -193,7 +193,7 @@ class boss_echo_of_tyrande : public CreatureScript
                         break;
                     }
                     case EVENT_MOONLANCE:
-                        if (SelectTarget(SELECT_TARGET_FARTHEST, 0, 100.0f, true))
+                        if (SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 100.0f, true))
                         {
                             DoCastAOE(SPELL_MOONLANCE);
                             events.ScheduleEvent(EVENT_MOONLANCE, urand(4000, 8000));
@@ -252,7 +252,7 @@ class npc_moonlance_single : public CreatureScript
                 me->CastSpell(me, SPELL_MOONLANCE_AOE, true);
                 if (Creature* tyrande = GetClosestCreatureWithEntry(me, NPC_TYRANDE_ENTRY, 75.0f))
                 {
-                    if (Unit* target = tyrande->AI()->SelectTarget(SELECT_TARGET_FARTHEST, 0, 100.0f, true))
+                    if (Unit* target = tyrande->AI()->SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 100.0f, true))
                     {
                         float targetPosX = tyrande->GetPositionX();
                         float targetPosY = tyrande->GetPositionY();

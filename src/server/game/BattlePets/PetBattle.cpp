@@ -973,7 +973,7 @@ void PetBattle::Finish(uint32 winnerTeamID, bool aborted, bool ignoreAbandonPena
         if (player)
         {
             //TODO: update achievement criteria
-            //player->RemoveUnitFlags(UNIT_FLAG_IMMUNE_TO_NPC);
+            player->RemoveUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
 
             // Send battle result
             CombatResult = aborted ? PET_BATTLE_RESULT_ABANDON : currentTeamID == winnerTeamID ? PET_BATTLE_RESULT_WON : PET_BATTLE_RESULT_LOOSE;

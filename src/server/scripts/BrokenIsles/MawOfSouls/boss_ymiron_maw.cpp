@@ -105,11 +105,11 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /**/) override
+        void JustEngagedWith(Unit* /**/) override
         {
             Talk(SAY_AGGRO);
             me->RemoveAurasDueToSpell(SPELL_KNEELING);
-            _EnterCombat();
+            _JustEngagedWith();
             events.ScheduleEvent(EVENT_BANE, Seconds(23));
             events.ScheduleEvent(EVENT_DARK_SLASH, 3500);
             events.ScheduleEvent(EVENT_SCREAMS_OF_DEAD, Seconds(6));
@@ -201,7 +201,7 @@ public:
         npc_mos_risen_warrior_AI(Creature* creature) : ScriptedAI(creature)
         {}
 
-        void EnterCombat(Unit* /**/) override
+        void JustEngagedWith(Unit* /**/) override
         {
             DoCast(me, SPELL_VIGOR, true);
             _events.ScheduleEvent(EVENT_VIGOR, Seconds(6));
@@ -250,7 +250,7 @@ public:
         at_bane_essence_AI(AreaTrigger* at) : AreaTriggerAI(at)
         {}
 
-        void OnInitialize()
+        void OnInitialize() override
         {
             if (!at->GetCaster())
                 return;
@@ -401,7 +401,7 @@ public:
             }
         }
 
-        void Register()
+        void Register() override
         {
             OnEffectPeriodic += AuraEffectPeriodicFn(spell_ymiron_fallen_bane_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
         }

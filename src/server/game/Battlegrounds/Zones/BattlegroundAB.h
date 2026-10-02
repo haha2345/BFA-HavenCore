@@ -29,7 +29,11 @@ enum BG_AB_WorldStates
     BG_AB_OP_RESOURCES_ALLY             = 1776,
     BG_AB_OP_RESOURCES_HORDE            = 1777,
     BG_AB_OP_RESOURCES_MAX              = 1780,
-    BG_AB_OP_RESOURCES_WARNING          = 1955
+    BG_AB_OP_RESOURCES_WARNING          = 1955,
+    // BFA client WorldState IDs (8.x) — the new client reads these for the score display
+    BG_AB_OP_RESOURCES_ALLY_NEW         = 17311,
+    BG_AB_OP_RESOURCES_HORDE_NEW        = 17312,
+    BG_AB_OP_RESOURCES_MAX_NEW          = 17313
 /*
     BG_AB_OP_STABLE_ICON                = 1842,             //Stable map icon (NONE)
     BG_AB_OP_STABLE_STATE_ALIENCE       = 1767,             //Stable map state (ALIENCE)

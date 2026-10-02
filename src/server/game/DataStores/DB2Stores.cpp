@@ -414,9 +414,10 @@ namespace
 
     StorageMap _stores;
     DB2Manager::HotfixContainer _hotfixData;
-    // Keyed per locale: hotfix_blob carries one serialized record per client
-    // locale, and each session must be served its own language's bytes.
-    std::map<std::pair<uint32 /*tableHash*/, int32 /*recordId*/>, std::array<std::vector<uint8>, TOTAL_LOCALES>> _hotfixBlob;
+    // hotfix_blob rows are per locale: one blob per (tableHash, recordId, locale).
+    // Keying without the locale let the last loaded locale (e.g. zhTW) overwrite
+    // every other one, so all clients received that locale's text.
+    std::array<std::map<std::pair<uint32 /*tableHash*/, int32 /*recordId*/>, std::vector<uint8>>, TOTAL_LOCALES> _hotfixBlob;
 
     AreaGroupMemberContainer _areaGroupMembers;
     ArtifactPowersContainer _artifactPowers;
@@ -1565,7 +1566,15 @@ void DB2Manager::LoadHotfixData()
         uint32 tableHash = fields[1].GetUInt32();
         int32 recordId = fields[2].GetInt32();
         bool deleted = fields[3].GetBool();
-        if (!deleted && _stores.find(tableHash) == _stores.end() && _hotfixBlob.find(std::make_pair(tableHash, recordId)) == _hotfixBlob.end())
+        auto hasHotfixBlob = [tableHash, recordId]()
+        {
+            for (auto const& localeBlobs : _hotfixBlob)
+                if (localeBlobs.find(std::make_pair(tableHash, recordId)) != localeBlobs.end())
+                    return true;
+            return false;
+        };
+
+        if (!deleted && _stores.find(tableHash) == _stores.end() && !hasHotfixBlob())
         {
             TC_LOG_ERROR("sql.sql", "Table `hotfix_data` references unknown DB2 store by hash 0x%X and has no reference to `hotfix_blob` in hotfix id %d with RecordID: %d", tableHash, id, recordId);
             continue;
@@ -1592,9 +1601,10 @@ void DB2Manager::LoadHotfixData()
 void DB2Manager::LoadHotfixBlob()
 {
     uint32 oldMSTime = getMSTime();
-    _hotfixBlob.clear();
+    for (auto& localeBlobs : _hotfixBlob)
+        localeBlobs.clear();
 
-    QueryResult result = HotfixDatabase.Query("SELECT TableHash, RecordId, locale, `Blob` FROM hotfix_blob ORDER BY TableHash");
+    QueryResult result = HotfixDatabase.Query("SELECT TableHash, RecordId, `Blob`, locale FROM hotfix_blob ORDER BY TableHash");
 
     if (!result)
     {
@@ -1602,8 +1612,6 @@ void DB2Manager::LoadHotfixBlob()
         return;
     }
 
-    // Without the locale column every row of the same record overwrote one
-    // slot, so all clients received whichever locale sorted last (zhTW).
     uint32 count = 0;
     do
     {
@@ -1619,15 +1627,16 @@ void DB2Manager::LoadHotfixBlob()
         }
 
         int32 recordId = fields[1].GetInt32();
-        std::string localeName = fields[2].GetString();
+        std::string localeName = fields[3].GetString();
         LocaleConstant locale = GetLocaleByName(localeName);
-        if (!IsValidLocale(locale))
+        if (locale >= TOTAL_LOCALES || (locale == LOCALE_enUS && localeName != "enUS"))
         {
-            TC_LOG_ERROR("server.loading", "`hotfix_blob` contains unknown locale %s for TableHash 0x%X and RecordId %d", localeName.c_str(), tableHash, recordId);
+            TC_LOG_ERROR("sql.sql", "Table `hotfix_blob` has invalid locale '%s' for table hash 0x%X, record %d, skipped.",
+                localeName.c_str(), tableHash, recordId);
             continue;
         }
 
-        _hotfixBlob[std::make_pair(tableHash, recordId)][locale] = fields[3].GetBinary();
+        _hotfixBlob[locale][std::make_pair(tableHash, recordId)] = fields[2].GetBinary();
         ++count;
     } while (result->NextRow());
 
@@ -1646,18 +1655,13 @@ DB2Manager::HotfixContainer const& DB2Manager::GetHotfixData() const
 
 std::vector<uint8> const* DB2Manager::GetHotfixBlobData(uint32 tableHash, int32 recordId, LocaleConstant locale)
 {
-    auto const* entry = Trinity::Containers::MapGetValuePtr(_hotfixBlob, std::make_pair(tableHash, recordId));
-    if (!entry)
-        return nullptr;
+    // The client's own locale first, enUS as the fallback (the same rule as the
+    // normal DB2 WriteRecord path).
+    if (locale < TOTAL_LOCALES)
+        if (std::vector<uint8> const* blob = Trinity::Containers::MapGetValuePtr(_hotfixBlob[locale], std::make_pair(tableHash, recordId)))
+            return blob;
 
-    if (IsValidLocale(locale) && !(*entry)[locale].empty())
-        return &(*entry)[locale];
-
-    // Community hotfixes may ship fewer locales than the client supports.
-    if (!(*entry)[DEFAULT_LOCALE].empty())
-        return &(*entry)[DEFAULT_LOCALE];
-
-    return nullptr;
+    return Trinity::Containers::MapGetValuePtr(_hotfixBlob[LOCALE_enUS], std::make_pair(tableHash, recordId));
 }
 
 uint32 DB2Manager::GetEmptyAnimStateID() const

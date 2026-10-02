@@ -171,7 +171,7 @@ struct npc_captains_controller : public ScriptedAI
         Initialize();
     }
     
-     void DoAction(int32 action)
+     void DoAction(int32 action) override
     {
         switch (action)
         {
@@ -303,7 +303,7 @@ struct boss_council_captain : public BossAI
         me->AddUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
         me->InterruptNonMeleeSpells(true);
         me->SetReactState(ReactStates::REACT_PASSIVE);
-        me->DeleteThreatList();
+        me->GetThreatManager().ClearAllThreat();
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MoveTargetedHome();
 
@@ -320,7 +320,7 @@ struct boss_council_captain : public BossAI
         Reset();
     }
 
-    void EnterCombat(Unit* /*unit*/) override
+    void JustEngagedWith(Unit* /*unit*/) override
     {
         if (instance)
         {
@@ -334,7 +334,7 @@ struct boss_council_captain : public BossAI
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me, 1);
         }
         me->setActive(true);
-        CaptainEnterCombat();
+        CaptainJustEngagedWith();
         if (IsFreeholdHeroicPlus(me->GetMap()))
         {
             if (Creature* rummy = me->FindNearestCreature(uint32(FreeholdCreature::NpcRummyMancomb), 80.f))
@@ -660,7 +660,7 @@ private:
         }
     }
 
-    void CaptainEnterCombat()
+    void CaptainJustEngagedWith()
     {
         if (Creature* jolly = m_Instance->instance->GetCreature(m_Instance->GetGuidData(FreeholdCreature::NpcCaptainJolly)))
         {
@@ -823,7 +823,7 @@ private:
             me->InterruptNonMeleeSpells(true, brewId, true);
         me->SetReactState(REACT_PASSIVE);
         me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
-        me->DeleteThreatList();
+        me->GetThreatManager().ClearAllThreat();
     }
 
     bool brewStarted;
@@ -1004,7 +1004,7 @@ struct npc_freehold_crew_knuckleduster : public ScriptedAI
 {
     npc_freehold_crew_knuckleduster(Creature* creature) : ScriptedAI(creature) { }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         for (uint8 i = 0; i < 4; ++i)
             me->SummonCreature(uint32(FreeholdCreature::NpcBlacktoothKnuckleduster), me->GetRandomNearPosition(5.0f), TEMPSUMMON_CORPSE_DESPAWN);
