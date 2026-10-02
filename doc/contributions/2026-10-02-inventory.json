@@ -76,7 +76,8 @@
         "notification routing assertion",
         "obsolete exact version assertion (2.0.0 vs 2.0.5)",
         "Echoing Void UI wording assertion"
-      ]
+      ],
+      "relevance": "Optional fork tooling only; not evidence for server mechanics and not an upstream acceptance gate."
     },
     "integrated_server_build": "in_progress; initial compile found obsolete HostileRefManager API in labdummy and it was removed",
     "gameplay": "Not performed in this contribution session."
@@ -84,8 +85,8 @@
   "categories": [
     {
       "category": "HavenLab",
-      "status": "pending_offline_failures",
-      "note": "Existing offline checks: 66 pass, 3 fail; those results are not gameplay acceptance.",
+      "status": "fork_only",
+      "note": "Optional client addon and accompanying .lab debug commands. Excluded from upstream server contributions as requested. Offline results do not gate production-server fixes.",
       "files": [
         {
           "path": "addons/HavenLab/Bindings.xml",
@@ -2543,5 +2544,12 @@
     "build/",
     "ClientData and credentials"
   ],
-  "no_deployment": "No server was started and no live database migration was executed."
+  "no_deployment": "No server was started and no live database migration was executed.",
+  "upstream_exclusions": [
+    "HavenLab client addon",
+    "HavenLab .lab debug commands",
+    "internal research and progress documents",
+    "local database isolation tools",
+    "fixed-GUID migrations until made portable"
+  ]
 }
