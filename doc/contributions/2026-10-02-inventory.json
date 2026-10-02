@@ -1,0 +1,2547 @@
+{
+  "date": "2026-10-02",
+  "upstream_repository": "HavenWoW/BFA-HavenCore",
+  "fork_repository": "haha2345/BFA-HavenCore",
+  "upstream_base": "c79b7808b9544b9ee18050bbd4ada7a0bcabeb7b",
+  "original_branch": "endgame/char-stats",
+  "integration_branch": "integration/upstream-2026-10-02",
+  "scope": "Preserved historical commits and classified local changes; contribution readiness is tracked separately from preservation.",
+  "original_authors": [
+    {
+      "author": "haha2345 <woden3702@gmail.com>",
+      "commits": 138
+    },
+    {
+      "author": "bathfire <>",
+      "commits": 13
+    }
+  ],
+  "already_addressed_upstream": [
+    {
+      "feature": "MapManager instance ID storage initialization",
+      "upstream_commit": "a2f7b79",
+      "action": "Use upstream implementation; no duplicate PR."
+    },
+    {
+      "feature": "MSVC UTF-8 source settings",
+      "upstream_commit": "cfeab19",
+      "action": "Use upstream compile interface; no duplicate PR."
+    },
+    {
+      "feature": "Locale-specific hotfix blobs",
+      "action": "Use upstream locale-aware storage and enUS fallback; no duplicate PR."
+    }
+  ],
+  "upstream_pull_requests": [
+    {
+      "number": 638,
+      "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/638",
+      "branch": "contrib/areatrigger-remove-once",
+      "state": "ready_for_review",
+      "scope": "one AreaTrigger callback per removal",
+      "source_commit": "5cf907c",
+      "attribution": "bathfire preserved"
+    },
+    {
+      "number": 639,
+      "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/639",
+      "branch": "contrib/caster-autoattack-modifier",
+      "state": "draft",
+      "scope": "caster-specific aura 343 autoattack multiplier",
+      "remaining": "Verify ranged applicability and actual damage observations."
+    },
+    {
+      "number": 640,
+      "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/640",
+      "branch": "contrib/absorb-taken-owner",
+      "state": "ready_for_review",
+      "scope": "recipient-side aura 422 modifier for absorbs",
+      "source_commit": "8dde9ab",
+      "attribution": "original author and Cursor co-author preserved"
+    }
+  ],
+  "validation": {
+    "area_trigger_method_harness": {
+      "before": "fail: two callbacks",
+      "after": "pass: once, repeated removal, out-of-world, null AI"
+    },
+    "absorb_method_harness": {
+      "before": "fail: recipient -50% gives 1000 rather than 500",
+      "after": "pass: recipient/caster separation, combined modifiers, mana shield, null guards"
+    },
+    "havenlab_offline": {
+      "pass": 66,
+      "fail": 3,
+      "failures": [
+        "notification routing assertion",
+        "obsolete exact version assertion (2.0.0 vs 2.0.5)",
+        "Echoing Void UI wording assertion"
+      ]
+    },
+    "integrated_server_build": "in_progress; initial compile found obsolete HostileRefManager API in labdummy and it was removed",
+    "gameplay": "Not performed in this contribution session."
+  },
+  "categories": [
+    {
+      "category": "HavenLab",
+      "status": "pending_offline_failures",
+      "note": "Existing offline checks: 66 pass, 3 fail; those results are not gameplay acceptance.",
+      "files": [
+        {
+          "path": "addons/HavenLab/Bindings.xml",
+          "category": "HavenLab",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "addons/HavenLab/HavenLab.lua",
+          "category": "HavenLab",
+          "added": "838",
+          "removed": "0"
+        },
+        {
+          "path": "addons/HavenLab/HavenLab.toc",
+          "category": "HavenLab",
+          "added": "12",
+          "removed": "0"
+        },
+        {
+          "path": "addons/HavenLab/HavenLab_Packs.lua",
+          "category": "HavenLab",
+          "added": "8913",
+          "removed": "0"
+        },
+        {
+          "path": "addons/HavenLab/HavenLab_Track.lua",
+          "category": "HavenLab",
+          "added": "611",
+          "removed": "0"
+        },
+        {
+          "path": "addons/HavenLab/HavenLab_UI.lua",
+          "category": "HavenLab",
+          "added": "839",
+          "removed": "0"
+        },
+        {
+          "path": "addons/HavenLab/HavenLab_Verdict.lua",
+          "category": "HavenLab",
+          "added": "612",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_01_world_havenlab_unscaled_dummy.sql",
+          "category": "HavenLab",
+          "added": "31",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Commands/cs_misc.cpp",
+          "category": "HavenLab",
+          "added": "603",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "azerite",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_10_09_world_az_spell_script_names.sql",
+          "category": "azerite",
+          "added": "15",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_10_10_world_az_seismic_wave_human_test.sql",
+          "category": "azerite",
+          "added": "10",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_10_11_world_az_concentrated_flame_human_test.sql",
+          "category": "azerite",
+          "added": "14",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_azerite.cpp",
+          "category": "azerite",
+          "added": "212",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "class-dh",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_07_04_world_dh_c_spell_script_names.sql",
+          "category": "class-dh",
+          "added": "5",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_05_world_dh_havoc_spell_script_names.sql",
+          "category": "class-dh",
+          "added": "35",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_06_world_dh_veng_spell_script_names.sql",
+          "category": "class-dh",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_dh.cpp",
+          "category": "class-dh",
+          "added": "213",
+          "removed": "122"
+        }
+      ]
+    },
+    {
+      "category": "class-dk",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_06_03_world_dk_c_spell_script_names.sql",
+          "category": "class-dk",
+          "added": "17",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_06_04_world_dk_frost_spell_script_names.sql",
+          "category": "class-dk",
+          "added": "21",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_06_05_world_dk_unholy_spell_script_names.sql",
+          "category": "class-dk",
+          "added": "20",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_dk.cpp",
+          "category": "class-dk",
+          "added": "412",
+          "removed": "268"
+        }
+      ]
+    },
+    {
+      "category": "class-druid",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_09_15_world_dru_c_spell_script_names.sql",
+          "category": "class-druid",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_09_16_world_dru_bal_spell_script_names.sql",
+          "category": "class-druid",
+          "added": "13",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_09_17_world_dru_feral_spell_script_names.sql",
+          "category": "class-druid",
+          "added": "10",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_09_18_world_dru_guard_spell_script_names.sql",
+          "category": "class-druid",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_09_19_world_dru_resto_spell_script_names.sql",
+          "category": "class-druid",
+          "added": "6",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_druid.cpp",
+          "category": "class-druid",
+          "added": "651",
+          "removed": "215"
+        }
+      ]
+    },
+    {
+      "category": "class-hunter",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_07_07_world_hun_c_spell_script_names.sql",
+          "category": "class-hunter",
+          "added": "5",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_08_world_hun_mm_spell_script_names.sql",
+          "category": "class-hunter",
+          "added": "20",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_09_world_hun_sv_spell_script_names.sql",
+          "category": "class-hunter",
+          "added": "35",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_10_world_hun_bm_spell_script_names.sql",
+          "category": "class-hunter",
+          "added": "6",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_hunter.cpp",
+          "category": "class-hunter",
+          "added": "567",
+          "removed": "261"
+        }
+      ]
+    },
+    {
+      "category": "class-mage",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_08_00_world_mag_c_spell_script_names.sql",
+          "category": "class-mage",
+          "added": "4",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_08_01_world_mag_arcane_spell_script_names.sql",
+          "category": "class-mage",
+          "added": "30",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_08_02_world_mag_fire_spell_script_names.sql",
+          "category": "class-mage",
+          "added": "16",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_08_03_world_mag_frost_spell_script_names.sql",
+          "category": "class-mage",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_mage.cpp",
+          "category": "class-mage",
+          "added": "558",
+          "removed": "63"
+        }
+      ]
+    },
+    {
+      "category": "class-monk",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_07_15_world_mon_c_spell_script_names.sql",
+          "category": "class-monk",
+          "added": "21",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_16_world_mon_brew_spell_script_names.sql",
+          "category": "class-monk",
+          "added": "15",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_17_world_mon_ww_spell_script_names.sql",
+          "category": "class-monk",
+          "added": "34",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_18_world_mon_mw_spell_script_names.sql",
+          "category": "class-monk",
+          "added": "32",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_monk.cpp",
+          "category": "class-monk",
+          "added": "882",
+          "removed": "230"
+        }
+      ]
+    },
+    {
+      "category": "class-paladin",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_07_00_world_pal_c_spell_script_names.sql",
+          "category": "class-paladin",
+          "added": "12",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_01_world_pal_holy_spell_script_names.sql",
+          "category": "class-paladin",
+          "added": "12",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_02_world_pal_prot_spell_script_names.sql",
+          "category": "class-paladin",
+          "added": "10",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_03_world_pal_ret_spell_script_names.sql",
+          "category": "class-paladin",
+          "added": "10",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_paladin.cpp",
+          "category": "class-paladin",
+          "added": "508",
+          "removed": "251"
+        }
+      ]
+    },
+    {
+      "category": "class-priest",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_08_04_world_pri_c_spell_script_names.sql",
+          "category": "class-priest",
+          "added": "5",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_08_05_world_pri_disc_spell_script_names.sql",
+          "category": "class-priest",
+          "added": "10",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_08_06_world_pri_holy_spell_script_names.sql",
+          "category": "class-priest",
+          "added": "30",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_08_07_world_pri_shadow_spell_script_names.sql",
+          "category": "class-priest",
+          "added": "18",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_priest.cpp",
+          "category": "class-priest",
+          "added": "588",
+          "removed": "130"
+        }
+      ]
+    },
+    {
+      "category": "class-rogue",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_07_11_world_rog_c_spell_script_names.sql",
+          "category": "class-rogue",
+          "added": "4",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_12_world_rog_assa_spell_script_names.sql",
+          "category": "class-rogue",
+          "added": "31",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_13_world_rog_outlaw_spell_script_names.sql",
+          "category": "class-rogue",
+          "added": "22",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_07_14_world_rog_sub_spell_script_names.sql",
+          "category": "class-rogue",
+          "added": "13",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_rogue.cpp",
+          "category": "class-rogue",
+          "added": "617",
+          "removed": "199"
+        }
+      ]
+    },
+    {
+      "category": "class-shaman",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_09_11_world_sha_c_spell_script_names.sql",
+          "category": "class-shaman",
+          "added": "6",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_09_12_world_sha_ele_spell_script_names.sql",
+          "category": "class-shaman",
+          "added": "11",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_09_13_world_sha_enh_spell_script_names.sql",
+          "category": "class-shaman",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_09_14_world_sha_resto_spell_script_names.sql",
+          "category": "class-shaman",
+          "added": "11",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_shaman.cpp",
+          "category": "class-shaman",
+          "added": "488",
+          "removed": "167"
+        }
+      ]
+    },
+    {
+      "category": "class-warlock",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_09_08_world_wl_c_spell_script_names.sql",
+          "category": "class-warlock",
+          "added": "11",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_09_09_world_wl_aff_spell_script_names.sql",
+          "category": "class-warlock",
+          "added": "5",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_09_10_world_wl_destro_spell_script_names.sql",
+          "category": "class-warlock",
+          "added": "10",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_warlock.cpp",
+          "category": "class-warlock",
+          "added": "128",
+          "removed": "146"
+        }
+      ]
+    },
+    {
+      "category": "class-warrior",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_05_60_world_arms_warrior_spell_script_names.sql",
+          "category": "class-warrior",
+          "added": "20",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_06_00_world_intimidating_shout_script.sql",
+          "category": "class-warrior",
+          "added": "4",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_06_01_world_fury_warrior_spell_script_names.sql",
+          "category": "class-warrior",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_06_02_world_prot_warrior_spell_script_names.sql",
+          "category": "class-warrior",
+          "added": "4",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_warrior.cpp",
+          "category": "class-warrior",
+          "added": "521",
+          "removed": "97"
+        }
+      ]
+    },
+    {
+      "category": "core-requires-hunk-split",
+      "status": "partially_submitted",
+      "note": "Shared files require hunk-level separation; three small fixes have dedicated PRs.",
+      "files": [
+        {
+          "path": "src/server/game/DataStores/DB2LoadInfo.h",
+          "category": "core-requires-hunk-split",
+          "added": "47",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/DataStores/DB2Stores.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "478",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/DataStores/DB2Stores.h",
+          "category": "core-requires-hunk-split",
+          "added": "10",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/DataStores/DB2Structure.h",
+          "category": "core-requires-hunk-split",
+          "added": "28",
+          "removed": "10"
+        },
+        {
+          "path": "src/server/game/Entities/AreaTrigger/AreaTrigger.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "0",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/game/Entities/Creature/GossipDef.h",
+          "category": "core-requires-hunk-split",
+          "added": "2",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Entities/Item/Item.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "13",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Entities/Item/Item.h",
+          "category": "core-requires-hunk-split",
+          "added": "1",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Entities/Player/Player.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "89",
+          "removed": "6"
+        },
+        {
+          "path": "src/server/game/Entities/Player/Player.h",
+          "category": "core-requires-hunk-split",
+          "added": "1",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Entities/Unit/StatSystem.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "23",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Entities/Unit/Unit.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "55",
+          "removed": "8"
+        },
+        {
+          "path": "src/server/game/Entities/Unit/Unit.h",
+          "category": "core-requires-hunk-split",
+          "added": "1",
+          "removed": "1"
+        },
+        {
+          "path": "src/server/game/Events/GameEventMgr.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "67",
+          "removed": "1"
+        },
+        {
+          "path": "src/server/game/Events/GameEventMgr.h",
+          "category": "core-requires-hunk-split",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Handlers/ItemHandler.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "127",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Handlers/MiscHandler.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "12",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/game/Loot/Loot.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "1",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Maps/MapManager.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "1",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Miscellaneous/MotherContaminantData.h",
+          "category": "core-requires-hunk-split",
+          "added": "87",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Miscellaneous/SharedDefines.h",
+          "category": "core-requires-hunk-split",
+          "added": "12",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Server/Packets/AllPackets.h",
+          "category": "core-requires-hunk-split",
+          "added": "1",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Server/Packets/ItemInteractionPackets.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "37",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Server/Packets/ItemInteractionPackets.h",
+          "category": "core-requires-hunk-split",
+          "added": "60",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Server/Protocol/Opcodes.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "3",
+          "removed": "3"
+        },
+        {
+          "path": "src/server/game/Server/WorldSession.h",
+          "category": "core-requires-hunk-split",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Spells/Auras/SpellAuraDefines.h",
+          "category": "core-requires-hunk-split",
+          "added": "2",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/game/Spells/Auras/SpellAuraEffects.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "30",
+          "removed": "7"
+        },
+        {
+          "path": "src/server/game/Spells/Auras/SpellAuraEffects.h",
+          "category": "core-requires-hunk-split",
+          "added": "2",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Spells/Spell.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "97",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Spells/Spell.h",
+          "category": "core-requires-hunk-split",
+          "added": "27",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Spells/SpellEffects.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "74",
+          "removed": "1"
+        },
+        {
+          "path": "src/server/game/Spells/SpellHistory.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "40",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Spells/SpellHistory.h",
+          "category": "core-requires-hunk-split",
+          "added": "1",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Spells/SpellInfo.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "1",
+          "removed": "1"
+        },
+        {
+          "path": "src/server/game/Spells/SpellMgr.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "34",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/World/World.cpp",
+          "category": "core-requires-hunk-split",
+          "added": "18",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/World/World.h",
+          "category": "core-requires-hunk-split",
+          "added": "11",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/worldserver/worldserver.conf.dist",
+          "category": "core-requires-hunk-split",
+          "added": "37",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "corruption-and-item-bonuses",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/hotfixes/2026_08_29_00_hotfix_item_bonus_list_group_entry.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "13",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/hotfixes/2026_08_30_00_ui_item_interaction.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "33",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/hotfixes/2026_08_30_01_mother_contaminant_item_names.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "78",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/hotfixes/2026_08_30_02_mother_hotfix_tablehash.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "12",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_24_00_world_corruption_infinite_stars.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "12",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_24_01_world_corruption_infinite_stars_proc.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "4",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_25_00_world_corruption_twilight_devastation.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_25_01_world_corruption_twilight_beam.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "20",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_26_00_world_corruption_twilight_beam_spline.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_26_01_world_corruption_twilight_at_id.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "11",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_26_02_world_corruption_echoing_void.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "49",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_00_world_corruption_twisted_appendage.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "13",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_04_world_corruption_void_ritual.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_05_world_corruption_strikethrough.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "10",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_06_world_corruption_racing_pulse.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_07_world_corruption_honed_mind.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_08_world_corruption_deadly_momentum.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_09_world_corruption_surging_vitality.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_10_world_corruption_gushing_wound.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_11_world_corruption_glimpse_of_clarity.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_12_world_corruption_ineffable_truth.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_13_world_corruption_grasping_tendrils.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_14_world_corruption_eye_of_corruption.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_15_world_corruption_grand_delusions.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_16_world_corruption_real_gear.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "36",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_28_00_world_corruption_eye_pulse.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_28_01_world_corruption_delusion.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_00_world_corruption_bad_effect_damage.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_01_world_corruption_inescapable_consequences.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_02_world_corruption_inevitable_doom.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_03_world_corruption_thing_faction.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_04_world_corruption_devour_vitality.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_05_world_corruption_flash_of_insight.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_06_world_corruption_whispered_truths.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "6",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_07_world_corruption_lash_of_the_void.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_08_world_corruption_searing_flames.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "50",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_09_world_corruption_obsidian_skin.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_29_10_world_corruption_thing_model.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_00_mother_contaminants_vendor.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "114",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_01_mother_titanic_purification_gossip.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "14",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_20_mother_zhcn_gossip_vendor_sort.sql",
+          "category": "corruption-and-item-bonuses",
+          "added": "97",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/database/Database/Implementation/HotfixDatabase.cpp",
+          "category": "corruption-and-item-bonuses",
+          "added": "11",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/database/Database/Implementation/HotfixDatabase.h",
+          "category": "corruption-and-item-bonuses",
+          "added": "5",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Custom/npc_mother_chamber_of_heart.cpp",
+          "category": "corruption-and-item-bonuses",
+          "added": "99",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_corruption.cpp",
+          "category": "corruption-and-item-bonuses",
+          "added": "4380",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-AtalDazar",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_31_27_world_ataldazar_ancient_switch.sql",
+          "category": "dungeon-AtalDazar",
+          "added": "2",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/AtalDazar/atal_dazar.h",
+          "category": "dungeon-AtalDazar",
+          "added": "18",
+          "removed": "6"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/AtalDazar/boss_priestess_alunza.cpp",
+          "category": "dungeon-AtalDazar",
+          "added": "2",
+          "removed": "17"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/AtalDazar/boss_rezan.cpp",
+          "category": "dungeon-AtalDazar",
+          "added": "1",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/AtalDazar/boss_volkaal.cpp",
+          "category": "dungeon-AtalDazar",
+          "added": "3",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/AtalDazar/boss_yazma.cpp",
+          "category": "dungeon-AtalDazar",
+          "added": "3",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/AtalDazar/instance_atal_dazar.cpp",
+          "category": "dungeon-AtalDazar",
+          "added": "5",
+          "removed": "22"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-FreeHold",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_30_10_world_freehold_crew_spawns.sql",
+          "category": "dungeon-FreeHold",
+          "added": "15",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_11_world_freehold_crew_scriptnames.sql",
+          "category": "dungeon-FreeHold",
+          "added": "11",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_12_world_freehold_kragg_sharkbait.sql",
+          "category": "dungeon-FreeHold",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_13_world_freehold_trothak_vehicle.sql",
+          "category": "dungeon-FreeHold",
+          "added": "14",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_14_world_freehold_harlan_text.sql",
+          "category": "dungeon-FreeHold",
+          "added": "16",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_15_world_freehold_loot_cleanup.sql",
+          "category": "dungeon-FreeHold",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_16_world_freehold_council_chest.sql",
+          "category": "dungeon-FreeHold",
+          "added": "14",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_17_world_freehold_journal.sql",
+          "category": "dungeon-FreeHold",
+          "added": "10",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_19_world_freehold_council_text.sql",
+          "category": "dungeon-FreeHold",
+          "added": "15",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_30_21_world_freehold_crew_week.sql",
+          "category": "dungeon-FreeHold",
+          "added": "36",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_08_00_world_freehold_wcl_dummy_scripts.sql",
+          "category": "dungeon-FreeHold",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/FreeHold/boss_council_o_captains.cpp",
+          "category": "dungeon-FreeHold",
+          "added": "350",
+          "removed": "81"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/FreeHold/boss_harlan_sweete.cpp",
+          "category": "dungeon-FreeHold",
+          "added": "10",
+          "removed": "1"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/FreeHold/boss_ring_of_booty.cpp",
+          "category": "dungeon-FreeHold",
+          "added": "50",
+          "removed": "7"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/FreeHold/boss_skycapn_kragg.cpp",
+          "category": "dungeon-FreeHold",
+          "added": "102",
+          "removed": "16"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/FreeHold/freehold.cpp",
+          "category": "dungeon-FreeHold",
+          "added": "10",
+          "removed": "6"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/FreeHold/freehold.h",
+          "category": "dungeon-FreeHold",
+          "added": "43",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/FreeHold/instance_freehold.cpp",
+          "category": "dungeon-FreeHold",
+          "added": "267",
+          "removed": "30"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-King's Rest",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_31_32_world_kingsrest_instance_encounters.sql",
+          "category": "dungeon-King's Rest",
+          "added": "6",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/King's Rest/boss_council_of_tribe.cpp",
+          "category": "dungeon-King's Rest",
+          "added": "1",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/King's Rest/boss_dazar.cpp",
+          "category": "dungeon-King's Rest",
+          "added": "5",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/King's Rest/boss_mchimba.cpp",
+          "category": "dungeon-King's Rest",
+          "added": "2",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/King's Rest/boss_the_golden_serpent.cpp",
+          "category": "dungeon-King's Rest",
+          "added": "6",
+          "removed": "1"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/King's Rest/instance_kings_rest.cpp",
+          "category": "dungeon-King's Rest",
+          "added": "13",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/King's Rest/kings_rest.h",
+          "category": "dungeon-King's Rest",
+          "added": "13",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-Operation Mechagon",
+      "status": "pending_portability_and_gameplay",
+      "note": "Static spawn GUIDs and local population guards must be made portable; paired runtime loading and lifecycle checks are pending.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_31_37_world_mechagon_instance_encounters.sql",
+          "category": "dungeon-Operation Mechagon",
+          "added": "3",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_31_38_world_mechagon_scriptname.sql",
+          "category": "dungeon-Operation Mechagon",
+          "added": "2",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_31_39_world_mechagon_king_id.sql",
+          "category": "dungeon-Operation Mechagon",
+          "added": "2",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_31_40_world_mechagon_dup_spawn.sql",
+          "category": "dungeon-Operation Mechagon",
+          "added": "2",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_31_41_world_mechagon_hk8_gunker_static.sql",
+          "category": "dungeon-Operation Mechagon",
+          "added": "2",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_24_71_world_gunker_squirt_static_ai.sql",
+          "category": "dungeon-Operation Mechagon",
+          "added": "42",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_30_80_world_gunker_bot_rescue_binding.sql",
+          "category": "dungeon-Operation Mechagon",
+          "added": "233",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_10_01_81_world_gunker_player_goop_binding.sql",
+          "category": "dungeon-Operation Mechagon",
+          "added": "483",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/boss_gunker.cpp",
+          "category": "dungeon-Operation Mechagon",
+          "added": "2005",
+          "removed": "50"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/boss_head_machinist_sparkflux.cpp",
+          "category": "dungeon-Operation Mechagon",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/boss_hk_8_aerial_opression_unit.cpp",
+          "category": "dungeon-Operation Mechagon",
+          "added": "5",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/boss_king_gobbamak.cpp",
+          "category": "dungeon-Operation Mechagon",
+          "added": "6",
+          "removed": "10"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/boss_king_of_mechagon.cpp",
+          "category": "dungeon-Operation Mechagon",
+          "added": "9",
+          "removed": "4"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/boss_kujo.cpp",
+          "category": "dungeon-Operation Mechagon",
+          "added": "6",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/boss_trixie_naeno.cpp",
+          "category": "dungeon-Operation Mechagon",
+          "added": "17",
+          "removed": "10"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/boss_tusle_tonks.cpp",
+          "category": "dungeon-Operation Mechagon",
+          "added": "5",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/instance_mechagon.cpp",
+          "category": "dungeon-Operation Mechagon",
+          "added": "160",
+          "removed": "25"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/operation_mechagon.h",
+          "category": "dungeon-Operation Mechagon",
+          "added": "26",
+          "removed": "10"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/Operation Mechagon/squirt_lifecycle.h",
+          "category": "dungeon-Operation Mechagon",
+          "added": "275",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-ShrineOfTheStorm",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "src/server/scripts/KulTiras/ShrineOfTheStorm/boss_aqusirr.cpp",
+          "category": "dungeon-ShrineOfTheStorm",
+          "added": "6",
+          "removed": "4"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/ShrineOfTheStorm/boss_lord_stormsong.cpp",
+          "category": "dungeon-ShrineOfTheStorm",
+          "added": "5",
+          "removed": "4"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/ShrineOfTheStorm/boss_tidesage_council.cpp",
+          "category": "dungeon-ShrineOfTheStorm",
+          "added": "34",
+          "removed": "31"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/ShrineOfTheStorm/boss_volzith_the_whisperer.cpp",
+          "category": "dungeon-ShrineOfTheStorm",
+          "added": "31",
+          "removed": "36"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/ShrineOfTheStorm/instance_shrine_of_the_storm.cpp",
+          "category": "dungeon-ShrineOfTheStorm",
+          "added": "2",
+          "removed": "1"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/ShrineOfTheStorm/shrine_of_the_storm.h",
+          "category": "dungeon-ShrineOfTheStorm",
+          "added": "12",
+          "removed": "1"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-SiegeOfBoralus",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_31_33_world_siege_of_boralus_instance_encounters.sql",
+          "category": "dungeon-SiegeOfBoralus",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_31_34_world_siege_of_boralus_scriptname.sql",
+          "category": "dungeon-SiegeOfBoralus",
+          "added": "4",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_31_36_world_siege_of_boralus_cannon_gossip.sql",
+          "category": "dungeon-SiegeOfBoralus",
+          "added": "2",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/SiegeOfBoralus/boss_chopper_redhook.cpp",
+          "category": "dungeon-SiegeOfBoralus",
+          "added": "84",
+          "removed": "6"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/SiegeOfBoralus/boss_dread_captain_lockwood.cpp",
+          "category": "dungeon-SiegeOfBoralus",
+          "added": "6",
+          "removed": "10"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/SiegeOfBoralus/boss_hadal_darkfathom.cpp",
+          "category": "dungeon-SiegeOfBoralus",
+          "added": "12",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/SiegeOfBoralus/boss_viqgoth.cpp",
+          "category": "dungeon-SiegeOfBoralus",
+          "added": "25",
+          "removed": "6"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/SiegeOfBoralus/siege_of_boralus.h",
+          "category": "dungeon-SiegeOfBoralus",
+          "added": "16",
+          "removed": "5"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-TempleOfSethraliss",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_31_23_world_sethraliss_galvazzt_spawn.sql",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "4",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_31_24_world_sethraliss_heart_fragment.sql",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "3",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_31_25_world_sethraliss_taint_scriptname.sql",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "5",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_47_world_sethraliss_marksman_273563.sql",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "14",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_48_world_sethraliss_tender_267237.sql",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "14",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_49_world_sethraliss_incubator_273995.sql",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "14",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_50_world_sethraliss_aspix_loot.sql",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "17",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_51_world_sethraliss_galvazzt_loot.sql",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "13",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TempleOfSethraliss/boss_adderis_and_aspix.cpp",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "27",
+          "removed": "31"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TempleOfSethraliss/boss_avatar_of_sethraliss.cpp",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "131",
+          "removed": "51"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TempleOfSethraliss/boss_galvazzt.cpp",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "62",
+          "removed": "15"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TempleOfSethraliss/boss_merektha.cpp",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "16",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TempleOfSethraliss/instance_temple_of_sethraliss.cpp",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "40",
+          "removed": "4"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TempleOfSethraliss/temple_of_sethraliss.h",
+          "category": "dungeon-TempleOfSethraliss",
+          "added": "17",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-TheMotherlode",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_31_30_world_motherlode_scriptname.sql",
+          "category": "dungeon-TheMotherlode",
+          "added": "5",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_31_31_world_motherlode_spell_script_names.sql",
+          "category": "dungeon-TheMotherlode",
+          "added": "6",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheMotherlode/boss_azerokk.cpp",
+          "category": "dungeon-TheMotherlode",
+          "added": "10",
+          "removed": "7"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheMotherlode/boss_coin_operated_crowd_pummeler.cpp",
+          "category": "dungeon-TheMotherlode",
+          "added": "9",
+          "removed": "3"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheMotherlode/boss_mogulrazdunk.cpp",
+          "category": "dungeon-TheMotherlode",
+          "added": "21",
+          "removed": "5"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheMotherlode/boss_rixxafluxflame.cpp",
+          "category": "dungeon-TheMotherlode",
+          "added": "16",
+          "removed": "1"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheMotherlode/the_motherlode.h",
+          "category": "dungeon-TheMotherlode",
+          "added": "12",
+          "removed": "1"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-TheUnderrot",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_30_22_world_underrot_areatrigger_scriptname.sql",
+          "category": "dungeon-TheUnderrot",
+          "added": "5",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_42_world_underrot_priest_265091.sql",
+          "category": "dungeon-TheUnderrot",
+          "added": "14",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_43_world_underrot_tick_266107.sql",
+          "category": "dungeon-TheUnderrot",
+          "added": "14",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_44_world_underrot_defiler_144306_sai.sql",
+          "category": "dungeon-TheUnderrot",
+          "added": "24",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_45_world_underrot_leaxa_cragmaw_loot.sql",
+          "category": "dungeon-TheUnderrot",
+          "added": "24",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_46_world_underrot_abom_keystone_cond.sql",
+          "category": "dungeon-TheUnderrot",
+          "added": "5",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheUnderrot/boss_cragmaw_infested.cpp",
+          "category": "dungeon-TheUnderrot",
+          "added": "5",
+          "removed": "4"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheUnderrot/boss_elder_leaxa.cpp",
+          "category": "dungeon-TheUnderrot",
+          "added": "7",
+          "removed": "6"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheUnderrot/boss_sporecaller_zancha.cpp",
+          "category": "dungeon-TheUnderrot",
+          "added": "8",
+          "removed": "6"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheUnderrot/boss_unbound_abomination.cpp",
+          "category": "dungeon-TheUnderrot",
+          "added": "40",
+          "removed": "36"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheUnderrot/instance_the_underrot.cpp",
+          "category": "dungeon-TheUnderrot",
+          "added": "2",
+          "removed": "3"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheUnderrot/the_underrot.cpp",
+          "category": "dungeon-TheUnderrot",
+          "added": "56",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Zandalar/TheUnderrot/the_underrot.h",
+          "category": "dungeon-TheUnderrot",
+          "added": "25",
+          "removed": "10"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-TolDagor",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_31_28_world_toldagor_instance_encounters.sql",
+          "category": "dungeon-TolDagor",
+          "added": "6",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_31_29_world_toldagor_sand_trap_at.sql",
+          "category": "dungeon-TolDagor",
+          "added": "6",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/TolDagor/boss_jes_howlis.cpp",
+          "category": "dungeon-TolDagor",
+          "added": "56",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/TolDagor/boss_knight_captain_valyri.cpp",
+          "category": "dungeon-TolDagor",
+          "added": "7",
+          "removed": "1"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/TolDagor/boss_overseer_korgus.cpp",
+          "category": "dungeon-TolDagor",
+          "added": "28",
+          "removed": "10"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/TolDagor/boss_the_sand_queen.cpp",
+          "category": "dungeon-TolDagor",
+          "added": "2",
+          "removed": "11"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/TolDagor/instance_tol_dagor.cpp",
+          "category": "dungeon-TolDagor",
+          "added": "1",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/TolDagor/tol_dagor.h",
+          "category": "dungeon-TolDagor",
+          "added": "12",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "dungeon-WaycrestManor",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_31_26_world_waycrest_instance_encounters.sql",
+          "category": "dungeon-WaycrestManor",
+          "added": "8",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_52_world_waycrest_thornshaper_278474.sql",
+          "category": "dungeon-WaycrestManor",
+          "added": "15",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_53_world_waycrest_marked_sister_264105.sql",
+          "category": "dungeon-WaycrestManor",
+          "added": "15",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_54_world_waycrest_soulcharmer_263961.sql",
+          "category": "dungeon-WaycrestManor",
+          "added": "15",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_55_world_waycrest_soul_fetish_278551.sql",
+          "category": "dungeon-WaycrestManor",
+          "added": "15",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_56_world_waycrest_triad_loot.sql",
+          "category": "dungeon-WaycrestManor",
+          "added": "46",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_57_world_waycrest_goliath_raal_loot.sql",
+          "category": "dungeon-WaycrestManor",
+          "added": "27",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_58_world_waycrest_waycrests_loot.sql",
+          "category": "dungeon-WaycrestManor",
+          "added": "27",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_01_59_world_waycrest_gorak_tul_loot.sql",
+          "category": "dungeon-WaycrestManor",
+          "added": "16",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/WaycrestManor/boss_gorak_tul.cpp",
+          "category": "dungeon-WaycrestManor",
+          "added": "2",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/WaycrestManor/boss_heartsbane_triad.cpp",
+          "category": "dungeon-WaycrestManor",
+          "added": "92",
+          "removed": "24"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/WaycrestManor/boss_lord_and_lady_waycrest.cpp",
+          "category": "dungeon-WaycrestManor",
+          "added": "45",
+          "removed": "28"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/WaycrestManor/boss_raal_the_gluttonous.cpp",
+          "category": "dungeon-WaycrestManor",
+          "added": "3",
+          "removed": "2"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/WaycrestManor/boss_soulbound_goliath.cpp",
+          "category": "dungeon-WaycrestManor",
+          "added": "8",
+          "removed": "1"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/WaycrestManor/instance_waycrest_manor.cpp",
+          "category": "dungeon-WaycrestManor",
+          "added": "9",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/WaycrestManor/waycrest_manor.cpp",
+          "category": "dungeon-WaycrestManor",
+          "added": "13",
+          "removed": "13"
+        },
+        {
+          "path": "src/server/scripts/KulTiras/WaycrestManor/waycrest_manor.h",
+          "category": "dungeon-WaycrestManor",
+          "added": "13",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "items",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_10_12_world_itm_spell_script_names.sql",
+          "category": "items",
+          "added": "20",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_10_13_world_itm_razor_coral_human_test.sql",
+          "category": "items",
+          "added": "19",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_10_14_world_itm_manifesto_human_test.sql",
+          "category": "items",
+          "added": "19",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_item.cpp",
+          "category": "items",
+          "added": "305",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "local-database-isolation",
+      "status": "fork_only",
+      "note": "Targets local GUID 26 and must not be treated as a universal migration.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_24_70_world_guid26_isolate_squirt_scriptname.sql",
+          "category": "local-database-isolation",
+          "added": "75",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "mastery",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_10_02_world_mas_ignite_spell_script_names.sql",
+          "category": "mastery",
+          "added": "10",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_10_03_world_mas_chaotic_two_homes.sql",
+          "category": "mastery",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_10_04_world_mas_overload_human_test.sql",
+          "category": "mastery",
+          "added": "6",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_10_05_world_mas_scattered_spell_script_names.sql",
+          "category": "mastery",
+          "added": "14",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_mastery.cpp",
+          "category": "mastery",
+          "added": "106",
+          "removed": "56"
+        }
+      ]
+    },
+    {
+      "category": "pets",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_10_00_world_pet_loader_spell_script_names.sql",
+          "category": "pets",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_10_01_world_pet_scale_human_test.sql",
+          "category": "pets",
+          "added": "7",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/game/Entities/Pet/Pet.cpp",
+          "category": "pets",
+          "added": "34",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Pet/pet_dk.cpp",
+          "category": "pets",
+          "added": "1",
+          "removed": "5"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_pet.cpp",
+          "category": "pets",
+          "added": "1",
+          "removed": "15"
+        }
+      ]
+    },
+    {
+      "category": "racials-and-generic-spells",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_09_10_06_world_rac_spell_script_names.sql",
+          "category": "racials-and-generic-spells",
+          "added": "21",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_10_07_world_rac_registered_hooks_human_test.sql",
+          "category": "racials-and-generic-spells",
+          "added": "11",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_09_10_08_world_rac_table_only_human_test.sql",
+          "category": "racials-and-generic-spells",
+          "added": "11",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_generic.cpp",
+          "category": "racials-and-generic-spells",
+          "added": "277",
+          "removed": "55"
+        }
+      ]
+    },
+    {
+      "category": "research-and-documentation",
+      "status": "fork_only",
+      "note": "Internal research and progress records are kept separate from upstream code patches.",
+      "files": [
+        {
+          "path": "README.md",
+          "category": "research-and-documentation",
+          "added": "44",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/00-目标.md",
+          "category": "research-and-documentation",
+          "added": "127",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/01-从哪里开始.md",
+          "category": "research-and-documentation",
+          "added": "65",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/README.md",
+          "category": "research-and-documentation",
+          "added": "177",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/havenlab_tests/run_tests.py",
+          "category": "research-and-documentation",
+          "added": "574",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/做法-A1-无尽之星.md",
+          "category": "research-and-documentation",
+          "added": "166",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/做法-A2-暮光毁灭.md",
+          "category": "research-and-documentation",
+          "added": "65",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/做法-A3-虚空回响.md",
+          "category": "research-and-documentation",
+          "added": "196",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/做法-A4-扭曲的附肢.md",
+          "category": "research-and-documentation",
+          "added": "140",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/做法-A5-虚空仪式.md",
+          "category": "research-and-documentation",
+          "added": "139",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/分类-BFA地下城全面修复.md",
+          "category": "research-and-documentation",
+          "added": "318",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/复核-11五人本NPC-战报修复-20260924.md",
+          "category": "research-and-documentation",
+          "added": "95",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/复核-冈克喷雾与粘液效果-机器人救援.md",
+          "category": "research-and-documentation",
+          "added": "188",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/复核-冈克机器人生命周期-20260924.md",
+          "category": "research-and-documentation",
+          "added": "37",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/复核-冈克机器人释放与激活.md",
+          "category": "research-and-documentation",
+          "added": "193",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/复核-自由镇三酒施法生命周期.md",
+          "category": "research-and-documentation",
+          "added": "84",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-A-腐蚀-测试.md",
+          "category": "research-and-documentation",
+          "added": "149",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-A-腐蚀.md",
+          "category": "research-and-documentation",
+          "added": "73",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-B-五人本.md",
+          "category": "research-and-documentation",
+          "added": "66",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-C-大秘境.md",
+          "category": "research-and-documentation",
+          "added": "39",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-D-团本入口.md",
+          "category": "research-and-documentation",
+          "added": "39",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-HavenLab-测试台.md",
+          "category": "research-and-documentation",
+          "added": "217",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-P6-尼奥罗萨武器.md",
+          "category": "research-and-documentation",
+          "added": "1270",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-冈克喷雾与粘液效果-机器人救援.md",
+          "category": "research-and-documentation",
+          "added": "215",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-冈克喷雾与粘液效果.md",
+          "category": "research-and-documentation",
+          "added": "57",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-冈克机器人激活与重置.md",
+          "category": "research-and-documentation",
+          "added": "251",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-冈克玩家粘液生命周期-玩家关联.md",
+          "category": "research-and-documentation",
+          "added": "225",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-冈克玩家粘液生命周期.md",
+          "category": "research-and-documentation",
+          "added": "127",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-满级木桩缩放.md",
+          "category": "research-and-documentation",
+          "added": "148",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-腐蚀-剩余修复.md",
+          "category": "research-and-documentation",
+          "added": "225",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-自由镇.md",
+          "category": "research-and-documentation",
+          "added": "724",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-自由镇三酒施法生命周期-正常施法与取消.md",
+          "category": "research-and-documentation",
+          "added": "179",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/方案-自由镇三酒施法生命周期.md",
+          "category": "research-and-documentation",
+          "added": "75",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/流程-调研实施审查循环.md",
+          "category": "research-and-documentation",
+          "added": "67",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F1-难度与血伤.md",
+          "category": "research-and-documentation",
+          "added": "107",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F2-友好船长周事件.md",
+          "category": "research-and-documentation",
+          "added": "189",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F2-尼奥罗萨写死武器加成.md",
+          "category": "research-and-documentation",
+          "added": "81",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F3-四王机制差距.md",
+          "category": "research-and-documentation",
+          "added": "145",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F3-腐蚀特效段位.md",
+          "category": "research-and-documentation",
+          "added": "73",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F4-掉落与Encounter.md",
+          "category": "research-and-documentation",
+          "added": "117",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F4-掉落随机腐蚀.md",
+          "category": "research-and-documentation",
+          "added": "97",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F5-玛乌尔商店.md",
+          "category": "research-and-documentation",
+          "added": "114",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F5-进本进度与门.md",
+          "category": "research-and-documentation",
+          "added": "84",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F6-泰坦净化.md",
+          "category": "research-and-documentation",
+          "added": "106",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F7-装等缩放收口.md",
+          "category": "research-and-documentation",
+          "added": "97",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/细节-F8-污染物添加腐蚀.md",
+          "category": "research-and-documentation",
+          "added": "138",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/腐蚀特效清单.md",
+          "category": "research-and-documentation",
+          "added": "587",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/设计-P6-尼奥罗萨武器.md",
+          "category": "research-and-documentation",
+          "added": "375",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/设计-冈克喷雾与粘液效果-架构.md",
+          "category": "research-and-documentation",
+          "added": "146",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/设计-冈克玩家粘液生命周期-架构.md",
+          "category": "research-and-documentation",
+          "added": "397",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/设计-腐蚀-Blizzlike.md",
+          "category": "research-and-documentation",
+          "added": "118",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/设计-自由镇三酒施法生命周期-架构.md",
+          "category": "research-and-documentation",
+          "added": "125",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/调研-837木桩.md",
+          "category": "research-and-documentation",
+          "added": "108",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/调研-BFA地下城-冈克完整机制.md",
+          "category": "research-and-documentation",
+          "added": "120",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/调研-冈克喷雾与粘液效果.md",
+          "category": "research-and-documentation",
+          "added": "492",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/调研-围攻伯拉勒斯空世界与阵营.md",
+          "category": "research-and-documentation",
+          "added": "348",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/调研-自由镇.md",
+          "category": "research-and-documentation",
+          "added": "1209",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/转储-item-bonus-corruption.md",
+          "category": "research-and-documentation",
+          "added": "109",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/转储-mother-contaminants.md",
+          "category": "research-and-documentation",
+          "added": "106",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/进度-BFA地下城全面修复.md",
+          "category": "research-and-documentation",
+          "added": "252",
+          "removed": "0"
+        },
+        {
+          "path": "doc/837满级修复/验收-玛乌尔净化装等污染物.md",
+          "category": "research-and-documentation",
+          "added": "228",
+          "removed": "0"
+        },
+        {
+          "path": "doc/职业修复/collect_inventory.py",
+          "category": "research-and-documentation",
+          "added": "110",
+          "removed": "0"
+        },
+        {
+          "path": "doc/职业修复/inventory.json",
+          "category": "research-and-documentation",
+          "added": "641",
+          "removed": "0"
+        },
+        {
+          "path": "doc/职业修复/全职业缺口概览.md",
+          "category": "research-and-documentation",
+          "added": "75",
+          "removed": "0"
+        },
+        {
+          "path": "doc/职业修复/武器战-基础能力与天赋实施方案.md",
+          "category": "research-and-documentation",
+          "added": "172",
+          "removed": "0"
+        },
+        {
+          "path": "doc/职业修复/武器战-第一批.md",
+          "category": "research-and-documentation",
+          "added": "69",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "shared-loader-requires-hunk-split",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "src/server/scripts/Custom/custom_script_loader.cpp",
+          "category": "shared-loader-requires-hunk-split",
+          "added": "2",
+          "removed": "0"
+        },
+        {
+          "path": "src/server/scripts/Spells/spell_script_loader.cpp",
+          "category": "shared-loader-requires-hunk-split",
+          "added": "6",
+          "removed": "0"
+        }
+      ]
+    },
+    {
+      "category": "training-dummies",
+      "status": "pending_feature_review",
+      "note": "Requires per-mechanism review and appropriate runtime verification before upstream submission.",
+      "files": [
+        {
+          "path": "sql/updates/world/2026_08_27_02_world_maxlevel_dummy_scaling.sql",
+          "category": "training-dummies",
+          "added": "79",
+          "removed": "0"
+        },
+        {
+          "path": "sql/updates/world/2026_08_27_03_world_dummy_blizzlike_roles.sql",
+          "category": "training-dummies",
+          "added": "76",
+          "removed": "0"
+        }
+      ]
+    }
+  ],
+  "local_only_exclusions": [
+    ".cursor/",
+    "_tmp/",
+    "DatabasesV1.1/",
+    "build/",
+    "ClientData and credentials"
+  ],
+  "no_deployment": "No server was started and no live database migration was executed."
+}
