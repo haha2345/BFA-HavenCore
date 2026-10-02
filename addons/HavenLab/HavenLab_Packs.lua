@@ -28,6 +28,44 @@ HL.SHELL_IDS = {
 }
 
 HL.PACKS = {
+    ["gunker-fx-observe"] = {
+        key = "gunker-fx-observe",
+        title = "冈克双粘液／人工核对",
+        hidden = true,
+        order = 1000,
+        chain = {},
+        ids = { 298124, 298259, 298125, 297821, 297901, 298145, 298216 },
+        labels = {
+            [298124] = "A光环",
+            [298259] = "B光环",
+            [298125] = "共同召唤触发",
+            [297821] = "粘液AT",
+            [297901] = "消毒喷雾",
+            [298145] = "消毒光环",
+            [298216] = "喷雾触发",
+        },
+        hint = "先解锁三台机器人并拉 boss；逐次生成 A/B 并记录 GUID，每轮先导出再重开。",
+        startText = "冈克救援观察开始：人工待核，不是 Approved。先记 bot/A/B 身份，每轮先导出再重开。",
+        startPrint = "选定已有 bot；.npc info 与客户端GUID留证，先.aura 298124记A，再.aura 298259记B；最终/lab report人工核对。",
+    },
+
+    ["freehold-brew-cast-observe"] = {
+        key = "freehold-brew-cast-observe",
+        title = "自由镇三酒施法／人工待核",
+        hidden = true,
+        order = 1001,
+        ids = { 265088, 264608, 265168 },
+        labels = {
+            [265088] = "自信酒起施",
+            [264608] = "活力酒起施",
+            [265168] = "腐蚀酒起施",
+        },
+        chain = {},
+        hint = "自然拉船长；同一酒师GUID合并三酒START间隔，另记读条。取消与重拉连续记录，短窗口立即导出；人工待核。",
+        startText = "三酒观察开始：人工待核，不是Approved。记录实际难度、酒师GUID与画面；SUCCESS不证明酒效果正确。",
+        startPrint = "开启/combatlog，自然进战；取消后连续等至少16秒，重拉别清日志；/lab report复制保存。",
+    },
+
     stars = {
         key = "stars",
         title = "无尽之星",
@@ -8252,6 +8290,604 @@ HL.PACKS = {
         extraVerdict = function()
             return {
                 "书面完成定义是穿 174103 再使用 313948。见 314042 Dummy 1。第一章后出 314040。不允许 .aura 代替穿脱。绿勾只证出手/光环，不证公式。Dummy 8 保持百分，不得改成码。Dummy 5 保持人数上限。Dummy 1 不得改成码。2.759/0.551/allies_end=4 不得进 Dummy。单人桩不组队。不要 Learn 别的号。173944 不验收。不要重写 277253。",
+            }
+        end,
+    },
+
+    stat_aura268_vanguard = {
+        key = "stat_aura268_vanguard",
+        title = "STAT-T4先锋盾71_csv基点60不是70_无护甲脚本",
+        order = 282,
+        hint = "防护战 71 Aura268。引擎 Handler+UpdateArmor。csv 60 不是补篇 70。禁止 want=aura。绿勾不证护甲加倍。关掉插件仍须给护甲。275361 不当验收。",
+        startText = "【先锋盾71】120 防护战。学会/开启 71。人物纸护甲应上升，幅度按力量×GetAmount%（60 不是 70）。关 71 后回落。关 HavenLab 再开 71 仍须上升。禁止 want=aura。",
+        startPrint = "请开 71 看人物纸护甲。60 不是 70。绿勾不证加倍。",
+        ids = { 71 },
+        labels = { [71] = "先锋盾_Aura268_bp60" },
+        chain = {
+            { id = 71, role = "先锋盾光环", want = "aura-self",
+              hintFail = "没有 71。120 防护战学会 71。自动判定只证明光环在。护甲加倍必须看人物纸。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：开 71 上升、关 71 回落。amount 按 GetAmount 对应 csv 60，不是 70。绿勾不证加倍。关掉插件引擎仍须给护甲。不要加战士护甲脚本。",
+            }
+        end,
+    },
+
+    stat_aura268_vanguard_armor = {
+        key = "stat_aura268_vanguard_armor",
+        title = "STAT-T4先锋盾71护甲_人眼看人物纸_60不是70",
+        order = 283,
+        hint = "防护战 71 护甲。StatSnapshot 没有 armor。禁止 want=stat 读护甲。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证护甲加倍。引擎 268，不是脚本 TOTAL_VALUE。csv 60 不是 70。禁止 want=aura。",
+        startText = "【先锋盾71护甲】120 防护战。记下关 71 时人物纸护甲与力量。开 71，护甲差应=力量×GetAmount%（60 不是 70）。关 71 回落。人眼看人物纸。绿勾不证加倍。禁止 want=aura。",
+        startPrint = "请开/关 71，人眼看人物纸护甲差=力量×GetAmount%（60 不是 70）。绿勾不证加倍。",
+        ids = { 71 },
+        labels = { [71] = "先锋盾_人测护甲_bp60" },
+        chain = {
+            { id = 71, role = "人眼看开/关71护甲", want = "labmsg",
+              hintFail = "StatSnapshot 没有 armor。Verdict 无法断言护甲。人眼看人物纸：开/关 71 护甲差=力量×GetAmount%（60 不是 70）。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证加倍。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：关 71 记护甲与力量，开 71 护甲差=力量×GetAmount%（csv 60 不是补篇 70）。关 71 回落。引擎 268 Handler+UpdateArmor，不是脚本 TOTAL_VALUE。不要加战士护甲脚本。绿勾不证加倍。StatSnapshot 没有 armor。",
+            }
+        end,
+    },
+
+    stat_aura268_sotr = {
+        key = "stat_aura268_sotr",
+        title = "STAT-T4正义盾击132403_Aura268_防护骑",
+        order = 284,
+        hint = "防护骑 132403 Aura268。引擎 Handler+UpdateArmor。旧 armor 脚本已卸。禁止 want=aura。绿勾不证护甲加倍。关掉插件仍须给护甲。",
+        startText = "【正义盾击132403】120 防护骑。开启 132403。人物纸护甲应上升，幅度按力量×GetAmount%（bp150）。关后回落。关 HavenLab 再开仍须上升。禁止 want=aura。",
+        startPrint = "请开 132403 看人物纸护甲。绿勾不证加倍。",
+        ids = { 132403 },
+        labels = { [132403] = "正义盾击_Aura268_bp150" },
+        chain = {
+            { id = 132403, role = "正义盾击光环", want = "aura-self",
+              hintFail = "没有 132403。120 防护骑开正义盾击。自动判定只证明光环在。护甲加倍必须看人物纸。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：开 132403 上升、关后回落。amount 按 GetAmount 对应 csv bp150。引擎 268，不是脚本 TOTAL_VALUE。旧 armor 脚本不得再注册。绿勾不证加倍。关掉插件引擎仍须给护甲。",
+            }
+        end,
+    },
+
+    stat_aura268_sotr_armor = {
+        key = "stat_aura268_sotr_armor",
+        title = "STAT-T4正义盾击132403护甲_人眼看人物纸_bp150",
+        order = 285,
+        hint = "防护骑 132403 护甲。StatSnapshot 没有 armor。禁止 want=stat 读护甲。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证护甲加倍。引擎 268，不是脚本 TOTAL_VALUE。力量×GetAmount%（bp150）。禁止 want=aura。",
+        startText = "【正义盾击132403护甲】120 防护骑。记下关 132403 时人物纸护甲与力量。开 132403，护甲差应=力量×GetAmount%（bp150）。关后回落。人眼看人物纸。绿勾不证加倍。禁止 want=aura。",
+        startPrint = "请开/关 132403，人眼看人物纸护甲差=力量×GetAmount%（bp150）。绿勾不证加倍。",
+        ids = { 132403 },
+        labels = { [132403] = "正义盾击_人测护甲_bp150" },
+        chain = {
+            { id = 132403, role = "人眼看开/关132403护甲", want = "labmsg",
+              hintFail = "StatSnapshot 没有 armor。Verdict 无法断言护甲。人眼看人物纸：开/关 132403 护甲差=力量×GetAmount%（bp150）。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证加倍。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：关 132403 记护甲与力量，开 132403 护甲差=力量×GetAmount%（bp150）。关后回落。引擎 268，不是脚本 TOTAL_VALUE。旧 armor 脚本不得再注册。绿勾不证加倍。StatSnapshot 没有 armor。",
+            }
+        end,
+    },
+
+    stat_aura268_ironfur = {
+        key = "stat_aura268_ironfur",
+        title = "STAT-T4铁鬃192081_Aura268_守护德_多层再看护甲",
+        order = 286,
+        hint = "守护德 192081 Aura268。引擎 Handler+UpdateArmor。旧 RecalcArmor 旁路已卸。GetAmount 已含层。禁止 want=aura。绿勾不证护甲加倍。关掉插件仍须给护甲。多层再看一次护甲（人眼）。",
+        startText = "【铁鬃192081】120 守护德。开启 192081。人物纸护甲应上升，幅度按敏捷×GetAmount（已含层）。再叠一层，人眼再看一次护甲。关后回落。关 HavenLab 再开仍须上升。禁止 want=aura。",
+        startPrint = "请开 192081 看人物纸护甲。多层再看一次。绿勾不证加倍。",
+        ids = { 192081 },
+        labels = { [192081] = "铁鬃_Aura268_含层" },
+        chain = {
+            { id = 192081, role = "铁鬃光环", want = "aura-self",
+              hintFail = "没有 192081。120 守护德开铁鬃。自动判定只证明光环在。护甲加倍必须看人物纸。多层再看一次护甲（人眼）。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：开 192081 上升、关后回落。多层再看一次护甲（人眼）。GetAmount 已含层，禁止测试再×层。属性是敏捷不是力量。引擎 268，不是脚本 TOTAL_VALUE。绿勾不证加倍。关掉插件引擎仍须给护甲。",
+            }
+        end,
+    },
+
+    stat_aura268_ironfur_armor = {
+        key = "stat_aura268_ironfur_armor",
+        title = "STAT-T4铁鬃192081护甲_人眼看人物纸_含层禁止再乘",
+        order = 287,
+        hint = "守护德 192081 护甲。StatSnapshot 没有 armor。禁止 want=stat 读护甲。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证护甲加倍。敏捷×GetAmount（已含层，禁止测试再×层）。引擎 268，不是脚本 TOTAL_VALUE。禁止 want=aura。",
+        startText = "【铁鬃192081护甲】120 守护德。记下关 192081 时人物纸护甲与敏捷。开 192081，护甲差应=敏捷×GetAmount（已含层，禁止测试再×层）。多层再看，仍按 GetAmount 不要再乘层。关后回落。人眼看人物纸。绿勾不证加倍。禁止 want=aura。",
+        startPrint = "请开/关 192081，人眼看人物纸护甲差=敏捷×GetAmount（已含层，禁止再×层）。绿勾不证加倍。",
+        ids = { 192081 },
+        labels = { [192081] = "铁鬃_人测护甲_含层" },
+        chain = {
+            { id = 192081, role = "人眼看开/关192081护甲", want = "labmsg",
+              hintFail = "StatSnapshot 没有 armor。Verdict 无法断言护甲。人眼看人物纸：开/关 192081 护甲差=敏捷×GetAmount（已含层，禁止测试再×层）。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证加倍。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：关 192081 记护甲与敏捷，开 192081 护甲差=敏捷×GetAmount（已含层，禁止测试再×层）。多层再看一次仍按 GetAmount。引擎 268，不是脚本 TOTAL_VALUE。绿勾不证加倍。StatSnapshot 没有 armor。",
+            }
+        end,
+    },
+
+    stat_aura268_boneshield = {
+        key = "stat_aura268_boneshield",
+        title = "STAT-T4白骨之盾195181_Aura268_血DK_层",
+        order = 288,
+        hint = "血DK 195181 Aura268。引擎 Handler+UpdateArmor。RecalcArmor 已删。层走 268 乘层。禁止 want=aura。绿勾不证护甲加倍。关掉插件仍须给护甲。",
+        startText = "【白骨之盾195181】120 血DK。开启 195181，看层。人物纸护甲应上升。多层时护甲跟 268 乘层。关后回落。关 HavenLab 再开仍须上升。禁止 want=aura。",
+        startPrint = "请开 195181 看层与人物纸护甲。绿勾不证加倍。",
+        ids = { 195181 },
+        labels = { [195181] = "白骨之盾_Aura268_层" },
+        chain = {
+            { id = 195181, role = "白骨之盾光环", want = "aura-self",
+              hintFail = "没有 195181。120 血DK开白骨之盾。自动判定只证明光环与层在。护甲加倍必须看人物纸。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：开 195181 上升、关后回落。看层。护甲走 268 乘层。不要用减速 aura 的不乘层对护甲。ModStackAmount/2500/骨堆仍在。引擎 268，不是脚本 TOTAL_VALUE。绿勾不证加倍。关掉插件引擎仍须给护甲。",
+            }
+        end,
+    },
+
+    stat_aura268_boneshield_armor = {
+        key = "stat_aura268_boneshield_armor",
+        title = "STAT-T4白骨之盾195181护甲_人眼看人物纸_268乘层",
+        order = 289,
+        hint = "血DK 195181 护甲。StatSnapshot 没有 armor。禁止 want=stat 读护甲。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证护甲加倍。力量×GetAmount（268 乘层；不要用减速 aura 的不乘层对护甲）。引擎 268，不是脚本 TOTAL_VALUE。禁止 want=aura。",
+        startText = "【白骨之盾195181护甲】120 血DK。记下关 195181 时人物纸护甲与力量。开 195181，护甲差应=力量×GetAmount（268 乘层；不要用减速 aura 的不乘层对护甲）。关后回落。人眼看人物纸。绿勾不证加倍。禁止 want=aura。",
+        startPrint = "请开/关 195181，人眼看人物纸护甲差=力量×GetAmount（268 乘层）。绿勾不证加倍。",
+        ids = { 195181 },
+        labels = { [195181] = "白骨之盾_人测护甲_268乘层" },
+        chain = {
+            { id = 195181, role = "人眼看开/关195181护甲", want = "labmsg",
+              hintFail = "StatSnapshot 没有 armor。Verdict 无法断言护甲。人眼看人物纸：开/关 195181 护甲差=力量×GetAmount（268 乘层；不要用减速 aura 的不乘层对护甲）。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证加倍。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：关 195181 记护甲与力量，开 195181 护甲差=力量×GetAmount（268 乘层；不要用减速 aura 的不乘层对护甲）。引擎 268，不是脚本 TOTAL_VALUE。绿勾不证加倍。StatSnapshot 没有 armor。",
+            }
+        end,
+    },
+
+    stat_aura268_demonspikes = {
+        key = "stat_aura268_demonspikes",
+        title = "STAT-T4恶魔尖刺203819_Aura268在idx1_复仇DH",
+        order = 290,
+        hint = "复仇DH 203819 Aura268。268 在 idx1，不是 idx0。引擎 Handler+UpdateArmor。无旁路。禁止 want=aura。绿勾不证护甲加倍。关掉插件仍须给护甲。",
+        startText = "【恶魔尖刺203819】120 复仇DH。开启 203819。268 在 idx1。人物纸护甲应上升，幅度按敏捷×amount%（bp60）。关后回落。关 HavenLab 再开仍须上升。禁止 want=aura。",
+        startPrint = "请开 203819 看人物纸护甲。268 在 idx1。绿勾不证加倍。",
+        ids = { 203819 },
+        labels = { [203819] = "恶魔尖刺_Aura268_idx1" },
+        chain = {
+            { id = 203819, role = "恶魔尖刺光环", want = "aura-self",
+              hintFail = "没有 203819。120 复仇DH开恶魔尖刺。268 在 idx1。自动判定只证明光环在。护甲加倍必须看人物纸。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：开 203819 上升、关后回落。写明 268 在 idx1。amount 按 GetAmount 对应 csv bp60，属性是敏捷。引擎 268，不是脚本 TOTAL_VALUE。无旁路。绿勾不证加倍。关掉插件引擎仍须给护甲。",
+            }
+        end,
+    },
+
+    stat_aura268_demonspikes_armor = {
+        key = "stat_aura268_demonspikes_armor",
+        title = "STAT-T4恶魔尖刺203819护甲_人眼看人物纸_idx1_bp60",
+        order = 291,
+        hint = "复仇DH 203819 护甲。268 在 idx1。StatSnapshot 没有 armor。禁止 want=stat 读护甲。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证护甲加倍。敏捷×amount%（bp60）。引擎 268，不是脚本 TOTAL_VALUE。禁止 want=aura。",
+        startText = "【恶魔尖刺203819护甲】120 复仇DH。记下关 203819 时人物纸护甲与敏捷。开 203819，护甲差应=敏捷×amount%（bp60）。268 在 idx1。关后回落。人眼看人物纸。绿勾不证加倍。禁止 want=aura。",
+        startPrint = "请开/关 203819，人眼看人物纸护甲差=敏捷×amount%（bp60）。268 在 idx1。绿勾不证加倍。",
+        ids = { 203819 },
+        labels = { [203819] = "恶魔尖刺_人测护甲_idx1_bp60" },
+        chain = {
+            { id = 203819, role = "人眼看开/关203819护甲", want = "labmsg",
+              hintFail = "StatSnapshot 没有 armor。Verdict 无法断言护甲。人眼看人物纸：开/关 203819 护甲差=敏捷×amount%（bp60）。268 在 idx1。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证加倍。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：关 203819 记护甲与敏捷，开 203819 护甲差=敏捷×amount%（bp60）。268 在 idx1。引擎 268，不是脚本 TOTAL_VALUE。绿勾不证加倍。StatSnapshot 没有 armor。",
+            }
+        end,
+    },
+
+    stat_aura268_bolster = {
+        key = "stat_aura268_bolster",
+        title = "STAT-T4Bolster275337_Aura268_禁止209859_禁止280001",
+        order = 292,
+        hint = "能吃到该艾泽里特的坦克。Bolster 只用 275337。禁止 209859。禁止 280001。引擎 Handler+UpdateArmor。禁止 want=aura。绿勾不证护甲加倍。关掉插件仍须给护甲。",
+        startText = "【Bolster275337】能吃到该艾泽里特的坦克。开启 275337。禁止 209859。禁止 280001。人物纸护甲应上升，幅度按 misc0=0 力量×40% amount。关后回落。关 HavenLab 再开仍须上升。禁止 want=aura。",
+        startPrint = "请开 275337 看人物纸护甲。不是 209859，不是 280001。绿勾不证加倍。",
+        ids = { 275337 },
+        labels = { [275337] = "Bolster_Aura268_不是209859不是280001" },
+        chain = {
+            { id = 275337, role = "Bolster光环", want = "aura-self",
+              hintFail = "没有 275337。能吃到该艾泽里特的坦克开 Bolster。禁止 209859。禁止 280001。自动判定只证明光环在。护甲加倍必须看人物纸。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：开 275337 上升、关后回落。Bolster 只用 275337。禁止 209859。禁止 280001。misc0=0 力量×40% amount。引擎 268，不是脚本 TOTAL_VALUE。绿勾不证加倍。关掉插件引擎仍须给护甲。",
+            }
+        end,
+    },
+
+    stat_aura268_bolster_armor = {
+        key = "stat_aura268_bolster_armor",
+        title = "STAT-T4Bolster275337护甲_人眼看人物纸_力量40percent",
+        order = 293,
+        hint = "Bolster 275337 护甲。StatSnapshot 没有 armor。禁止 want=stat 读护甲。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证护甲加倍。misc0=0 力量×40% amount。禁止 209859。禁止 280001。引擎 268，不是脚本 TOTAL_VALUE。禁止 want=aura。",
+        startText = "【Bolster275337护甲】能吃到该艾泽里特的坦克。记下关 275337 时人物纸护甲与力量。开 275337，护甲差应=misc0=0 力量×40% amount。禁止 209859。禁止 280001。关后回落。人眼看人物纸。绿勾不证加倍。禁止 want=aura。",
+        startPrint = "请开/关 275337，人眼看人物纸护甲差=力量×40% amount。不是 209859/280001。绿勾不证加倍。",
+        ids = { 275337 },
+        labels = { [275337] = "Bolster_人测护甲_力量40percent" },
+        chain = {
+            { id = 275337, role = "人眼看开/关275337护甲", want = "labmsg",
+              hintFail = "StatSnapshot 没有 armor。Verdict 无法断言护甲。人眼看人物纸：开/关 275337 护甲差=misc0=0 力量×40% amount。禁止 209859。禁止 280001。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证加倍。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：关 275337 记护甲与力量，开 275337 护甲差=misc0=0 力量×40% amount。Bolster 只用 275337。禁止 209859。禁止 280001。引擎 268，不是脚本 TOTAL_VALUE。绿勾不证加倍。StatSnapshot 没有 armor。",
+            }
+        end,
+    },
+
+    stat_aura268_str_refresh = {
+        key = "stat_aura268_str_refresh",
+        title = "STAT-T4力量刷新护甲_71_misc0=0_人眼看人物纸",
+        order = 294,
+        hint = "防护战。有 268（71，misc0=0）时换力量装/脱力量装，人眼看护甲变。stat 不要断言 armor。StatSnapshot 没有 armor。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证护甲加倍。禁止 want=aura。",
+        startText = "【力量刷新71】120 防护战。先开 71（misc0=0）。记下人物纸护甲与力量。换一件力量装，人眼看护甲变；再脱力量装，人眼看护甲变回去。stat 不要断言 armor。绿勾不证加倍。禁止 want=aura。",
+        startPrint = "请开 71 后换/脱力量装，人眼看人物纸护甲变。stat 不要断言 armor。绿勾不证加倍。",
+        ids = { 71 },
+        labels = { [71] = "先锋盾_力量刷新护甲_misc0=0" },
+        chain = {
+            { id = 71, role = "人眼看换脱力量装护甲", want = "labmsg",
+              hintFail = "StatSnapshot 没有 armor。stat 不要断言 armor。Verdict 无法断言护甲。人眼看人物纸：有 268（71）时换力量装/脱力量装，护甲应变。禁止 expect.stat=armor。禁止用 haste 冒充护甲。绿勾不证加倍。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测看人物纸护甲：有 268（71，misc0=0）时换力量装/脱力量装，护甲变。stat 不要断言 armor。绿勾不证加倍。StatSnapshot 没有 armor。引擎力量变了必须刷 UpdateArmor。",
+            }
+        end,
+    },
+
+    stat_aura268_engine_not_addon = {
+        key = "stat_aura268_engine_not_addon",
+        title = "STAT-T4关掉HavenLab引擎仍给护甲_71或192081",
+        order = 295,
+        hint = "关掉 HavenLab 再开 71 或 192081，面板护甲仍增加。本条是人测清单。绿勾不证加倍。引擎 268，不是插件改面板。禁止 want=aura。禁止用 haste 冒充护甲。StatSnapshot 没有 armor。",
+        startText = "【引擎不是插件】120 防护战开 71，或 120 守护德开 192081。先看人物纸护甲上升。关掉 HavenLab，再开 71 或 192081，面板护甲仍增加。绿勾不证加倍。禁止 want=aura。",
+        startPrint = "请关掉 HavenLab 再开 71 或 192081，人眼看面板护甲仍增加。绿勾不证加倍。",
+        ids = { 71, 192081 },
+        labels = {
+            [71] = "先锋盾_关插件仍给护甲",
+            [192081] = "铁鬃_关插件仍给护甲",
+        },
+        chain = {
+            { id = 71, role = "人眼看关插件后面板护甲", want = "labmsg",
+              hintFail = "关掉 HavenLab 再开 71 或 192081，人眼看面板护甲仍增加。本条是人测清单。绿勾不证加倍。StatSnapshot 没有 armor。禁止 expect.stat=armor。禁止用 haste 冒充护甲。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测：关掉 HavenLab 再开 71 或 192081，面板护甲仍增加。绿勾不证加倍。引擎 268 Handler+UpdateArmor，不是插件改面板数字。StatSnapshot 没有 armor。",
+            }
+        end,
+    },
+
+    stat_aura343_white_colossus = {
+        key = "stat_aura343_white_colossus",
+        title = "STAT-T5巨人打击窗口白字提高",
+        order = 296,
+        hint = "武器战。cast 167105，aura-target 208086，damage 0。进窗前先打白字。窗内白字应提高，方向与 GetAmount 一致（csv 基点 30，禁止 20 当通过线）。labmsg 记下 amount、casterGuid=玩家、whiteMul343 已乘。绿勾不证公式。必须验白字。禁止 want=aura。禁止 expect 写死 30/20/15。",
+        startText = "【巨人打击白字208086】120 武器战。近战假人，自动攻击打开。进窗前先打至少一记白字记下伤害。cast 167105，目标有 208086 且 caster 是玩家。窗内白字（id 0）应提高，方向与 GetAmount 一致（csv 基点 30，禁止把 20 当通过线）。labmsg 记下 amount、casterGuid=玩家、whiteMul343 已乘。绿勾不证公式。必须验白字。",
+        startPrint = "请先打白字记进窗前伤害，再打 167105，看窗内白字提高。读 GetAmount，禁止 20 当通过线。绿勾不证公式。",
+        ids = { 167105, 208086, 0 },
+        labels = {
+            [167105] = "巨人打击施放",
+            [208086] = "巨人打击窗口_Aura343_csv基点30",
+            [0] = "白字自动攻击",
+        },
+        chain = {
+            { id = 167105, role = "巨人打击施法", want = "cast",
+              hintFail = "没有 167105。120 武器战对假人打巨人打击。禁止 want=aura。" },
+            { id = 208086, role = "巨人打击窗口", want = "aura-target",
+              hintFail = "目标没有 208086。caster 应是玩家。自动判定只证明光环在。白字提高必须人眼看。禁止 want=aura。" },
+            { id = 0, role = "白字自动攻击", want = "damage",
+              hintFail = "没有白字（id 0）。近战距离打开自动攻击。禁止用 12294/1464 冒充白字。绿勾不证公式。必须验白字。" },
+            { id = 208086, role = "记下amount与whiteMul343", want = "labmsg",
+              hintFail = "人记下 spell=208086、amount=GetAmount()、casterGuid=玩家、attackerGuid、whiteMul343 已乘。csv 基点 30，禁止 20 当通过线。禁止 expect 写死 30/20/15。绿勾不证公式。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测必须验白字：进窗前记白字，窗内白字应提高，方向与 GetAmount 一致（csv 基点 30，禁止把 20 当通过线）。labmsg 记下 amount、casterGuid=玩家、whiteMul343 已乘。绿勾不证公式。禁止 expect 写死 30/20/15。",
+            }
+        end,
+    },
+
+    stat_aura343_skill_no_double = {
+        key = "stat_aura343_skill_no_double",
+        title = "STAT-T5同一窗口技能伤只吃271不得翻倍",
+        order = 297,
+        hint = "武器战。同一 208086 窗口内 cast 12294，damage 12294。技能伤只吃 271 不得再乘 343。labmsg：abilityMul343 未乘。绿勾不证公式。必须验白字对照。禁止 want=aura。禁止 expect 写死 30/20/15。",
+        startText = "【技能不叠343】120 武器战。cast 167105，目标有 208086。同一窗口内 cast 12294（没有则 1464，键名不变），damage 的 id 必须是 12294 不得为 0。技能伤可以吃 271，不得再乘一次 343。labmsg：abilityMul343 未乘。人测对照：白字已提高的同时，技能伤不得出现再乘一次 343 amount 的翻倍。绿勾不证公式。",
+        startPrint = "请在 208086 窗口内打 12294。技能伤不得再乘 343。labmsg 看 abilityMul343 未乘。绿勾不证公式。",
+        ids = { 167105, 208086, 12294 },
+        labels = {
+            [167105] = "巨人打击施放",
+            [208086] = "巨人打击窗口_Aura343",
+            [12294] = "致死打击_技能对照",
+        },
+        chain = {
+            { id = 167105, role = "巨人打击施法", want = "cast",
+              hintFail = "没有 167105。先打巨人打击挂上 208086。" },
+            { id = 208086, role = "巨人打击窗口", want = "aura-target",
+              hintFail = "目标没有 208086。窗口内才能对照技能伤。禁止 want=aura。" },
+            { id = 12294, role = "致死打击施法", want = "cast",
+              hintFail = "没有 12294。没有则用 1464，键名仍是 stat_aura343_skill_no_double。禁止把 damage 写成 id 0。" },
+            { id = 12294, role = "致死打击伤害", want = "damage",
+              hintFail = "没有 12294 伤害。damage 的 id 必须是 12294，不得为 0。技能伤只吃 271，不得再乘 343。" },
+            { id = 12294, role = "记下abilityMul343未乘", want = "labmsg",
+              hintFail = "labmsg：abilityMul343 未乘。技能伤可以提高（271），但不得再叠一次与白字相同的 343。禁止 expect 写死 30/20/15。绿勾不证公式。" },
+        },
+        extraVerdict = function()
+            return {
+                "同一 208086 窗口技能伤只吃 271 不得再乘 343。labmsg：abilityMul343 未乘。白字已提高的同时，技能伤不得再乘一次 343 amount。绿勾不证公式。必须验白字对照。禁止 expect 写死 30/20/15。",
+            }
+        end,
+    },
+
+    stat_aura343_guid_own = {
+        key = "stat_aura343_guid_own",
+        title = "STAT-T5双来源只吃自己GUID",
+        order = 298,
+        hint = "武器战。cast 167105，aura-target 208086，damage 0。目标要有两个 GUID 的 343；白字只吃玩家那枚 GetAmount。第二源由人上号挂。绿勾不证公式。必须验白字。禁止 want=aura。禁止 expect 写死 30/20/15。",
+        startText = "【双GUID只吃自己】120 武器战。cast 167105，目标有玩家的 208086。第二源由另一角色上号挂 79140 或 208086（HavenLab 单人包打不出第二 GUID）。白字 id 0 只吃玩家那枚 GetAmount。labmsg 打印玩家 GUID 与两枚 343 的 casterGuid，白字乘数只含玩家那一枚。禁止把第二源 amount 加进玩家白字。绿勾不证公式。必须验白字。",
+        startPrint = "请打 167105。目标要有两个 GUID 的 343。白字只吃玩家那枚 GetAmount。第二源由人上号挂。绿勾不证公式。",
+        ids = { 167105, 208086, 0 },
+        labels = {
+            [167105] = "巨人打击施放",
+            [208086] = "巨人打击窗口_玩家GUID",
+            [0] = "白字自动攻击",
+        },
+        chain = {
+            { id = 167105, role = "巨人打击施法", want = "cast",
+              hintFail = "没有 167105。120 武器战对假人打巨人打击。禁止 want=aura。" },
+            { id = 208086, role = "玩家343窗口", want = "aura-target",
+              hintFail = "目标没有玩家的 208086。第二源由人上号挂，包仍打玩家白字。禁止 want=aura。" },
+            { id = 0, role = "白字自动攻击", want = "damage",
+              hintFail = "没有白字（id 0）。白字只吃玩家 GUID 那枚 GetAmount。禁止用技能 id 冒充白字。绿勾不证公式。必须验白字。" },
+            { id = 208086, role = "记下双casterGuid", want = "labmsg",
+              hintFail = "人记下玩家 GUID 与两枚 343 的 casterGuid。白字乘数只含玩家那一枚 GetAmount。禁止把第二源 amount 加进玩家白字。禁止 expect 写死 30/20/15。绿勾不证公式。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测目标要有两个 GUID 的 343。白字只吃玩家那枚 GetAmount。第二源由人上号挂。labmsg 打印玩家 GUID 与两枚 casterGuid。禁止把第二源 amount 加进玩家白字。绿勾不证公式。必须验白字。",
+            }
+        end,
+    },
+
+    stat_aura343_bp0 = {
+        key = "stat_aura343_bp0",
+        title = "STAT-T5基点0也走到乘法",
+        order = 299,
+        hint = "防护或任意能放 1160 的战士。cast 1160，aura-target 1160，damage 0。基点 0 也走到乘法。白字可不提高，不得因此失败。labmsg 写 bp0 与 30/15 走同一 GetTotalAuraMultiplier。绿勾不证公式。必须验白字。禁止 want=aura。禁止 expect 写死 30/20/15。",
+        startText = "【挫志1160基点0】防护或任意能放 1160 的战士。cast 1160，目标有 1160。白字 id 0。csv 基点 0，amount=GetAmount() 时白字可以不提高，不得因此判失败，不得证明没有这效果。labmsg 显示 343 路径已走，bp0 与 30/15 走同一 GetTotalAuraMultiplier。绿勾不证公式。必须验白字。",
+        startPrint = "请打 1160。基点 0 也走到乘法。白字可不提高，不得因此失败。labmsg 看 bp0 与 30/15 同一 GetTotalAuraMultiplier。绿勾不证公式。",
+        ids = { 1160, 0 },
+        labels = {
+            [1160] = "挫志怒吼_Aura343_bp0",
+            [0] = "白字自动攻击",
+        },
+        chain = {
+            { id = 1160, role = "挫志怒吼施法", want = "cast",
+              hintFail = "没有 1160。防护或任意能放 1160 的战士对假人打挫志。禁止 want=aura。" },
+            { id = 1160, role = "挫志光环", want = "aura-target",
+              hintFail = "目标没有 1160。基点 0 也必须挂上。禁止 want=aura。" },
+            { id = 0, role = "白字自动攻击", want = "damage",
+              hintFail = "没有白字（id 0）。近战距离打开自动攻击。白字可不提高，不得因此失败。绿勾不证公式。必须验白字。" },
+            { id = 1160, role = "记下bp0走同一乘法", want = "labmsg",
+              hintFail = "人记下 spell=1160、amount=GetAmount()、casterGuid、attackerGuid、whiteMul343。bp0 与 30/15 走同一 GetTotalAuraMultiplier。白字可不提高，不得因此失败。禁止 expect 写死 30/20/15。绿勾不证公式。" },
+        },
+        extraVerdict = function()
+            return {
+                "1160 csv 基点 0 也走到乘法。labmsg 写 bp0 与 30/15 走同一 GetTotalAuraMultiplier。白字可不提高，不得因此失败，不得证明没有这效果。绿勾不证公式。必须验白字。禁止 expect 写死 30/20/15。",
+            }
+        end,
+    },
+
+    stat_aura343_vendetta = {
+        key = "stat_aura343_vendetta",
+        title = "STAT-T5仇杀白字读GetAmount",
+        order = 300,
+        hint = "奇袭盗贼。cast 79140，aura-target 79140，damage 0。读 GetAmount，禁止写死 30 或网页 20。PvP 下 amount 随 csv PvpMultiplier 约 2/3 变化。绿勾不证公式。必须验白字。禁止 want=aura。禁止 expect 写死 30/20/15。",
+        startText = "【仇杀79140白字】120 奇袭盗贼。cast 79140，目标有 79140。白字 id 0 提高方向与 GetAmount 一致。禁止用 30 或网页 20 当写死通过线。PvP 下 amount 可变小（csv PvpMultiplier 约 2/3），以 labmsg 的 amount 为准。绿勾不证公式。必须验白字。",
+        startPrint = "请打 79140，看白字方向与 GetAmount 一致。禁止写死 30 或网页 20。绿勾不证公式。",
+        ids = { 79140, 0 },
+        labels = {
+            [79140] = "仇杀_Aura343_读GetAmount",
+            [0] = "白字自动攻击",
+        },
+        chain = {
+            { id = 79140, role = "仇杀施法", want = "cast",
+              hintFail = "没有 79140。120 奇袭盗贼对假人打仇杀。禁止 want=aura。" },
+            { id = 79140, role = "仇杀光环", want = "aura-target",
+              hintFail = "目标没有 79140。自动判定只证明光环在。白字提高必须人眼看。禁止 want=aura。" },
+            { id = 0, role = "白字自动攻击", want = "damage",
+              hintFail = "没有白字（id 0）。近战距离打开自动攻击。禁止用技能 id 冒充白字。绿勾不证公式。必须验白字。" },
+            { id = 79140, role = "记下GetAmount", want = "labmsg",
+              hintFail = "人记下 spell=79140、amount=GetAmount()、casterGuid、attackerGuid、whiteMul343 已乘。读 GetAmount，禁止写死 30 或网页 20。PvP 下以 labmsg 的 amount 为准。禁止 expect 写死 30/20/15。绿勾不证公式。" },
+        },
+        extraVerdict = function()
+            return {
+                "奇袭盗贼白字方向与 GetAmount 一致。禁止写死 30 或网页 20。PvP 下 amount 随 csv PvpMultiplier 约 2/3 变化，以 labmsg 的 amount 为准。绿勾不证公式。必须验白字。禁止 expect 写死 30/20/15。",
+            }
+        end,
+    },
+
+    stat_aura343_siegebreaker = {
+        key = "stat_aura343_siegebreaker",
+        title = "STAT-T5攻城者窗口白字提高",
+        order = 301,
+        hint = "狂怒战。cast 280772（若仓库不同则以能挂上 280773 的技能为准，光环仍 280773），aura-target 280773，damage 0。csv 基点 15，禁止写死 15 当唯一通过线。绿勾不证公式。必须验白字。禁止 want=aura。禁止 expect 写死 30/20/15。",
+        startText = "【攻城者280773白字】120 狂怒战。cast 280772（若仓库不同则以能挂上 280773 的技能为准，光环仍 280773）。目标有 280773。白字 id 0 提高方向与 GetAmount 一致（csv 基点 15）。labmsg 打 amount，禁止写死 15 当唯一通过线。绿勾不证公式。必须验白字。",
+        startPrint = "请打 280772，看目标 280773。白字方向与 GetAmount 一致。禁止写死 15 当唯一通过线。绿勾不证公式。",
+        ids = { 280772, 280773, 0 },
+        labels = {
+            [280772] = "攻城者施放",
+            [280773] = "攻城者窗口_Aura343_csv基点15",
+            [0] = "白字自动攻击",
+        },
+        chain = {
+            { id = 280772, role = "攻城者施法", want = "cast",
+              hintFail = "没有 280772。若仓库施放 ID 不同，以能挂上 280773 的技能为准。120 狂怒战。禁止 want=aura。" },
+            { id = 280773, role = "攻城者窗口", want = "aura-target",
+              hintFail = "目标没有 280773。光环仍是 280773。自动判定只证明光环在。白字提高必须人眼看。禁止 want=aura。" },
+            { id = 0, role = "白字自动攻击", want = "damage",
+              hintFail = "没有白字（id 0）。近战距离打开自动攻击。禁止用技能 id 冒充白字。绿勾不证公式。必须验白字。" },
+            { id = 280773, role = "记下GetAmount", want = "labmsg",
+              hintFail = "人记下 spell=280773、amount=GetAmount()、casterGuid、attackerGuid、whiteMul343 已乘。csv 基点 15，禁止写死 15 当唯一通过线。禁止 expect 写死 30/20/15。绿勾不证公式。" },
+        },
+        extraVerdict = function()
+            return {
+                "狂怒战挂上 280773，白字提高方向与 GetAmount 一致（csv 基点 15）。labmsg 打 amount，禁止写死 15 当唯一通过线。绿勾不证公式。必须验白字。禁止 expect 写死 30/20/15。",
+            }
+        end,
+    },
+
+    stat_aura343_bp0_192090 = {
+        key = "stat_aura343_bp0_192090",
+        title = "STAT-T5基点0_192090也走到乘法",
+        order = 302,
+        hint = "野性或守护德鲁伊痛击（Thrash）挂上 192090。aura-target 192090，damage 0。基点 0 也走到乘法。白字可不提高，不得因此失败。绿勾不证公式。必须验白字。禁止 want=aura。禁止 expect 写死 30/20/15。",
+        startText = "【痛击192090基点0】野性或守护德鲁伊用痛击（Thrash）使目标挂上 192090。本包无 cast。aura-target 192090，白字 id 0。csv 基点 0，amount=GetAmount() 时白字可以不提高，不得因此判失败。labmsg 显示 343 路径已走、amount=GetAmount()。绿勾不证公式。必须验白字。",
+        startPrint = "请用痛击挂上 192090。基点 0 也走到乘法。白字可不提高，不得因此失败。绿勾不证公式。",
+        ids = { 192090, 0 },
+        labels = {
+            [192090] = "痛击_Aura343_bp0",
+            [0] = "白字自动攻击",
+        },
+        chain = {
+            { id = 192090, role = "痛击192090光环", want = "aura-target",
+              hintFail = "目标没有 192090。野性或守护德鲁伊用痛击（Thrash）挂上。禁止 want=aura。" },
+            { id = 0, role = "白字自动攻击", want = "damage",
+              hintFail = "没有白字（id 0）。近战距离打开自动攻击。白字可不提高，不得因此失败。绿勾不证公式。必须验白字。" },
+            { id = 192090, role = "记下bp0走同一乘法", want = "labmsg",
+              hintFail = "人记下 spell=192090、amount=GetAmount()、casterGuid、attackerGuid、whiteMul343。基点 0 也走到乘法。白字可不提高，不得因此失败。禁止 expect 写死 30/20/15。绿勾不证公式。" },
+        },
+        extraVerdict = function()
+            return {
+                "目标有 192090，白字 id 0。labmsg 显示 343 路径已走、amount=GetAmount()。csv 基点 0 时白字可以不提高，不得因此判失败。绿勾不证公式。必须验白字。禁止 expect 写死 30/20/15。",
+            }
+        end,
+    },
+
+    stat_aura343_bp0_301061 = {
+        key = "stat_aura343_bp0_301061",
+        title = "STAT-T5基点0_301061也走到乘法",
+        order = 303,
+        hint = "野性或守护德鲁伊痛击（Thrash）挂上 301061。aura-target 301061，damage 0。基点 0 也走到乘法。白字可不提高，不得因此失败。绿勾不证公式。必须验白字。禁止 want=aura。禁止 expect 写死 30/20/15。",
+        startText = "【痛击301061基点0】野性或守护德鲁伊用痛击（Thrash）使目标挂上 301061。本包无 cast。aura-target 301061，白字 id 0。csv 基点 0，amount=GetAmount() 时白字可以不提高，不得因此判失败。labmsg 显示 343 路径已走、amount=GetAmount()。绿勾不证公式。必须验白字。两键都测，不要只测 192090。",
+        startPrint = "请用痛击挂上 301061。基点 0 也走到乘法。白字可不提高，不得因此失败。绿勾不证公式。",
+        ids = { 301061, 0 },
+        labels = {
+            [301061] = "痛击_Aura343_bp0_301061",
+            [0] = "白字自动攻击",
+        },
+        chain = {
+            { id = 301061, role = "痛击301061光环", want = "aura-target",
+              hintFail = "目标没有 301061。野性或守护德鲁伊用痛击（Thrash）挂上。禁止 want=aura。" },
+            { id = 0, role = "白字自动攻击", want = "damage",
+              hintFail = "没有白字（id 0）。近战距离打开自动攻击。白字可不提高，不得因此失败。绿勾不证公式。必须验白字。" },
+            { id = 301061, role = "记下bp0走同一乘法", want = "labmsg",
+              hintFail = "人记下 spell=301061、amount=GetAmount()、casterGuid、attackerGuid、whiteMul343。基点 0 也走到乘法。白字可不提高，不得因此失败。禁止 expect 写死 30/20/15。绿勾不证公式。" },
+        },
+        extraVerdict = function()
+            return {
+                "目标有 301061，白字 id 0。labmsg 显示 343 路径已走、amount=GetAmount()。csv 基点 0 时白字可以不提高，不得因此判失败。绿勾不证公式。必须验白字。禁止 expect 写死 30/20/15。",
+            }
+        end,
+    },
+
+    -- 人物属性 / 项链 STAT-T3c。order 从 304 起。
+    -- 禁止占用 282–295（Aura268 方案预留）与 296–303（Aura343 方案预留）。
+    -- 插入点：itm_manifesto_dummy8_5（order 281）之后，`-- 引擎回归用` 之前。
+    -- 禁止改 az_ / itm_ / stat_aura268_ / stat_aura343_ / 职业键。
+    stat_neck_hoa_apply = {
+        key = "stat_neck_hoa_apply",
+        title = "项链：穿上 158075 后自身应有 Dummy 277253",
+        order = 304,
+        hint = "聊天框 .additem 158075 穿项链。自身应有 Dummy 277253。本键不断言 CastSpell。不允许 .aura 代替穿脱。禁止 want=aura。绿勾不证明 CastSpell。",
+        startText = "【项链穿上】聊天框 .additem 158075 穿项链。自身应有 Dummy 277253。本键不断言 CastSpell。不允许 .aura 代替穿脱。禁止 want=aura。没有单独 GM 选出命令。",
+        startPrint = "请 .additem 158075 穿项链。看自身 Dummy 277253。不要用 .aura 代替穿。绿勾不证明 CastSpell。",
+        ids = { 277253, 158075 },
+        labels = { [277253] = "项链Dummy0", [158075] = "心之熔炉" },
+        chain = {
+            { id = 277253, role = "项链Dummy", want = "aura-self",
+              hintFail = "没有 277253。聊天框 .additem 158075 穿项链。不允许 .aura 代替穿。绿勾不证明 CastSpell。禁止 want=aura。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测：.additem 158075 后自身应有 Dummy 277253。绿勾只证光环在，不证 CastSpell。不要用 .aura 代替穿。",
+            }
+        end,
+    },
+    stat_neck_trait_cast = {
+        key = "stat_neck_trait_cast",
+        title = "项链：穿 158075 且穿头 160491（战士选出 Power 30 / 266180）后自身应有 266180；人物纸主属性因装备栏上升",
+        order = 305,
+        hint = "穿 158075 与头 160491，角色面板艾泽里特手选压制之力 266180。插件只断言自身 266180。人物纸力量因装备栏上升由人眼看。StatSnapshot 无 strength，不要 want=stat。绿勾不证明 CastSpell。",
+        startText = "【项链特质】聊天框 .additem 158075 穿项链、.additem 160491 穿头。打开艾泽里特界面手选「压制之力」Power 30 / 266180。没有单独 GM 选出命令。自身应有 266180。穿上 160491 后用人物纸看力量是否因装备栏上升（插件不断言力量）。不允许 .aura 代替穿脱。禁止 want=aura。绿勾不证明 CastSpell。",
+        startPrint = "请 .additem 158075 穿项链、.additem 160491 穿头，角色面板艾泽里特里手选 266180。看 266180；人物纸力量用人眼看。不要用 .aura 代替穿。",
+        ids = { 266180, 158075, 160491 },
+        labels = { [266180] = "压制之力", [158075] = "心之熔炉", [160491] = "正交光学头" },
+        chain = {
+            { id = 266180, role = "压制之力", want = "aura-self",
+              hintFail = "没有 266180。聊天框 .additem 158075 穿项链、.additem 160491 穿头，角色面板艾泽里特手选压制之力 Power 30 / 266180。没有单独 GM 选出命令。不允许 .aura 代替穿。绿勾不证明 CastSpell。人物纸力量用人眼看。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测：自身应有 266180。穿上 160491 后人物纸力量应因装备栏上升。绿勾只证 266180 在，不证 CastSpell，也不证力量数字。不要用 .aura 代替穿。不要用 27973 当可穿验收。",
+            }
+        end,
+    },
+    stat_neck_hoa_remove = {
+        key = "stat_neck_hoa_remove",
+        title = "项链：脱下 158075 后 277253 与 266180 应掉（项链门）",
+        order = 306,
+        hint = "用背包脱 158075。人眼看 277253 与 266180 应掉。本键不要 aura-self（光环还在会绿勾）。不要用 .aura 清光环。160491 仍可戴着。",
+        startText = "【项链脱下】用背包脱 158075。不要用 .aura 清光环。人眼看 277253 与 266180 应掉（项链门）。160491 仍可戴着。本键不靠绿勾。不允许 .aura 代替脱卸。禁止 want=aura。",
+        startPrint = "请用背包脱 158075。人眼看 277253 与 266180 应掉。不要用 .aura 代替脱。160491 仍可戴着。不要靠绿勾。",
+        ids = { 277253, 266180, 158075 },
+        labels = { [277253] = "项链Dummy0应掉", [266180] = "压制之力应掉", [158075] = "心之熔炉" },
+        chain = {
+            { id = 277253, role = "脱项链后人眼看Dummy应掉", want = "labmsg",
+              hintFail = "本键不靠绿勾。用背包脱 158075 后，人眼确认 277253 与 266180 已掉（项链门）。160491 仍可戴着。不要用 .aura 清光环。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测：背包脱 158075 后 277253 与 266180 应掉。绿勾不证明项链门。不要用 .aura 代替脱。",
+            }
+        end,
+    },
+    stat_neck_engine_not_addon = {
+        key = "stat_neck_engine_not_addon",
+        title = "项链：关掉 HavenLab 后再穿脱，引擎仍走同一调用链",
+        order = 307,
+        hint = "先关掉 HavenLab。再 .additem 158075 / 160491，手选 266180，再背包脱 158075。本键只留提示，不用插件绿勾证明引擎 CastSpell。",
+        startText = "【项链关插件】先关掉 HavenLab。聊天框 .additem 158075 穿项链、.additem 160491 穿头，角色面板艾泽里特里手选「压制之力」Power 30 / 266180。自身应有 277253 与 266180。再背包脱 158075，266180 应掉。没有单独 GM 选出命令。不允许 .aura 代替穿脱。禁止 want=aura。本键只留提示。",
+        startPrint = "请关掉 HavenLab 后 .additem 158075 穿项链、.additem 160491 穿头，手选 266180；再背包脱 158075。不要靠绿勾证明引擎 CastSpell。",
+        ids = { 277253, 266180, 158075, 160491 },
+        labels = { [277253] = "项链Dummy0", [266180] = "压制之力", [158075] = "心之熔炉", [160491] = "正交光学头" },
+        chain = {
+            { id = 277253, role = "关插件后人眼看调用链", want = "labmsg",
+              hintFail = "本键只留提示。关掉 HavenLab 后仍靠穿脱走出 SetState → ApplyAllAzeriteEmpoweredItemMods → ApplyAzeritePowers 项链门 → ApplyAzeritePower 专精门 → CastSpell / RemoveAurasDueToItemSpell。不要靠绿勾证明引擎 CastSpell。" },
+        },
+        extraVerdict = function()
+            return {
+                "人测清单：关掉 HavenLab 后再穿 158075 / 160491 并手选 266180，再背包脱 158075。引擎仍走同一调用链。本键不用插件绿勾证明 CastSpell。",
             }
         end,
     },
