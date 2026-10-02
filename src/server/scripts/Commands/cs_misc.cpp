@@ -1667,7 +1667,6 @@ public:
         }
 
         player->CombatStop();
-        player->getHostileRefManager().deleteReferences();
 
         uint32 nearbyRaid = 0;
         for (Creature* creature : player->FindNearestCreatures(raidDummyEntry, 60.0f))
