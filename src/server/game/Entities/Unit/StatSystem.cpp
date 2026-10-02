@@ -122,7 +122,10 @@ bool Player::UpdateStats(Stats stat)
     }
 
     if (stat == STAT_STRENGTH)
+    {
         UpdateAttackPowerAndDamage(false);
+        UpdateArmor();
+    }
     else if (stat == STAT_AGILITY)
     {
         UpdateAttackPowerAndDamage(false);
@@ -276,6 +279,20 @@ void Player::UpdateArmor()
     {
         if ((*i)->GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL)
             value += CalculatePct(GetStat(Stats((*i)->GetMiscValueB())), (*i)->GetAmount());
+    }
+
+    AuraEffectList const& mArmorFromStat = GetAuraEffectsByType(SPELL_AURA_MOD_ARMOR_PCT_FROM_STAT);
+    for (AuraEffectList::const_iterator i = mArmorFromStat.begin(); i != mArmorFromStat.end(); ++i)
+    {
+        int32 misc = (*i)->GetMiscValue();
+        Stats stat;
+        if (misc == 0)
+            stat = STAT_STRENGTH;
+        else if (misc == 1)
+            stat = STAT_AGILITY;
+        else
+            continue;
+        value += CalculatePct(GetStat(stat), (*i)->GetAmount());
     }
 
     value *= GetModifierValue(unitMod, TOTAL_PCT);

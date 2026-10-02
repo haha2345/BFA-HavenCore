@@ -4899,62 +4899,6 @@ class spell_dru_swipe_bear : public SpellScript
     }
 };
 
-// 192081 Ironfur
-class spell_dru_ironfur : public AuraScript
-{
-    PrepareAuraScript(spell_dru_ironfur);
-
-    int32 _appliedArmor = 0;
-
-    void RecalcArmor()
-    {
-        Unit* target = GetTarget();
-        if (!target)
-            return;
-
-        if (_appliedArmor != 0)
-            target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(_appliedArmor), false);
-
-        int32 pct = 0;
-        if (SpellEffectInfo const* eff0 = GetSpellInfo()->GetEffect(EFFECT_0))
-            pct = eff0->BasePoints;
-
-        Unit* caster = GetCaster();
-        if (!caster)
-            caster = target;
-
-        int32 armor = int32(CalculatePct(caster->GetStat(STAT_AGILITY), pct)) * int32(GetStackAmount());
-        if (armor != 0)
-            target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(armor), true);
-        _appliedArmor = armor;
-    }
-
-    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-    {
-        RecalcArmor();
-    }
-
-    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-    {
-        Unit* target = GetTarget();
-        if (target && _appliedArmor != 0)
-            target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(_appliedArmor), false);
-        _appliedArmor = 0;
-    }
-
-    void OnStackChange(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-    {
-        RecalcArmor();
-    }
-
-    void Register() override
-    {
-        OnEffectApply += AuraEffectApplyFn(spell_dru_ironfur::HandleApply, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL);
-        OnEffectRemove += AuraEffectRemoveFn(spell_dru_ironfur::HandleRemove, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL);
-        OnEffectApply += AuraEffectApplyFn(spell_dru_ironfur::OnStackChange, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
-    }
-};
-
 // 29166 Innervate
 class spell_dru_innervate : public AuraScript
 {
@@ -5096,6 +5040,5 @@ void AddSC_druid_spell_scripts()
     RegisterSpellScript(spell_dru_force_of_nature);
     RegisterSpellScript(spell_dru_primal_wrath);
     RegisterSpellScript(spell_dru_swipe_bear);
-    RegisterAuraScript(spell_dru_ironfur);
     RegisterAuraScript(spell_dru_innervate);
 }

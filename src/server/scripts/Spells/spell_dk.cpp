@@ -2450,44 +2450,9 @@ public:
         PrepareAuraScript(spell_dk_bone_shield_AuraScript);
 
         int32 procDelay = 0;
-        int32 _appliedArmor = 0;
-
-        void RecalcArmor()
-        {
-            Unit* target = GetTarget();
-            if (!target)
-                return;
-
-            if (_appliedArmor != 0)
-                target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(_appliedArmor), false);
-
-            int32 pct = 40;
-            if (SpellEffectInfo const* eff0 = GetSpellInfo()->GetEffect(EFFECT_0))
-                pct = eff0->BasePoints; // 效果 0 基点 40。不是 Dummy 列。
-
-            int32 armor = int32(CalculatePct(target->GetStat(STAT_STRENGTH), pct)) * int32(GetStackAmount());
-            if (armor != 0)
-                target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(armor), true);
-            _appliedArmor = armor;
-        }
-
-        void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-        {
-            RecalcArmor();
-        }
-
-        void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-        {
-            Unit* target = GetTarget();
-            if (target && _appliedArmor != 0)
-                target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(_appliedArmor), false);
-            _appliedArmor = 0;
-        }
 
         void OnStackChange(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
-            RecalcArmor();
-
             Unit* target = GetTarget();
             if (!target)
                 return;
@@ -2514,7 +2479,6 @@ public:
             // 观察窗口 2.5 秒。效果 4 Dummy 基点 0，不要把 2.5 写进 Dummy，也不要写死 2000。
             ModStackAmount(-1);
             procDelay = 2500;
-            RecalcArmor();
 
             // 不要 HasSpell(221699)。221699 不在 8.3 鲜血天赋树。
         }
@@ -2532,10 +2496,8 @@ public:
 
         void Register() override
         {
-            OnEffectApply += AuraEffectApplyFn(spell_dk_bone_shield_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL);
-            OnEffectRemove += AuraEffectRemoveFn(spell_dk_bone_shield_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL);
-            OnEffectApply += AuraEffectApplyFn(spell_dk_bone_shield_AuraScript::OnStackChange, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
-            OnEffectProc += AuraEffectProcFn(spell_dk_bone_shield_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_268);
+            OnEffectApply += AuraEffectApplyFn(spell_dk_bone_shield_AuraScript::OnStackChange, EFFECT_0, SPELL_AURA_MOD_ARMOR_PCT_FROM_STAT, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+            OnEffectProc += AuraEffectProcFn(spell_dk_bone_shield_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_MOD_ARMOR_PCT_FROM_STAT);
             OnAuraUpdate += AuraUpdateFn(spell_dk_bone_shield_AuraScript::OnUpdate);
         }
     };

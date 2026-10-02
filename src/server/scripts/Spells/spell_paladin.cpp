@@ -498,51 +498,7 @@ class spell_pal_shield_of_the_righteous : public SpellScript
 };
 
 // 132403 - Shield of the Righteous armor
-class spell_pal_shield_of_the_righteous_armor : public AuraScript
-{
-    PrepareAuraScript(spell_pal_shield_of_the_righteous_armor);
-
-    int32 _appliedArmor = 0;
-
-    void RecalcArmor()
-    {
-        Unit* target = GetTarget();
-        if (!target)
-            return;
-
-        if (_appliedArmor != 0)
-            target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(_appliedArmor), false);
-
-        int32 pct = 150;
-        if (SpellEffectInfo const* eff0 = GetSpellInfo()->GetEffect(EFFECT_0))
-            pct = eff0->BasePoints; // 基点 150。这是 Aura 268 列，不是 Dummy。
-
-        int32 armor = int32(CalculatePct(target->GetStat(STAT_STRENGTH), pct));
-        if (armor != 0)
-            target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(armor), true);
-        _appliedArmor = armor;
-    }
-
-    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-    {
-        RecalcArmor();
-    }
-
-    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-    {
-        Unit* target = GetTarget();
-        if (target && _appliedArmor != 0)
-            target->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(_appliedArmor), false);
-        _appliedArmor = 0;
-    }
-
-    void Register() override
-    {
-        // Aura 268 核心 HandleUnused。禁止改 SpellAuraEffects.cpp。挂钩形状抄 spell_dk_bone_shield：OnEffectApply / OnEffectRemove，不要 AfterEffectApply。
-        OnEffectApply += AuraEffectApplyFn(spell_pal_shield_of_the_righteous_armor::HandleApply, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL);
-        OnEffectRemove += AuraEffectRemoveFn(spell_pal_shield_of_the_righteous_armor::HandleRemove, EFFECT_0, SPELL_AURA_268, AURA_EFFECT_HANDLE_REAL);
-    }
-};
+// 护甲已走 SPELL_AURA_MOD_ARMOR_PCT_FROM_STAT，本旁路已卸
 
 // Grand Crusader - 85416
 // 204019 - Blessed Hammer / Hammer of the Righteous - 53595
@@ -2601,7 +2557,7 @@ void AddSC_paladin_spell_scripts()
     RegisterAuraScript(spell_pal_righteous_verdict);
     RegisterAuraScript(spell_pal_awakening);
     RegisterAuraScript(spell_pal_avenging_crusader);
-    RegisterAuraScript(spell_pal_shield_of_the_righteous_armor);
+    // 护甲已走 SPELL_AURA_MOD_ARMOR_PCT_FROM_STAT，本旁路已卸
     RegisterAuraScript(spell_pal_grand_crusader_aura);
     RegisterAuraScript(spell_pal_last_defender);
     RegisterSpellScript(spell_pal_beacon_of_virtue);
