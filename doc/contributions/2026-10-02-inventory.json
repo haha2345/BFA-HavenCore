@@ -9,7 +9,7 @@
   "original_authors": [
     {
       "author": "haha2345 <woden3702@gmail.com>",
-      "commits": 138
+      "commits": 128
     },
     {
       "author": "bathfire <>",
@@ -40,7 +40,8 @@
       "state": "ready_for_review",
       "scope": "one AreaTrigger callback per removal",
       "source_commit": "5cf907c",
-      "attribution": "bathfire preserved"
+      "attribution": "bathfire preserved",
+      "ci": "action_required: upstream maintainer must approve the external-contributor workflow"
     },
     {
       "number": 639,
@@ -57,7 +58,8 @@
       "state": "ready_for_review",
       "scope": "recipient-side aura 422 modifier for absorbs",
       "source_commit": "8dde9ab",
-      "attribution": "original author and Cursor co-author preserved"
+      "attribution": "original author and Cursor co-author preserved",
+      "ci": "action_required: upstream maintainer must approve the external-contributor workflow"
     }
   ],
   "validation": {
@@ -79,7 +81,17 @@
       ],
       "relevance": "Optional fork tooling only; not evidence for server mechanics and not an upstream acceptance gate."
     },
-    "integrated_server_build": "in_progress; initial compile found obsolete HostileRefManager API in labdummy and it was removed",
+    "integrated_server_build": {
+      "status": "pass",
+      "target": "worldserver",
+      "configuration": "RelWithDebInfo",
+      "compiler": "MSVC 14.50 / Visual Studio 18 (2026), x64, C++20",
+      "exit_code": 0,
+      "artifact": "build/bin/RelWithDebInfo/worldserver.exe",
+      "scope": "Integrated branch; includes additional fork changes. This does not replace CI for isolated upstream PR heads.",
+      "dependency_setup": "Boost 1.85 filesystem/program_options/regex/locale built from existing local source into an external staging directory.",
+      "log": "D:/wow837_projects/contribution-audit/2026-10-02/integration-build-4.log"
+    },
     "gameplay": "Not performed in this contribution session."
   },
   "categories": [
