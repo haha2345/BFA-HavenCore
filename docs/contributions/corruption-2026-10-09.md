@@ -49,7 +49,7 @@ Inventory location boundary checks passed. See [evidence and standalone sources]
 
 All ten PRs are drafts. Historical source comments and build results do not establish official retail correctness.
 Avoidant misc masks/base-rating interactions, Lifesteal logs/procs, random-loot source eligibility, dual-wield Lash scaling, and MOTHER packets/currency/consumption/persistence require further checks.
-Eye interpolation, pursuer speed/shroud and other documented approximation/fallback values remain disclosed rather than claimed as newly verified hotfix data.
+Echoing Void collapse 0.15, Void Ritual solo 5/6, Obsidian Skin 0.15/six-target division, Eye interpolation and pursuer speed/shroud are inherited model approximations. Inevitable Doom's corruption-minus-50 rule comes from historical observations. None were independently revalidated as retail hotfix data here.
 Drawbacks require matching 8.3.7 SpellInfo/CorruptionEffects records, especially community-hotfix spells 337612/337816. No new blob data is supplied and no startup loading test was run.
 
 ## Attribution
