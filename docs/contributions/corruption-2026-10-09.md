@@ -8,19 +8,19 @@ The contribution branches start from upstream `2c13546197309802d43785a0a1fc9b2ce
 
 | Slice | Branch | Head | Upstream PR |
 |---|---|---|---|
-| item-effects | `contrib/corruption-item-effects` | `fc5bc962cacb` | Pending creation |
-| avoidance | `contrib/corruption-avoidance` | `e7af774e0dda` | Pending creation |
-| leech | `contrib/corruption-leech` | `2f8f84e8c256` | Pending creation |
-| linked-procs | `contrib/corruption-linked-procs` | `b28e516133ce` | Pending creation |
-| procs | `contrib/corruption-procs` | `22835358b6d0` | Pending creation |
-| cooldowns | `contrib/corruption-cooldowns` | `772132413c00` | Pending creation |
-| drawbacks | `contrib/corruption-drawbacks` | `c10959ddc864` | Pending creation |
-| weapons | `contrib/corruption-weapons` | `9537e24875a5` | Pending creation |
-| loot | `contrib/corruption-loot` | `7c9e5ce12eb0` | Pending creation |
-| mother | `contrib/corruption-mother` | `a20113a509f2` | Pending creation |
+| item-effects | `contrib/corruption-item-effects` | `fc5bc962cacb` | [#657](https://github.com/HavenWoW/BFA-HavenCore/pull/657) (draft) |
+| avoidance | `contrib/corruption-avoidance` | `e7af774e0dda` | [#658](https://github.com/HavenWoW/BFA-HavenCore/pull/658) (draft) |
+| leech | `contrib/corruption-leech` | `2f8f84e8c256` | [#659](https://github.com/HavenWoW/BFA-HavenCore/pull/659) (draft) |
+| linked-procs | `contrib/corruption-linked-procs` | `b28e516133ce` | [#660](https://github.com/HavenWoW/BFA-HavenCore/pull/660) (draft) |
+| procs | `contrib/corruption-procs` | `22835358b6d0` | [#661](https://github.com/HavenWoW/BFA-HavenCore/pull/661) (draft) |
+| cooldowns | `contrib/corruption-cooldowns` | `772132413c00` | [#662](https://github.com/HavenWoW/BFA-HavenCore/pull/662) (draft) |
+| drawbacks | `contrib/corruption-drawbacks` | `c10959ddc864` | [#663](https://github.com/HavenWoW/BFA-HavenCore/pull/663) (draft) |
+| weapons | `contrib/corruption-weapons` | `9537e24875a5` | [#664](https://github.com/HavenWoW/BFA-HavenCore/pull/664) (draft) |
+| loot | `contrib/corruption-loot` | `7c9e5ce12eb0` | [#665](https://github.com/HavenWoW/BFA-HavenCore/pull/665) (draft) |
+| mother | `contrib/corruption-mother` | `a20113a509f2` | [#666](https://github.com/HavenWoW/BFA-HavenCore/pull/666) (draft) |
 
 Each script PR includes the same shared header; combine loader declarations/calls when merging.
-Item effects precede scripts and application/purification; LINKED_2 precedes weapons; positive equipped drivers precede cooldowns; loot precedes MOTHER.
+Merge prerequisites: #657 (instance effects) before scripts/application; #660 (LINKED_2) before #664 (weapons); #661 (equipped rank drivers) before #662 (cooldowns); #665 (loot) before #666 (MOTHER). MOTHER currently includes the loot commits against upstream main; rebase/retarget it once loot merges.
 The drawback absorb penalty also depends on [#640](https://github.com/HavenWoW/BFA-HavenCore/pull/640).
 
 ## Verification
@@ -33,7 +33,7 @@ Inventory location boundary checks passed. See [evidence and standalone sources]
 ## Already covered upstream
 
 - AreaTrigger removal callback fix: [#638](https://github.com/HavenWoW/BFA-HavenCore/pull/638), merged.
-- Recipient absorb-taken ownership: [#640](https://github.com/HavenWoW/BFA-HavenCore/pull/640). The maintainer-requested redundant comment was removed in `c34963d`; open, CI pending at audit preparation.
+- Recipient absorb-taken ownership: [#640](https://github.com/HavenWoW/BFA-HavenCore/pull/640). The maintainer-requested redundant comment was removed in `c34963d`; open; MSVC/Clang passed and GCC remained running at the last check during submission.
 - Session-locale hotfix blob delivery (`9be9c7a` locally) already exists upstream through #594; no duplicate PR.
 
 ## Preserved in the fork, excluded from upstream patches
@@ -47,7 +47,7 @@ Inventory location boundary checks passed. See [evidence and standalone sources]
 
 ## Outstanding validation
 
-All ten PRs are drafts. Historical source comments and build results do not establish official retail correctness.
+All ten PRs are open drafts and allow maintainer edits. Current CI disables compiler jobs for draft PRs; a successful changes filter with skipped builds is not a compiler pass. Historical source comments and build results do not establish official retail correctness.
 Avoidant misc masks/base-rating interactions, Lifesteal logs/procs, random-loot source eligibility, dual-wield Lash scaling, and MOTHER packets/currency/consumption/persistence require further checks.
 Echoing Void collapse 0.15, Void Ritual solo 5/6, Obsidian Skin 0.15/six-target division, Eye interpolation and pursuer speed/shroud are inherited model approximations. Inevitable Doom's corruption-minus-50 rule comes from historical observations. None were independently revalidated as retail hotfix data here.
 Drawbacks require matching 8.3.7 SpellInfo/CorruptionEffects records, especially community-hotfix spells 337612/337816. No new blob data is supplied and no startup loading test was run.

@@ -1,0 +1,122 @@
+[
+  {
+    "key": "item-effects",
+    "branch": "contrib/corruption-item-effects",
+    "number": 657,
+    "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/657",
+    "head": "fc5bc962cacb19395703119f5c80e2127131a7df",
+    "title": "Core/Items: use instance effects when equipping and proccing items",
+    "draft": true,
+    "state": "open",
+    "changed_files": 1,
+    "maintainer_can_modify": true
+  },
+  {
+    "key": "avoidance",
+    "branch": "contrib/corruption-avoidance",
+    "number": 658,
+    "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/658",
+    "head": "e7af774e0dda0db1b848524c90231dfa2458c754",
+    "title": "Core/Stats: implement rating-from-rating auras for Avoidant",
+    "draft": true,
+    "state": "open",
+    "changed_files": 7,
+    "maintainer_can_modify": true
+  },
+  {
+    "key": "leech",
+    "branch": "contrib/corruption-leech",
+    "number": 659,
+    "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/659",
+    "head": "2f8f84e8c25638e91055c3317e4c1298b0f73ff9",
+    "title": "Core/Units: apply Lifesteal healing when dealing damage",
+    "draft": true,
+    "state": "open",
+    "changed_files": 2,
+    "maintainer_can_modify": true
+  },
+  {
+    "key": "linked-procs",
+    "branch": "contrib/corruption-linked-procs",
+    "number": 660,
+    "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/660",
+    "head": "b28e516133ce0ac528d9c5ca816f089c59a87043",
+    "title": "Core/Spells: generate default procs for LINKED_2-only auras",
+    "draft": true,
+    "state": "open",
+    "changed_files": 1,
+    "maintainer_can_modify": true
+  },
+  {
+    "key": "procs",
+    "branch": "contrib/corruption-procs",
+    "number": 661,
+    "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/661",
+    "head": "22835358b6d0b494260164691188debcc31eb706",
+    "title": "Scripts/Spells: add positive corruption effects and equipped rank drivers",
+    "draft": true,
+    "state": "open",
+    "changed_files": 18,
+    "maintainer_can_modify": true
+  },
+  {
+    "key": "cooldowns",
+    "branch": "contrib/corruption-cooldowns",
+    "number": 662,
+    "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/662",
+    "head": "772132413c002db47f47c5e02d8ae277f29f4aef",
+    "title": "Scripts/Spells: add Glimpse of Clarity and Ineffable Truth",
+    "draft": true,
+    "state": "open",
+    "changed_files": 7,
+    "maintainer_can_modify": true
+  },
+  {
+    "key": "drawbacks",
+    "branch": "contrib/corruption-drawbacks",
+    "number": 663,
+    "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/663",
+    "head": "c10959ddc864c5325fa68c7ec54618d08987e262",
+    "title": "Scripts/Spells: add corruption drawbacks and threshold drivers",
+    "draft": true,
+    "state": "open",
+    "changed_files": 14,
+    "maintainer_can_modify": true
+  },
+  {
+    "key": "weapons",
+    "branch": "contrib/corruption-weapons",
+    "number": 664,
+    "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/664",
+    "head": "9537e24875a5f6721e3c6bbacbf10ca3665a15fb",
+    "title": "Scripts/Spells: add Ny'alotha corrupted weapon effects",
+    "draft": true,
+    "state": "open",
+    "changed_files": 9,
+    "maintainer_can_modify": true
+  },
+  {
+    "key": "loot",
+    "branch": "contrib/corruption-loot",
+    "number": 665,
+    "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/665",
+    "head": "7c9e5ce12eb0099aaa45a099bfbc361faedd0d83",
+    "title": "Core/Items: load corruption bonus groups and attach loot bonuses",
+    "draft": true,
+    "state": "open",
+    "changed_files": 11,
+    "maintainer_can_modify": true
+  },
+  {
+    "key": "mother",
+    "branch": "contrib/corruption-mother",
+    "number": 666,
+    "url": "https://github.com/HavenWoW/BFA-HavenCore/pull/666",
+    "head": "a20113a509f21ddd24d80114dca9d8c71c7f1cf8",
+    "title": "Core/Items: add contaminant application and MOTHER purification",
+    "draft": true,
+    "state": "open",
+    "changed_files": 32,
+    "maintainer_can_modify": true
+  }
+]
