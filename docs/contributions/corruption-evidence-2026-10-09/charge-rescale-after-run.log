@@ -1,0 +1,7 @@
+buff apply two charges: PASS [5000,7500,7500,12500,]
+buff removal active and queued: PASS [6000,9000,9000,19000,]
+new consumed charge stays continuous: PASS [5000,7500,7500,12500,12500,17500,]
+expired charge removed: PASS [12500,16250,16250,21250,]
+single active charge: PASS [5000,7500,]
+zero percent no change: PASS [0,10000,10000,20000,]
+negative percent no change: PASS [0,10000,10000,20000,]

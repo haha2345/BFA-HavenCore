@@ -1,0 +1,7 @@
+buff apply two charges: FAIL [-2500,7500,2500,12500,]
+buff removal active and queued: FAIL [-1000,9000,9000,19000,]
+new consumed charge stays continuous: FAIL [-2500,7500,2500,12500,12500,17500,]
+expired charge removed: FAIL [6250,16250,11250,21250,]
+single active charge: FAIL [-2500,7500,]
+zero percent no change: PASS [0,10000,10000,20000,]
+negative percent no change: PASS [0,10000,10000,20000,]

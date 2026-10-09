@@ -1,0 +1,10 @@
+same rank own item levels: 100 expected 300
+mixed ranks: 300 expected 300
+removed item stale aura: 100 expected 0
+broken item: 100 expected 0
+manual non-item aura: 100 expected 100
+manual plus item source: 100 expected 200
+no source no fallback: 100 expected 0
+null owner: 100 expected 0
+fallback per existing source: 7 expected 14
+non equip trigger excluded: 100 expected 0
