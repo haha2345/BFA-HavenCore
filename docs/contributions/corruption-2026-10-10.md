@@ -2,7 +2,7 @@
 
 [Hextv requested one corruption PR](https://github.com/HavenWoW/BFA-HavenCore/pull/665#issuecomment-6089849327).
 The existing [#665](https://github.com/HavenWoW/BFA-HavenCore/pull/665) is expanded to include all ten classified contributions; the original discussion stays there.
-The other nine drafts will close after the combined remote head and description are verified. Branches and original authorship remain preserved.
+On 2026-10-10, drafts #657 through #664 and #666 were closed after the combined remote head and description were verified. Each description links to #665. Branches and original authorship remain preserved.
 
 ## Combined branch
 
@@ -49,7 +49,7 @@ All core code and Spells/Commands/Custom were compiled together; other legacy co
 No server startup, database migration execution, packet capture or in-game test was performed.
 Production method regressions from the original submission remain applicable because consolidation did not change their code:
 rank sums 10/10, charge queues 7/7, plus inventory boundaries. [Original sources/results](corruption-evidence-2026-10-09/README.txt).
-[Build and branch records](corruption-evidence-2026-10-10/build.json).
+[Build record](corruption-evidence-2026-10-10/build.json), [combined branch record](corruption-evidence-2026-10-10/combined-branch.json) and [verified PR states/checks](corruption-evidence-2026-10-10/verified-prs.json).
 
 ## Preserved limitations
 

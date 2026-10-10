@@ -1,0 +1,147 @@
+{
+  "prs": [
+    {
+      "number": 665,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/665",
+      "title": "Core/Corruption: add effects, loot and MOTHER interactions",
+      "state": "open",
+      "draft": true,
+      "changed_files": 81,
+      "maintainer_can_modify": true,
+      "head": "6b89d71013771fa6fca0bec43ae8e6c5d2ffa415",
+      "base": "c9fca55311d75b282200f8ed5ed8b0a64ec7e74b"
+    },
+    {
+      "number": 657,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/657",
+      "title": "Core/Items: use instance effects when equipping and proccing items",
+      "state": "closed",
+      "draft": true,
+      "changed_files": 1,
+      "maintainer_can_modify": false,
+      "head": "fc5bc962cacb19395703119f5c80e2127131a7df",
+      "base": "2c13546197309802d43785a0a1fc9b2cea9211c9"
+    },
+    {
+      "number": 658,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/658",
+      "title": "Core/Stats: implement rating-from-rating auras for Avoidant",
+      "state": "closed",
+      "draft": true,
+      "changed_files": 7,
+      "maintainer_can_modify": false,
+      "head": "e7af774e0dda0db1b848524c90231dfa2458c754",
+      "base": "2c13546197309802d43785a0a1fc9b2cea9211c9"
+    },
+    {
+      "number": 659,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/659",
+      "title": "Core/Units: apply Lifesteal healing when dealing damage",
+      "state": "closed",
+      "draft": true,
+      "changed_files": 2,
+      "maintainer_can_modify": false,
+      "head": "2f8f84e8c25638e91055c3317e4c1298b0f73ff9",
+      "base": "2c13546197309802d43785a0a1fc9b2cea9211c9"
+    },
+    {
+      "number": 660,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/660",
+      "title": "Core/Spells: generate default procs for LINKED_2-only auras",
+      "state": "closed",
+      "draft": true,
+      "changed_files": 1,
+      "maintainer_can_modify": false,
+      "head": "b28e516133ce0ac528d9c5ca816f089c59a87043",
+      "base": "2c13546197309802d43785a0a1fc9b2cea9211c9"
+    },
+    {
+      "number": 661,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/661",
+      "title": "Scripts/Spells: add positive corruption effects and equipped rank drivers",
+      "state": "closed",
+      "draft": true,
+      "changed_files": 18,
+      "maintainer_can_modify": false,
+      "head": "22835358b6d0b494260164691188debcc31eb706",
+      "base": "2c13546197309802d43785a0a1fc9b2cea9211c9"
+    },
+    {
+      "number": 662,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/662",
+      "title": "Scripts/Spells: add Glimpse of Clarity and Ineffable Truth",
+      "state": "closed",
+      "draft": true,
+      "changed_files": 7,
+      "maintainer_can_modify": false,
+      "head": "772132413c002db47f47c5e02d8ae277f29f4aef",
+      "base": "2c13546197309802d43785a0a1fc9b2cea9211c9"
+    },
+    {
+      "number": 663,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/663",
+      "title": "Scripts/Spells: add corruption drawbacks and threshold drivers",
+      "state": "closed",
+      "draft": true,
+      "changed_files": 14,
+      "maintainer_can_modify": false,
+      "head": "c10959ddc864c5325fa68c7ec54618d08987e262",
+      "base": "2c13546197309802d43785a0a1fc9b2cea9211c9"
+    },
+    {
+      "number": 664,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/664",
+      "title": "Scripts/Spells: add Ny'alotha corrupted weapon effects",
+      "state": "closed",
+      "draft": true,
+      "changed_files": 9,
+      "maintainer_can_modify": false,
+      "head": "9537e24875a5f6721e3c6bbacbf10ca3665a15fb",
+      "base": "2c13546197309802d43785a0a1fc9b2cea9211c9"
+    },
+    {
+      "number": 666,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/666",
+      "title": "Core/Items: add contaminant application and MOTHER purification",
+      "state": "closed",
+      "draft": true,
+      "changed_files": 32,
+      "maintainer_can_modify": false,
+      "head": "a20113a509f21ddd24d80114dca9d8c71c7f1cf8",
+      "base": "2c13546197309802d43785a0a1fc9b2cea9211c9"
+    },
+    {
+      "number": 640,
+      "html_url": "https://github.com/HavenWoW/BFA-HavenCore/pull/640",
+      "title": "Core/Auras: read absorb-taken modifiers from the shielded unit",
+      "state": "open",
+      "draft": false,
+      "changed_files": 1,
+      "maintainer_can_modify": true,
+      "head": "c34963d406330fae0c1ee815671bc78369772990",
+      "base": "c79b7808b9544b9ee18050bbd4ada7a0bcabeb7b"
+    }
+  ],
+  "checks": [
+    {
+      "name": "clang / build",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "gcc / build",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "msvc / build",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "changes",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ]
+}
