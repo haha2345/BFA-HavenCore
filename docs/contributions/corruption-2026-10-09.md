@@ -1,3 +1,5 @@
+> Updated 2026-10-10: these ten submissions are being consolidated into [#665](https://github.com/HavenWoW/BFA-HavenCore/pull/665). See the [current mapping and verification](corruption-2026-10-10.md). The record below describes the original 2026-10-09 submission.
+
 # Corruption contribution submission — 2026-10-09
 
 The contributor authorized splitting all corruption fixes into reviewable upstream PRs.

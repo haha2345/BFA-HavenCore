@@ -1,0 +1,12 @@
+{
+  "head": "6b89d71013771fa6fca0bec43ae8e6c5d2ffa415",
+  "upstream": "c9fca55311d75b282200f8ed5ed8b0a64ec7e74b",
+  "exit_code": 0,
+  "compiler": "MSVC 18.4 / C++20 / x64",
+  "configuration": "RelWithDebInfo",
+  "script_scope": "Spells, Commands, Custom; all core code",
+  "cmake_options": "TOOLS=0, SCRIPTS=minimal-static, SCRIPTS_CUSTOM=static",
+  "binary_sha256": "efa901ed5d071eb2cb3ed9eee28d75cd3cbe28374b02014dfacfd54606471529",
+  "log_sha256": "31e83b579d5d1f31e87b8d1cf7ce10ab29163c1b4784dd2426ea0d42aff6f25d",
+  "runtime_validation": false
+}
